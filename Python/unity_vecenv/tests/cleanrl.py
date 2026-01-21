@@ -325,7 +325,7 @@ if __name__ == "__main__":
         torch.save(agent.state_dict(), model_path)
         print(f"model saved to {model_path}")
 
-        onnx_path = f"runs/{run_name}/{args.exp_name}.sentis.onnx"
+        onnx_path = f"runs/{run_name}/{args.exp_name}.inference_engine.onnx"
         export_unity_onnx(agent, envs, onnx_path, device)
         print(f"onnx saved to {onnx_path}")
         # from cleanrl_utils.evals.ppo_eval import evaluate

@@ -6,7 +6,9 @@ namespace Scripts.VecEnv.Core
 {
     public abstract class GymAgent : ExternalAgent
     {
-        [Header("Inference")] public ModelAsset inferencePolicy;
+        [Header("Inference")] 
+        public ModelAsset inferencePolicy;
+        public bool inferenceEnabled;
         [Header("Agent")] public int maxSteps;
 
         protected int CurrentStep;
