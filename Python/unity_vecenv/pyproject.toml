@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "unity-vecenv"
+version = "0.0.1"
+description = "Short description of my package"
+readme = "README.md"
+authors = [
+    { name = "Mart Kartasev", email = "mart.kartasev@gmail.com" }
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+
+dependencies = [
+    "numpy==1.23.5"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "ruff"
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]

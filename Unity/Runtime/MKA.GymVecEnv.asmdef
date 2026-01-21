@@ -1,0 +1,17 @@
+{
+    "name": "MKA.GymVecEnv",
+    "rootNamespace": "",
+    "references": [
+        "GUID:63a57c8b658089e49a173b0f0c4870a7",
+        "GUID:4cea703a51eb2aa499ce6fdf8c822c26"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

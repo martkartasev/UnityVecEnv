@@ -1,0 +1,14 @@
+{
+  "name": "com.mka.gymvecenv",
+  "version": "0.0.1",
+  "displayName": "VecEnv Gymnasium Unity",
+  "description": "A VecEnv api for defining agents. Inspired by MLAgents",
+  "documentationUrl": "https://github.com/martkartasev/UnityVecEnv",
+  "changelogUrl": "https://github.com/martkartasev/UnityVecEnv",
+  "licensesUrl": "https://github.com/martkartasev/UnityVecEnv",
+  "author": {
+    "name": "Mart Kartasev",
+    "email": "mart.kartasev@gmail.com",
+    "url": "https://www.linkedin.com/in/mart-karta%C5%A1ev-a67410114/"
+  }
+}

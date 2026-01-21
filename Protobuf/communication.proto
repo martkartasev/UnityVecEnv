@@ -1,0 +1,115 @@
+syntax = "proto3";
+package ExternalCommunication;
+
+enum AutoResetMode {
+  NextStep = 0;
+  SameStep = 1;
+  Disabled = 2;
+}
+
+message InitializeEnvironments {
+  AutoResetMode autoResetMode = 1;
+  int32 requestedNumberOfEnvs = 2;
+}
+
+message EnvironmentDescription {
+  Space singleObservationSpace = 1;
+  Space singleActionSpace = 2;
+  int32 trueNumberOfEnvs = 3;
+}
+
+message Space {
+  int32 continuousSize = 1;
+  MinMax continuousRange = 2;
+  int32 discreteSize = 3;
+}
+
+message MinMax {
+  float minValue = 1;
+  float maxValue = 2;
+}
+
+message Reset {
+  repeated ResetParameters envsToReset = 1;
+  bool reloadScene = 2;
+}
+
+message ResetParameters {
+  int32 index = 1;
+  repeated float continuous = 2;
+}
+
+message Step {
+  repeated Action actions = 1;
+  optional int32 stepCount = 2;
+  optional float timeScale = 3;
+  bool applyActionEveryPhysicsStep = 4;
+}
+
+message Action {
+  int32 agentIndex = 1;
+
+  repeated float continuous = 2;
+  repeated int32 discrete = 3;
+}
+
+message Observation {
+  int32 index = 1;
+
+  repeated float continuous = 2;
+  repeated int32 discrete = 3;
+}
+
+message Observations {
+  repeated Observation observations = 1;
+}
+
+message StepResult {
+  Observation observation = 1;
+  float reward = 2;
+  bool done = 3;
+  bool truncated = 4;
+}
+
+
+message StepResults {
+  repeated StepResult stepResults = 1;
+  Info infos = 2;
+}
+
+message Screenshot {
+  Transform camera = 1;
+}
+
+message Info {
+  repeated FinalInfo final_infos = 1;
+  repeated Observation final_observations = 2;
+  repeated float custom = 10;
+}
+
+message FinalInfo {
+  int32 agentIndex = 1;
+  float episode_reward = 2;
+  float episode_length = 3;
+  repeated float custom = 10;
+}
+
+
+message Transform {
+  Vector3 position = 1;
+  optional Vector3 euler = 2;
+  optional Quaternion orientation = 3;
+}
+
+message Vector3 {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message Quaternion {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float w = 4;
+}
