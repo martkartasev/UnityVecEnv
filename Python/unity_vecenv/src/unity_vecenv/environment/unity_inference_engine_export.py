@@ -12,6 +12,7 @@ class InferenceEnginePolicy(nn.Module):
     - deterministic action = actor_mean(obs)
     - (optional) also output value network
     """
+
     def __init__(self, agent: nn.Module, export_value: bool = True, clamp_actions: bool = True):
         super().__init__()
         self.agent = agent
@@ -35,6 +36,7 @@ class InferenceEnginePolicy(nn.Module):
 def export_unity_onnx(agent, envs, onnx_path: str, device: torch.device):
     os.makedirs(os.path.dirname(onnx_path), exist_ok=True)
 
+    was_training = agent.training
     agent.eval()
     wrapper = InferenceEnginePolicy(agent, export_value=True, clamp_actions=True).to(device).eval()
 
@@ -55,4 +57,7 @@ def export_unity_onnx(agent, envs, onnx_path: str, device: torch.device):
         },
         do_constant_folding=True,
     )
+
+    if was_training:
+        agent.train()
     print(f"Sentis-compatible ONNX saved to: {onnx_path}")

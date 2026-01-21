@@ -62,7 +62,7 @@ class Args:
     """the lambda for the general advantage estimation"""
     num_minibatches: int = 10  # 32
     """the number of mini-batches"""
-    update_epochs: int = 3  # 10
+    update_epochs: int = 4  # 10
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
