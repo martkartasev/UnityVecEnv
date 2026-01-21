@@ -33,23 +33,19 @@ class InferenceEnginePolicy(nn.Module):
 
 
 def export_unity_onnx(agent, envs, onnx_path: str, device: torch.device):
+    os.makedirs(os.path.dirname(onnx_path), exist_ok=True)
+
     agent.eval()
-
-    # Sentis supports dynamic input dims; at minimum make batch dynamic. :contentReference[oaicite:1]{index=1}
-    obs_dim = int(np.array(envs.single_observation_space.shape).prod())
-
     wrapper = InferenceEnginePolicy(agent, export_value=True, clamp_actions=True).to(device).eval()
 
-    # Dummy input: batch=1
+    obs_dim = int(np.array(envs.single_observation_space.shape).prod())
     dummy_obs = torch.zeros(1, obs_dim, device=device, dtype=torch.float32)
-
-    os.makedirs(os.path.dirname(onnx_path), exist_ok=True)
 
     torch.onnx.export(
         wrapper,
         (dummy_obs,),
         onnx_path,
-        opset_version=15,                  # Unity recommends opset 15. :contentReference[oaicite:2]{index=2}
+        opset_version=15,
         input_names=["obs"],
         output_names=["action_mean", "value"],
         dynamic_axes={
