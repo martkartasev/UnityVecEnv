@@ -14,6 +14,7 @@ from gymnasium.wrappers.vector import NormalizeReward, NormalizeObservation, Cli
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
+from unity_vecenv.environment.unity_inference_engine_export import export_unity_onnx
 from unity_vecenv.environment.unity_vector_env import UnityVectorEnv
 
 
@@ -45,7 +46,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Watercraft-v1"
     """the id of the environment"""
-    total_timesteps: int = 30000000
+    total_timesteps: int = 15000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
@@ -55,13 +56,13 @@ class Args:
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
-    gamma: float = 0.995 # 0.99
+    gamma: float = 0.995  # 0.99
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 10 # 32
+    num_minibatches: int = 10  # 32
     """the number of mini-batches"""
-    update_epochs: int = 3 # 10
+    update_epochs: int = 3  # 10
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
@@ -69,7 +70,7 @@ class Args:
     """the surrogate clipping coefficient"""
     clip_vloss: bool = True
     """Toggles whether or not to use a clipped loss for the value function, as per the paper."""
-    ent_coef: float = 0.0 #0.005?
+    ent_coef: float = 0.0  # 0.005?
     """coefficient of the entropy"""
     vf_coef: float = 0.5
     """coefficient of the value function"""
@@ -322,8 +323,11 @@ if __name__ == "__main__":
     if args.save_model:
         model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
         torch.save(agent.state_dict(), model_path)
-        # envs.export_onnx(agent, model_path)
         print(f"model saved to {model_path}")
+
+        onnx_path = f"runs/{run_name}/{args.exp_name}.sentis.onnx"
+        export_unity_onnx(agent, envs, onnx_path, device)
+        print(f"onnx saved to {onnx_path}")
         # from cleanrl_utils.evals.ppo_eval import evaluate
         #
         # episodic_returns = evaluate(
@@ -348,14 +352,3 @@ if __name__ == "__main__":
 
     envs.close()
     writer.close()
-    #
-    # def export_onnx(self, model, input_dim, epoch):
-    #     dummy_input = torch.randn(1, input_dim)
-    #
-    #     torch.onnx.export(
-    #         model,
-    #         dummy_input,
-    #         f"results/{self.run_name}/residual_{self.run_name}_{epoch}.onnx",
-    #         input_names=['input'],
-    #         output_names=['output'],
-    #         opset_version=15)
