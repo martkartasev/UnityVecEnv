@@ -60,7 +60,7 @@ namespace Scripts.VecEnv.Core
             AgentIndex = index;
         }
 
-        protected internal void DummyAction()
+        protected internal void DoInternalAction()
         {
             SetAction(ProduceDummyAction(new Action(continuousActions, discreteActions.Count)));
         }

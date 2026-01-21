@@ -160,7 +160,7 @@ namespace Scripts.VecEnv.Core
             _agents.ForEach(agent => agent.DoStep());
             _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running)
                 .ForEach(doneAgent => doneAgent.DoReset());
-            _agents.ForEach(agent => agent.DummyAction());
+            _agents.ForEach(agent => agent.DoInternalAction());
         }
 
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
