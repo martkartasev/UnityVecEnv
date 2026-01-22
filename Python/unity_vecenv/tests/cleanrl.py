@@ -88,6 +88,17 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 
+def make_env():
+    env = UnityVectorEnv(start_process=True,
+                         num_envs=args.num_envs,
+                         time_scale=100,
+                         no_graphics=True)
+    env = ClipAction(env)
+    #   env = NormalizeObservation(env)
+    env = RecordEpisodeStatistics(env)
+    return env
+
+
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
@@ -124,17 +135,6 @@ class Agent(nn.Module):
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
-
-
-def make_env():
-    env = UnityVectorEnv(start_process=True,
-                         num_envs=args.num_envs,
-                         time_scale=100,
-                         no_graphics=True)
-    env = ClipAction(env)
-    #   env = NormalizeObservation(env)
-    env = RecordEpisodeStatistics(env)
-    return env
 
 
 if __name__ == "__main__":
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     envs = make_env()
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
     print(run_name)
-    print("batch: " + str(args.batch_size) + "\n minibatch:" + str(args.minibatch_size) + "\n iterations:" + str(args.num_iterations))
+    print("batch/buffer: " + str(args.batch_size) + "\nminibatch:" + str(args.minibatch_size) + "\niterations:" + str(args.num_iterations))
 
     agent = Agent(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
