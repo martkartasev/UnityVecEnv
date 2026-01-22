@@ -81,6 +81,11 @@ namespace Scripts.VecEnv.Core
             _agents.Remove(externalAgent);
         }
 
+        private void Start()
+        {
+            _agents.ForEach(agent => agent.DoInitialize());
+        }
+
         public void FixedUpdate()
         {
             do
@@ -172,6 +177,8 @@ namespace Scripts.VecEnv.Core
 
             yield return new WaitForFixedUpdate();
             Spawner.InitializeEnvAndRegisterAgents();
+            _agents.ForEach(agent => agent.DoInitialize());
+
             _environmentDescription.AgentCount = _agents.Count;
 
             _initialized = true;
