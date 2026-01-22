@@ -89,10 +89,10 @@ class Args:
 
 
 def make_env():
-    env = UnityVectorEnv(start_process=True,
+    env = UnityVectorEnv(start_process=False,
                          num_envs=args.num_envs,
                          time_scale=100,
-                         no_graphics=True)
+                         no_graphics=False)
     env = ClipAction(env)
     #   env = NormalizeObservation(env)
     env = RecordEpisodeStatistics(env)

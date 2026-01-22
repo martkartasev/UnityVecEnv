@@ -21,6 +21,7 @@ namespace Scripts.VecEnv.Core
         public static int physicsStepsPerGymStep = 10;
 
         public event System.Action PreObservation;
+        public event System.Action PostInitialize;
 
         private IExternalCommunication _communicator;
         private List<GymAgent> _agents = new();
@@ -84,6 +85,7 @@ namespace Scripts.VecEnv.Core
         private void Start()
         {
             _agents.ForEach(agent => agent.DoInitialize());
+            PostInitialize?.Invoke();
         }
 
         public void FixedUpdate()
@@ -178,6 +180,7 @@ namespace Scripts.VecEnv.Core
             yield return new WaitForFixedUpdate();
             Spawner.InitializeEnvAndRegisterAgents();
             _agents.ForEach(agent => agent.DoInitialize());
+            PostInitialize?.Invoke();
 
             _environmentDescription.AgentCount = _agents.Count;
 
