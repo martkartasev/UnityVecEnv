@@ -5,6 +5,7 @@ using System.Linq;
 using Scripts.VecEnv.Message;
 using Scripts.VecEnv.Networking;
 using UnityEngine;
+using Action = System.Action;
 using Info = Scripts.VecEnv.Message.Info;
 using Reset = Scripts.VecEnv.Message.Reset;
 using Step = Scripts.VecEnv.Message.Step;
@@ -20,8 +21,9 @@ namespace Scripts.VecEnv.Core
         public static GymVecEnvManager Instance => _sLazy.Value;
         public static int physicsStepsPerGymStep = 10;
 
-        public event System.Action PreObservation;
-        public event System.Action PostInitialize;
+        public event Action PreObservation;
+        public event Action EarlyObservation;
+        public event Action PostInitialize;
 
         private IExternalCommunication _communicator;
         private List<GymAgent> _agents = new();
@@ -161,6 +163,7 @@ namespace Scripts.VecEnv.Core
 
         private void DummyStep()
         {
+            EarlyObservation?.Invoke();
             PreObservation?.Invoke();
             _agents.ForEach(agent => agent.ProduceObservation());
             _agents.ForEach(agent => agent.DoCollectReward());
@@ -222,6 +225,11 @@ namespace Scripts.VecEnv.Core
         private bool ManageStep(Step step, bool applyAction)
         {
             bool continueProcessing = _physicsStepsRemaining-- > 0;
+
+            if (_physicsStepsRemaining == step.PhysicsStepCount / 2)
+            {
+                EarlyObservation?.Invoke();
+            }
 
             if (continueProcessing)
             {

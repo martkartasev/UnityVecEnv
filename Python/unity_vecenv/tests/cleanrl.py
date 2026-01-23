@@ -46,7 +46,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Watercraft-v1"
     """the id of the environment"""
-    total_timesteps: int = 15000000
+    total_timesteps: int = 30000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
@@ -92,6 +92,7 @@ def make_env():
     env = UnityVectorEnv(start_process=True,
                          num_envs=args.num_envs,
                          time_scale=100,
+                         port=50011,
                          no_graphics=True)
     env = ClipAction(env)
     #   env = NormalizeObservation(env)
@@ -139,6 +140,8 @@ class Agent(nn.Module):
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
+    envs = make_env()
+    args.num_envs = envs.num_envs
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
@@ -171,7 +174,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
     # env setup
-    envs = make_env()
+
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
     print(run_name)
     print("batch/buffer: " + str(args.batch_size) + "\nminibatch:" + str(args.minibatch_size) + "\niterations:" + str(args.num_iterations))
