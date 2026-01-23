@@ -5,6 +5,7 @@ import numpy as np
 from gymnasium import spaces
 from gymnasium.vector import VectorEnv, AutoresetMode
 
+from unity_vecenv.environment.network_utils import is_port_in_use
 from unity_vecenv.environment.unity_client import start_client
 from unity_vecenv.environment.unity_process import start_unity_process
 from unity_vecenv.protobuf_gen.communication_pb2 import ResetParameters, Reset, Observations, Step, Action, StepResults, InitializeEnvironments, AutoResetMode
@@ -29,8 +30,12 @@ class UnityVectorEnv(VectorEnv):
         }
         self.time_scale = time_scale
         self.physics_steps_per_action = physics_steps_per_action
-        self.process = start_unity_process("", port=port, nr_agents=num_envs, no_graphics=no_graphics, timescale=self.time_scale) if start_process else None
-        self.client = start_client(port=port)
+        self.port = port
+        while is_port_in_use(self.port):
+            self.port += 1
+
+        self.process = start_unity_process("", port=self.port, nr_agents=num_envs, no_graphics=no_graphics, timescale=self.time_scale) if start_process else None
+        self.client = start_client(port=self.port)
 
         environment_description = self.initialize_environment(num_envs)
         if environment_description.trueNumberOfEnvs == 0:
