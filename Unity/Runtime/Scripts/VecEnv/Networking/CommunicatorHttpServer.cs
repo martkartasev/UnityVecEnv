@@ -318,6 +318,7 @@ namespace Scripts.VecEnv.Networking
         {
             context.Response.ContentLength64 = bytes.Length;
             context.Response.ContentType = "application/x-protobuf";
+            context.Response.StatusCode = 200;
 
             var output = context.Response.OutputStream;
             await output.WriteAsync(bytes, 0, bytes.Length);

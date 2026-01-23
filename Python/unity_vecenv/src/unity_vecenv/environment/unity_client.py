@@ -52,17 +52,22 @@ class SimClient:
         while attempts < 20:
             try:
                 response = requests.post(
-                    f'http://localhost:{self.port}/{method}',
+                    f'http://localhost:{self.port}/{method}/',
                     data=msg,
                     headers={
-                        'Content-Type': 'application/octet-stream',
+                        'Content-Type': 'application/x-protobuf',
                     },
+                    allow_redirects=False,
                     **kwargs
                 )
+                if response.status_code != 200:
+                    print("status:", response.status_code)
+                    print("headers:", response.headers.get("Content-Type"), response.headers.get("Location"))
+                    print("body head:", response.content[:200])
                 response.raise_for_status()
                 return response.content
-            except (ConnectionRefusedError, ConnectionError, requests.exceptions.ConnectionError):
-                print("Connection refused, retrying...")
+            except (ConnectionRefusedError, ConnectionError, requests.exceptions.ConnectionError, HTTPError) as e:
+                print("Connection failed, retrying...")
                 time.sleep(1)
                 attempts += 1
 
