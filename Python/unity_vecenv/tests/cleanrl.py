@@ -46,7 +46,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Watercraft-v1"
     """the id of the environment"""
-    total_timesteps: int = 30000000
+    total_timesteps: int = 50000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
