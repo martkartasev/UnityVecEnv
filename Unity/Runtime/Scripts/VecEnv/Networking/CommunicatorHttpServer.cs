@@ -120,7 +120,6 @@ namespace Scripts.VecEnv.Networking
             {
                 try
                 {
-                   
                     l.Prefixes.Add($"http://localhost:{channel}/step/");
                     l.Prefixes.Add($"http://127.0.0.1:{channel}/step/");
 
@@ -239,12 +238,18 @@ namespace Scripts.VecEnv.Networking
             _initializeTcs = new TaskCompletionSource<ExternalCommunication.EnvironmentDescription>(TaskCreationOptions.RunContinuationsAsynchronously);
             var tcs = _initializeTcs;
 
-            var description = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(5), onTimeout: () =>
+            var description = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(30), onTimeout: () =>
             {
-                Debug.LogWarning("No reset result produced before timeout");
-                return new ExternalCommunication.EnvironmentDescription();
+                Debug.LogWarning("No initializet result produced before timeout");
+                return null;
             });
 
+            if (description == null)
+            {
+                ReturnError(context, 500, "No initial initialization result");
+                return;
+            }
+            
             WriteBytesToOutputStream(context, description.ToByteArray());
         }
 
@@ -257,11 +262,17 @@ namespace Scripts.VecEnv.Networking
             _resetTcs = new TaskCompletionSource<Observations>(TaskCreationOptions.RunContinuationsAsynchronously);
             var tcs = _resetTcs;
 
-            var obs = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(5), onTimeout: () =>
+            var obs = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(30), onTimeout: () =>
             {
                 Debug.LogWarning("No reset result produced before timeout");
-                return new Observations();
+                return null;
             });
+            
+            if (obs == null)
+            {
+                ReturnError(context, 500, "No reset result produced before timeout");
+                return;
+            }
 
             WriteBytesToOutputStream(context, obs.ToByteArray());
         }
@@ -275,11 +286,17 @@ namespace Scripts.VecEnv.Networking
             _stepTcs = new TaskCompletionSource<StepResults>(TaskCreationOptions.RunContinuationsAsynchronously);
             var tcs = _stepTcs;
 
-            var sr = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(5), onTimeout: () =>
+            var sr = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(30), onTimeout: () =>
             {
                 Debug.LogWarning("No step result produced before timeout");
-                return new StepResults();
+                return null;
             });
+            
+            if (sr == null)
+            {
+                ReturnError(context, 500, "No step result produced before timeout");
+                return;
+            }
 
             WriteBytesToOutputStream(context, sr.ToByteArray());
         }
@@ -297,14 +314,32 @@ namespace Scripts.VecEnv.Networking
         }
 
 
-        private static void WriteBytesToOutputStream(HttpListenerContext context, byte[] bytes)
+        private static async void WriteBytesToOutputStream(HttpListenerContext context, byte[] bytes)
         {
             context.Response.ContentLength64 = bytes.Length;
+            context.Response.ContentType = "application/x-protobuf";
 
             var output = context.Response.OutputStream;
-            output.Write(bytes, 0, bytes.Length);
+            await output.WriteAsync(bytes, 0, bytes.Length);
+            await context.Response.OutputStream.FlushAsync();
         }
 
+
+        private static void ReturnError(
+            HttpListenerContext context,
+            int status,
+            string message = null)
+        {
+            context.Response.StatusCode = status;
+            context.Response.ContentType = "text/plain";
+
+            if (!string.IsNullOrEmpty(message))
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes(message);
+                context.Response.ContentLength64 = bytes.Length;
+                context.Response.OutputStream.Write(bytes, 0, bytes.Length);
+            }
+        }
 
         public void Dispose()
         {

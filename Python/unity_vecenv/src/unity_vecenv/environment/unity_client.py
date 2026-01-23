@@ -22,7 +22,7 @@ class SimClient:
 
         while attempts < 20:
             try:
-                obs_bytes = self.do_request(InitializeEnvironments.SerializeToString(message), "initialize")
+                obs_bytes = self.do_request(InitializeEnvironments.SerializeToString(message), "initialize", timeout=30)
                 environment_description = EnvironmentDescription.FromString(obs_bytes)
                 break
             except DecodeError:
@@ -36,15 +36,16 @@ class SimClient:
         return environment_description
 
     def reset(self, message: Reset) -> Observations:
-        obs_bytes = self.do_request(Reset.SerializeToString(message), "reset", timeout=100)
+        obs_bytes = self.do_request(Reset.SerializeToString(message), "reset", timeout=30)
         observations = Observations.FromString(obs_bytes)
 
         return observations
 
     def step(self, message: Step) -> StepResults:
-        obs_bytes = self.do_request(Step.SerializeToString(message), "step")
+        obs_bytes = self.do_request(Step.SerializeToString(message), "step", timeout=30)
         observations = StepResults.FromString(obs_bytes)
         return observations
+
 
     def do_request(self, msg, method, **kwargs):
         attempts = 0
@@ -58,6 +59,7 @@ class SimClient:
                     },
                     **kwargs
                 )
+                response.raise_for_status()
                 return response.content
             except (ConnectionRefusedError, ConnectionError, requests.exceptions.ConnectionError):
                 print("Connection refused, retrying...")

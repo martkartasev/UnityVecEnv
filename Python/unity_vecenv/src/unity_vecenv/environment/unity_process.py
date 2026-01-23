@@ -5,7 +5,7 @@ import subprocess
 def start_unity_process(executable_path: str,
                         nr_agents: int = 1,
                         port: int = 10000,
-                        log_file: str = "",
+                        log_file: str = "./",
                         timescale: float = 1,
                         decision_period: int = 10,
                         no_graphics: bool = True):
@@ -15,7 +15,7 @@ def start_unity_process(executable_path: str,
             "-channel", str(port),  # Param to change connection port. If you want to start multiple instances
             ]
     if log_file != "":
-        args += ["-log", log_file]
+        args += ["-logfile", str(port) + ".log"]
 
     if timescale != 1:
         args += ["-timescale", str(timescale)]
