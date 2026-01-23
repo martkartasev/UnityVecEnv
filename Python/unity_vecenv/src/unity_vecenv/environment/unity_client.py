@@ -1,6 +1,7 @@
 import time
 
 import requests
+import traceback
 from google.protobuf.message import DecodeError
 
 from unity_vecenv.protobuf_gen.communication_pb2 import Reset, Observations, Step, StepResults, EnvironmentDescription, InitializeEnvironments
@@ -15,6 +16,7 @@ def start_client(port: int = 50010):
 class SimClient:
     def __init__(self, port):
         self.port = port
+        self.session = requests.Session()
 
     def initialize(self, message: InitializeEnvironments) -> EnvironmentDescription:
         attempts = 0
@@ -51,8 +53,8 @@ class SimClient:
         attempts = 0
         while attempts < 20:
             try:
-                response = requests.post(
-                    f'http://localhost:{self.port}/{method}/',
+                response = self.session.post(
+                    f'http://127.0.0.1:{self.port}/{method}/',
                     data=msg,
                     headers={
                         'Content-Type': 'application/x-protobuf',
@@ -64,12 +66,12 @@ class SimClient:
                     print("status:", response.status_code)
                     print("headers:", response.headers.get("Content-Type"), response.headers.get("Location"))
                     print("body head:", response.content[:200])
+                    print(socket.getaddrinfo("localhost", self.port))
                 response.raise_for_status()
                 return response.content
-            except (ConnectionRefusedError, ConnectionError, requests.exceptions.ConnectionError, HTTPError) as e:
-                print("Connection failed, retrying...")
-                time.sleep(1)
+            except (ConnectionRefusedError, ConnectionError, requests.exceptions.ConnectionError,requests.exceptions.RequestException) as e:
                 attempts += 1
+                # Got to determine if this is a problem long term
 
-        print("Failed to connect after multiple attempts.")
+        print("Connection failed after multiple attempts.")
         return None
