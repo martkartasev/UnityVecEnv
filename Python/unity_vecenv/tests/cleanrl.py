@@ -100,6 +100,7 @@ def make_env():
 
     env = FlattenedVectorEnvThreaded([lambda ind=i: UnityVectorEnv(start_process=True, port=50012 + ind, num_envs=args.num_envs, no_graphics=True) for i in range(args.num_instances)])
     env = ClipAction(env)
+    #TODO Write logs to runs folder
     #   env = NormalizeObservation(env)
     env = RecordEpisodeStatistics(env)
     return env
