@@ -265,6 +265,7 @@ if __name__ == "__main__":
         # Optimizing the policy and value network
         b_inds = np.arange(args.batch_size)
         clipfracs = []
+
         t1 = time.time()
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
