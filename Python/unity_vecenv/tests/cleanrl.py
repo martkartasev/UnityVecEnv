@@ -53,6 +53,8 @@ class Args:
     """the learning rate of the optimizer"""
     num_envs: int = 300
     """the number of parallel game environments"""
+    num_instances: int = 6
+    """the number of parallel game environments per instance"""
     num_steps: int = 100
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
@@ -61,7 +63,7 @@ class Args:
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 8  # 32
+    num_minibatches: int = 16  # 32
     """the number of mini-batches"""
     update_epochs: int = 3  # 10
     """the K epochs to update the policy"""
@@ -96,7 +98,7 @@ def make_env():
     #                      port=50011,
     #                      no_graphics=True)
 
-    env = FlattenedVectorEnvThreaded([lambda ind=i: UnityVectorEnv(start_process=True, port=50012 + ind, num_envs=args.num_envs, no_graphics=True) for i in range(6)])
+    env = FlattenedVectorEnvThreaded([lambda ind=i: UnityVectorEnv(start_process=True, port=50012 + ind, num_envs=args.num_envs, no_graphics=True) for i in range(args.num_instances)])
     env = ClipAction(env)
     #   env = NormalizeObservation(env)
     env = RecordEpisodeStatistics(env)
