@@ -68,7 +68,7 @@ class UnityVectorEnv(VectorEnv):
 
         reset = self.client.reset(reset_msg)
         obs = self.reset_result_to_numpy(reset, self.num_envs)
-        return obs, None
+        return obs, {}
 
     def step(self, action):
         action_msg = self.map_action_to_proto(action)

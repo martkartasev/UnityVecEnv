@@ -15,6 +15,7 @@ from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
 from unity_vecenv.environment.unity_inference_engine_export import export_unity_onnx
+from unity_vecenv.environment.unity_multi_vec_env import FlattenedVectorEnvThreaded
 from unity_vecenv.environment.unity_vector_env import UnityVectorEnv
 
 
@@ -50,7 +51,7 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 600
+    num_envs: int = 300
     """the number of parallel game environments"""
     num_steps: int = 100
     """the number of steps to run in each environment per policy rollout"""
@@ -60,9 +61,9 @@ class Args:
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 10  # 32
+    num_minibatches: int = 8  # 32
     """the number of mini-batches"""
-    update_epochs: int = 4  # 10
+    update_epochs: int = 3  # 10
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
@@ -89,11 +90,13 @@ class Args:
 
 
 def make_env():
-    env = UnityVectorEnv(start_process=True,
-                         num_envs=args.num_envs,
-                         time_scale=100,
-                         port=50010,
-                         no_graphics=True)
+    # env = UnityVectorEnv(start_process=True,
+    #                      num_envs=args.num_envs,
+    #                      time_scale=100,
+    #                      port=50011,
+    #                      no_graphics=True)
+
+    env = FlattenedVectorEnvThreaded([lambda ind=i: UnityVectorEnv(start_process=True, port=50012 + ind, num_envs=args.num_envs, no_graphics=True) for i in range(6)])
     env = ClipAction(env)
     #   env = NormalizeObservation(env)
     env = RecordEpisodeStatistics(env)
@@ -204,6 +207,7 @@ if __name__ == "__main__":
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
 
+        t0 = time.time()
         for step in range(0, args.num_steps):
             global_step += args.num_envs
             obs[step] = next_obs
@@ -217,7 +221,9 @@ if __name__ == "__main__":
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
+
             next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
@@ -228,6 +234,7 @@ if __name__ == "__main__":
                         # print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+        t_env = time.time() - t0
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -256,6 +263,7 @@ if __name__ == "__main__":
         # Optimizing the policy and value network
         b_inds = np.arange(args.batch_size)
         clipfracs = []
+        t1 = time.time()
         for epoch in range(args.update_epochs):
             np.random.shuffle(b_inds)
             for start in range(0, args.batch_size, args.minibatch_size):
@@ -306,6 +314,7 @@ if __name__ == "__main__":
 
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
+        t_train = time.time() - t1
 
         y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
         var_y = np.var(y_true)
@@ -320,7 +329,7 @@ if __name__ == "__main__":
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)))
+        print("SPS:", int(global_step / (time.time() - start_time)), "env_step_ms:", 1000 * t_env, "train_ms:", 1000 * t_train)
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     if args.save_model:
