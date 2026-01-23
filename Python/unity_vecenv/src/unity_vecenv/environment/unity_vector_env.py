@@ -31,7 +31,8 @@ class UnityVectorEnv(VectorEnv):
         self.time_scale = time_scale
         self.physics_steps_per_action = physics_steps_per_action
         self.port = port
-        while is_port_in_use(self.port):
+        while (start_process and is_port_in_use(self.port) or
+               (not start_process and not is_port_in_use(self.port))):
             self.port += 1
 
         self.process = start_unity_process("", port=self.port, nr_agents=num_envs, no_graphics=no_graphics, timescale=self.time_scale) if start_process else None
