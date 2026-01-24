@@ -354,7 +354,7 @@ namespace Scripts.VecEnv.Networking
 
         public void Dispose()
         {
-            isRunning = false;
+            isRunning = false; // TODO: Need to fix handling
             httpListener.Stop();
             listenerThread.Join();
         }
