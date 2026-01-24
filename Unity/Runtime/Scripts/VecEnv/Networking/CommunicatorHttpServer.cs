@@ -28,6 +28,7 @@ namespace Scripts.VecEnv.Networking
         private Thread listenerThread;
         private bool isRunning = true;
 
+        private readonly SemaphoreSlim _stepGate = new(1, 1);
         private TaskCompletionSource<Observations> _resetTcs;
         private TaskCompletionSource<StepResults> _stepTcs;
         private TaskCompletionSource<ExternalCommunication.EnvironmentDescription> _initializeTcs;
@@ -132,7 +133,7 @@ namespace Scripts.VecEnv.Networking
                     l.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
                     l.Start();
                 }
-                catch (SocketException e)
+                catch (SocketException)
                 {
                     l.Prefixes.Clear();
                     channel += 1;
@@ -150,8 +151,8 @@ namespace Scripts.VecEnv.Networking
                 HttpListenerContext context = null;
                 try
                 {
-                    context = httpListener.GetContext(); // blocks
-                    _ = Task.Run(() => HandleContextAsync(context));
+                    context = httpListener.GetContext();
+                    HandleContextAsync(context).GetAwaiter().GetResult();
                 }
                 catch (HttpListenerException)
                 {
@@ -220,6 +221,7 @@ namespace Scripts.VecEnv.Networking
             {
                 try
                 {
+                    if (context.Response.StatusCode != 200) Debug.Log("Closed request with response code " + context.Response.StatusCode);
                     context.Response.Close();
                 }
                 catch
@@ -249,8 +251,8 @@ namespace Scripts.VecEnv.Networking
                 ReturnError(context, 500, "No initial initialization result");
                 return;
             }
-            
-            WriteBytesToOutputStream(context, description.ToByteArray());
+
+            await WriteBytesToOutputStream(context, description.ToByteArray());
         }
 
         private async Task HandleResetAsync(HttpListenerContext context)
@@ -267,38 +269,46 @@ namespace Scripts.VecEnv.Networking
                 Debug.LogWarning("No reset result produced before timeout");
                 return null;
             });
-            
+
             if (obs == null)
             {
                 ReturnError(context, 500, "No reset result produced before timeout");
                 return;
             }
 
-            WriteBytesToOutputStream(context, obs.ToByteArray());
+            await WriteBytesToOutputStream(context, obs.ToByteArray());
         }
 
         private async Task HandleStepAsync(HttpListenerContext context)
         {
-            var incoming = Step.Parser.ParseFrom(context.Request.InputStream);
-
-            step = incoming;
-            _stepTcs?.TrySetCanceled();
-            _stepTcs = new TaskCompletionSource<StepResults>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var tcs = _stepTcs;
-
-            var sr = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(30), onTimeout: () =>
+            await _stepGate.WaitAsync();
+            try
             {
-                Debug.LogWarning("No step result produced before timeout");
-                return null;
-            });
-            
-            if (sr == null)
-            {
-                ReturnError(context, 500, "No step result produced before timeout");
-                return;
+                var incoming = Step.Parser.ParseFrom(context.Request.InputStream);
+
+                step = incoming;
+                _stepTcs?.TrySetCanceled();
+                _stepTcs = new TaskCompletionSource<StepResults>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var tcs = _stepTcs;
+
+                var sr = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(30), onTimeout: () =>
+                {
+                    Debug.LogWarning("No step result produced before timeout");
+                    return null;
+                });
+
+                if (sr == null)
+                {
+                    ReturnError(context, 500, "No step result produced before timeout");
+                    return;
+                }
+
+                await WriteBytesToOutputStream(context, sr.ToByteArray());
             }
-
-            WriteBytesToOutputStream(context, sr.ToByteArray());
+            finally
+            {
+                _stepGate.Release();
+            }
         }
 
         private static async Task<T> WaitWithTimeout<T>(Task<T> task, TimeSpan timeout, Func<T> onTimeout)
@@ -314,7 +324,7 @@ namespace Scripts.VecEnv.Networking
         }
 
 
-        private static async void WriteBytesToOutputStream(HttpListenerContext context, byte[] bytes)
+        private static async Task WriteBytesToOutputStream(HttpListenerContext context, byte[] bytes)
         {
             context.Response.ContentLength64 = bytes.Length;
             context.Response.ContentType = "application/x-protobuf";

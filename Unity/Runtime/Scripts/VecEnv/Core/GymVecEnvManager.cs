@@ -29,7 +29,6 @@ namespace Scripts.VecEnv.Core
         private List<GymAgent> _agents = new();
         private int _physicsStepsRemaining;
         private bool _firstResetComplete;
-        private bool _initialized;
 
         private bool _gymStepOngoing;
         private Step _gymStep;
@@ -187,7 +186,6 @@ namespace Scripts.VecEnv.Core
 
             _environmentDescription.AgentCount = _agents.Count;
 
-            _initialized = true;
             _gymStepOngoing = false;
             _physicsStepsRemaining = -1;
             callback?.Invoke(_environmentDescription);

@@ -2,6 +2,7 @@ import time
 
 import requests
 import traceback
+import socket
 from google.protobuf.message import DecodeError
 
 from unity_vecenv.protobuf_gen.communication_pb2 import Reset, Observations, Step, StepResults, EnvironmentDescription, InitializeEnvironments
@@ -70,8 +71,8 @@ class SimClient:
                 response.raise_for_status()
                 return response.content
             except (ConnectionRefusedError, ConnectionError, requests.exceptions.ConnectionError,requests.exceptions.RequestException) as e:
+                print("Connection refused:", str(self.port), e)
                 attempts += 1
-                # Got to determine if this is a problem long term
 
         print("Connection failed after multiple attempts.")
         return None

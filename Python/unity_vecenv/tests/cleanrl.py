@@ -51,7 +51,7 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 300
+    num_envs: int = 30
     """the number of parallel game environments"""
     num_instances: int = 6
     """the number of parallel game environments per instance"""
@@ -63,7 +63,7 @@ class Args:
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 16  # 32
+    num_minibatches: int = 32  # 32
     """the number of mini-batches"""
     update_epochs: int = 3  # 10
     """the K epochs to update the policy"""
@@ -92,13 +92,9 @@ class Args:
 
 
 def make_env():
-    # env = UnityVectorEnv(start_process=True,
-    #                      num_envs=args.num_envs,
-    #                      time_scale=100,
-    #                      port=50011,
-    #                      no_graphics=True)
+    env = UnityVectorEnv(start_process=False, num_envs=args.num_envs, time_scale=5, port=50010,no_graphics=False)
 
-    env = FlattenedVectorEnvThreaded([lambda ind=i: UnityVectorEnv(start_process=True, port=50012 + ind, num_envs=args.num_envs, no_graphics=True) for i in range(args.num_instances)])
+    # env = FlattenedVectorEnvThreaded([lambda ind=i: UnityVectorEnv(start_process=True, port=50012 + ind, num_envs=args.num_envs, no_graphics=True) for i in range(args.num_instances)])
     env = ClipAction(env)
     #TODO Write logs to runs folder
     #   env = NormalizeObservation(env)
