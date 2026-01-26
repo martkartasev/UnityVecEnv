@@ -15,7 +15,7 @@ def start_unity_process(executable_path: str,
             "-channel", str(port),  # Param to change connection port. If you want to start multiple instances
             ]
     if log_file != "":
-        args += ["-logfile", str(port) + ".log"]
+        args += ["-logfile", log_file + str(port) + ".log"]
 
     if timescale != 1:
         args += ["-timescale", str(timescale)]
