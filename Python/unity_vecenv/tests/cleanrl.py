@@ -92,13 +92,14 @@ class Args:
 
 
 def make_env():
-    # env = UnityVectorEnv(start_process=True, num_envs=args.num_envs, time_scale=5, port=50011,no_graphics=False,)
+    # env = UnityVectorEnv(start_process=False, num_envs=args.num_envs, time_scale=5, port=50010,no_graphics=False,)
 
     env = FlattenedVectorEnvThreaded([lambda ind=i: UnityVectorEnv(start_process=True,
                                                                    port=50012 + ind,
                                                                    num_envs=args.num_envs,
                                                                    physics_steps_per_action=10,
-                                                                   no_graphics=True) for i in range(args.num_instances)])
+                                                                   no_graphics=True,
+                                                                   log_file="./") for i in range(args.num_instances)])
     env = ClipAction(env)
     #TODO Write logs to runs folder
     #   env = NormalizeObservation(env)

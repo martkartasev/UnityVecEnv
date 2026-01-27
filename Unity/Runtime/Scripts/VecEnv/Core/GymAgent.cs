@@ -3,6 +3,7 @@ using Scripts.VecEnv.Inference;
 using Scripts.VecEnv.Message;
 using Unity.InferenceEngine;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Scripts.VecEnv.Core
 {
@@ -20,7 +21,7 @@ namespace Scripts.VecEnv.Core
         private InferenceHelper _model;
         private AgentObservation _latestObservation;
 
-        [Header("Agent")] public int maxSteps;
+        [Header("Agent")] public int gymSteps;
 
         protected int CurrentStep;
         protected EnvironmentState DoneStatus;
@@ -29,7 +30,7 @@ namespace Scripts.VecEnv.Core
         protected abstract float CollectReward();
         protected abstract void Reset();
         public abstract void SetAction(Action action);
-        protected abstract EnvironmentState Step();
+        protected abstract EnvironmentState GymStep();
         protected abstract void CollectObservation(AgentObservation agentObservation);
 
         protected virtual void Initialize()
@@ -55,11 +56,11 @@ namespace Scripts.VecEnv.Core
             return produceObservation;
         }
 
-        protected internal EnvironmentState DoStep()
+        protected internal EnvironmentState DoGymStep()
         {
             CurrentStep++;
-            DoneStatus = Step();
-            if (DoneStatus == EnvironmentState.Running && CurrentStep >= maxSteps) DoneStatus = EnvironmentState.Truncated;
+            DoneStatus = GymStep();
+            if (DoneStatus == EnvironmentState.Running && CurrentStep >= gymSteps) DoneStatus = EnvironmentState.Truncated;
             return DoneStatus;
         }
 

@@ -19,7 +19,8 @@ class UnityVectorEnv(VectorEnv):
                  time_scale=10,
                  physics_steps_per_action: int = 10,
                  port: int = 50010,
-                 num_envs: int = 1):
+                 num_envs: int = 1,
+                 log_file: str = "", ):
         super(UnityVectorEnv, self).__init__()
 
         self.metadata = {
@@ -35,7 +36,7 @@ class UnityVectorEnv(VectorEnv):
                (not start_process and not is_port_in_use(self.port))):
             self.port += 1
 
-        self.process = start_unity_process("", port=self.port, nr_agents=num_envs, no_graphics=no_graphics, timescale=self.time_scale) if start_process else None
+        self.process = start_unity_process("", port=self.port, nr_agents=num_envs, no_graphics=no_graphics, timescale=self.time_scale, log_file=log_file) if start_process else None
         self.client = start_client(port=self.port)
 
         environment_description = self.initialize_environment(num_envs)

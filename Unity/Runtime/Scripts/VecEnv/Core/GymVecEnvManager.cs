@@ -27,12 +27,14 @@ namespace Scripts.VecEnv.Core
 
         private IExternalCommunication _communicator;
         private List<GymAgent> _agents = new();
-        private int _physicsStepsRemaining;
-        private bool _firstResetComplete;
 
+        private bool _firstResetComplete;
+        private bool _connectionInitialized;
         private bool _gymStepOngoing;
+
         private Step _gymStep;
         private EnvironmentDescription _environmentDescription;
+        private Coroutine _disconnectedStepper;
         public AgentAndManagerSpawner Spawner { get; set; }
 
         static GymVecEnvManager CreateGymVecEnvManager()
@@ -96,81 +98,39 @@ namespace Scripts.VecEnv.Core
                 var fetchInitialize = _communicator.FetchInitialize();
                 if (fetchInitialize.HasValue)
                 {
-                    var e = DoInitialize(fetchInitialize.Value, init => _communicator.InitializeCompleted(init));
-                    StartCoroutine(e);
+                    StartCoroutine(DoInitialize(fetchInitialize.Value, init => _communicator.InitializeCompleted(init)));
                     return;
                 }
 
                 var fetchReset = _communicator.FetchReset();
-                if (!_firstResetComplete && !fetchReset.HasValue)
+                if (fetchReset.HasValue)
+                {
+                    StartCoroutine(DoReset(fetchReset.Value, obs => _communicator.ResetCompleted(obs)));
+                    return;
+                }
+
+                if (!_connectionInitialized && !_firstResetComplete)
                 {
 #if UNITY_EDITOR
-                    DummyStep();
+                    if (_disconnectedStepper == null) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
 #endif
                     return;
                 }
 
-                if (fetchReset.HasValue)
+                if (!_gymStepOngoing)
                 {
-                    var e = DoReset(fetchReset.Value, obs => _communicator.ResetCompleted(obs));
-                    StartCoroutine(e);
-                    return;
-                }
-
-                if (_gymStepOngoing)
-                {
-                    var continueProcessingStep = ManageStep(_gymStep, _gymStep.ApplyActionEveryStep);
-                    if (continueProcessingStep)
-                        return;
-                    PreObservation?.Invoke();
-
-                    var rewards = _agents.Select(agent => agent.DoCollectReward()).ToArray();
-                    var dones = _agents.Select(agent => agent.DoStep()).ToArray();
-                    var doneAgents = _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ToList();
-
-                    Info infos = new Info();
-                    if (doneAgents.Count > 0)
+                    var fetchNextStep = _communicator.FetchNextStep();
+                    if (fetchNextStep.HasValue)
                     {
-                        infos.Observations = doneAgents.Select(agent => agent.ProduceObservation()).ToArray();
-                        infos.Infos = doneAgents.Select(agent => new AgentInfo
-                        {
-                            EpisodeLength = agent.GetCurrentStep(),
-                            EpisodeReward = agent.GetEpisodeReward(),
-                            AgentIndex = agent.AgentIndex
-                        }).ToArray();
+                        _gymStep = ReceiveStep(fetchNextStep.Value);
+                        StartCoroutine(ManageStep(_gymStep,
+                            (agentObservations, dones, rewards, infos) => _communicator.StepCompleted(agentObservations, dones, rewards, infos)
+                        ));
                     }
-
-                    //TODO: Implement autoreset_mode, currently default to next.
-                    _communicator.StepCompleted(
-                        _agents.Select(agent => agent.ProduceObservation()).ToArray(),
-                        dones,
-                        rewards,
-                        infos);
-
-                    doneAgents.ForEach(agent => agent.DoReset());
-                }
-
-
-                var fetchNextStep = _communicator.FetchNextStep();
-                if (fetchNextStep.HasValue)
-                {
-                    _gymStep = fetchNextStep.Value;
-                    ReceiveStep(_gymStep);
                 }
             } while (!_gymStepOngoing);
         }
 
-        private void DummyStep()
-        {
-            EarlyObservation?.Invoke();
-            PreObservation?.Invoke();
-            _agents.ForEach(agent => agent.ProduceObservation());
-            _agents.ForEach(agent => agent.DoCollectReward());
-            _agents.ForEach(agent => agent.DoStep());
-            _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running)
-                .ForEach(doneAgent => doneAgent.DoReset());
-            _agents.ForEach(agent => agent.DoInternalAction());
-        }
 
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
         {
@@ -179,15 +139,15 @@ namespace Scripts.VecEnv.Core
                 Spawner.SpawnAgents(initializeEnvironments.AgentCount);
             }
 
+            _gymStepOngoing = false;
+            _firstResetComplete = false;
+            
             yield return new WaitForFixedUpdate();
             Spawner.InitializeEnvAndRegisterAgents();
             _agents.ForEach(agent => agent.DoInitialize());
             PostInitialize?.Invoke();
 
             _environmentDescription.AgentCount = _agents.Count;
-
-            _gymStepOngoing = false;
-            _physicsStepsRemaining = -1;
             callback?.Invoke(_environmentDescription);
         }
 
@@ -200,7 +160,6 @@ namespace Scripts.VecEnv.Core
             }
 
             _gymStepOngoing = false;
-            _physicsStepsRemaining = -1;
 
             yield return new WaitForFixedUpdate();
 
@@ -211,38 +170,94 @@ namespace Scripts.VecEnv.Core
         }
 
 
-        private void ReceiveStep(Step step)
+        private Step ReceiveStep(Step step)
         {
-            _gymStepOngoing = true;
             Time.timeScale = step.TimeScale;
-            _physicsStepsRemaining = step.PhysicsStepCount == 0 ? physicsStepsPerGymStep : step.PhysicsStepCount;
 
-            ManageStep(step, true);
+            if (step.PhysicsStepCount == 0) step.PhysicsStepCount = physicsStepsPerGymStep;
+
+            for (int i = 0; i < _agents.Count; i++)
+            {
+                _agents[i].SetAction(step.AgentActions[i]);
+            }
+
+            _gymStepOngoing = true;
+            return step;
         }
 
-        private bool ManageStep(Step step, bool applyAction)
+        private IEnumerator ManageStep(Step step, Action<AgentObservation[], EnvironmentState[], float[], Info> completedCallback)
         {
-            bool continueProcessing = _physicsStepsRemaining-- > 0;
-
-            if (_physicsStepsRemaining == step.PhysicsStepCount / 2)
+            for (int i = 0; i < step.PhysicsStepCount; i++)
             {
-                EarlyObservation?.Invoke();
-            }
+                if (!_gymStepOngoing) yield break;
 
-            if (continueProcessing)
-            {
-                _agents.ForEach(agent => agent.DoStep());
-                if (applyAction)
+                if (i == step.PhysicsStepCount / 2)
                 {
-                    for (int i = 0; i < _agents.Count; i++)
-                    {
-                        _agents[i].SetAction(step.AgentActions[i]);
-                    }
+                    EarlyObservation?.Invoke();
                 }
+
+                yield return new WaitForFixedUpdate();
             }
 
-            _gymStepOngoing = continueProcessing;
-            return continueProcessing;
+
+            PreObservation?.Invoke();
+
+            var rewards = _agents.Select(agent => agent.DoCollectReward()).ToArray();
+            var dones = _agents.Select(agent => agent.DoGymStep()).ToArray();
+            var doneAgents = _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ToList();
+
+            Info infos = new Info();
+            if (doneAgents.Count > 0)
+            {
+                infos.Observations = doneAgents.Select(agent => agent.ProduceObservation()).ToArray();
+                infos.Infos = doneAgents.Select(agent => new AgentInfo
+                {
+                    EpisodeLength = agent.GetCurrentStep(),
+                    EpisodeReward = agent.GetEpisodeReward(),
+                    AgentIndex = agent.AgentIndex
+                }).ToArray();
+            }
+
+            //TODO: Implement autoreset_mode, currently default to next.
+            var agentObservations = _agents.Select(agent => agent.ProduceObservation()).ToArray();
+            completedCallback.Invoke(agentObservations, dones, rewards, infos);
+
+            doneAgents.ForEach(agent => agent.DoReset());
+
+            _gymStepOngoing = false;
+        }
+
+        private IEnumerator DisconnectedActionStepper()
+        {
+            _agents.ForEach(agent => agent.DoReset());
+            _agents.ForEach(agent => agent.ProduceObservation());
+            _agents.ForEach(agent => agent.DoInternalAction());
+
+            while (!_gymStepOngoing && !_firstResetComplete && !_connectionInitialized)
+            {
+                for (int i = 0; i < physicsStepsPerGymStep; i++)
+                {
+                    if (_gymStepOngoing)
+                    {
+                        _disconnectedStepper = null;
+                        yield break;
+                    }
+
+                    yield return new WaitForFixedUpdate();
+                }
+
+                _agents.ForEach(agent => agent.DoCollectReward());
+                _agents.ForEach(agent => agent.DoGymStep());
+                _agents.ForEach(agent => agent.ProduceObservation());
+                _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ForEach(agent =>
+                {
+                    agent.DoReset();
+                    agent.ProduceObservation();
+                });
+                _agents.ForEach(agent => agent.DoInternalAction());
+            }
+
+            _disconnectedStepper = null;
         }
 
         private void OnDestroy()
