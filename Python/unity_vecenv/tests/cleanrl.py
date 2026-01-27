@@ -47,7 +47,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Watercraft-v1"
     """the id of the environment"""
-    total_timesteps: int = 25000000
+    total_timesteps: int = 50000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
@@ -92,17 +92,15 @@ class Args:
 
 
 def make_env():
-    # env = UnityVectorEnv(start_process=False, num_envs=args.num_envs, time_scale=5, port=50010,no_graphics=False,)
+    # env = UnityVectorEnv(start_process=False, num_envs=args.num_envs, time_scale=5, port=50010,no_graphics=False,log_file="")
 
     env = FlattenedVectorEnvThreaded([lambda ind=i: UnityVectorEnv(start_process=True,
                                                                    port=50012 + ind,
                                                                    num_envs=args.num_envs,
                                                                    physics_steps_per_action=10,
                                                                    no_graphics=True,
-                                                                   log_file="./") for i in range(args.num_instances)])
+                                                                   log_file="") for i in range(args.num_instances)])
     env = ClipAction(env)
-    #TODO Write logs to runs folder
-    #   env = NormalizeObservation(env)
     env = RecordEpisodeStatistics(env)
     return env
 

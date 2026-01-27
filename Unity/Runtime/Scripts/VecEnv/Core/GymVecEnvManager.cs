@@ -141,7 +141,7 @@ namespace Scripts.VecEnv.Core
 
             _gymStepOngoing = false;
             _firstResetComplete = false;
-            
+
             yield return new WaitForFixedUpdate();
             Spawner.InitializeEnvAndRegisterAgents();
             _agents.ForEach(agent => agent.DoInitialize());
@@ -200,12 +200,11 @@ namespace Scripts.VecEnv.Core
             }
 
 
-            PreObservation?.Invoke();
-
             var rewards = _agents.Select(agent => agent.DoCollectReward()).ToArray();
             var dones = _agents.Select(agent => agent.DoGymStep()).ToArray();
             var doneAgents = _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ToList();
 
+            PreObservation?.Invoke();
             Info infos = new Info();
             if (doneAgents.Count > 0)
             {
@@ -243,17 +242,19 @@ namespace Scripts.VecEnv.Core
                         yield break;
                     }
 
+                    if (i == physicsStepsPerGymStep / 2)
+                    {
+                        EarlyObservation?.Invoke();
+                    }
+
                     yield return new WaitForFixedUpdate();
                 }
 
                 _agents.ForEach(agent => agent.DoCollectReward());
                 _agents.ForEach(agent => agent.DoGymStep());
+                PreObservation?.Invoke();
                 _agents.ForEach(agent => agent.ProduceObservation());
-                _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ForEach(agent =>
-                {
-                    agent.DoReset();
-                    agent.ProduceObservation();
-                });
+                _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ForEach(agent => { agent.DoReset(); });
                 _agents.ForEach(agent => agent.DoInternalAction());
             }
 

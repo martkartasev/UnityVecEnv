@@ -31,7 +31,7 @@ namespace Scripts.VecEnv.Core
         protected abstract void Reset();
         public abstract void SetAction(Action action);
         protected abstract EnvironmentState GymStep();
-        protected abstract void CollectObservation(AgentObservation agentObservation);
+        protected abstract void CollectObservation(ref AgentObservation observation);
 
         protected virtual void Initialize()
         {
@@ -51,7 +51,7 @@ namespace Scripts.VecEnv.Core
         protected internal AgentObservation ProduceObservation()
         {
             var produceObservation = new AgentObservation(continuousObservations, discreteActions.Count);
-            CollectObservation(produceObservation);
+            CollectObservation(ref produceObservation);
             _latestObservation = produceObservation;
             return produceObservation;
         }
