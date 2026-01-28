@@ -37,7 +37,7 @@ class UnityVectorEnv(VectorEnv):
                (not start_process and not is_port_in_use(self.port))):
             self.port += 1
 
-        self.process = start_unity_process("", port=self.port, nr_agents=num_envs, no_graphics=no_graphics, timescale=self.time_scale, log_file=log_file) if start_process else None
+        self.process = start_unity_process(executable_path, port=self.port, nr_agents=num_envs, no_graphics=no_graphics, timescale=self.time_scale, log_file=log_file) if start_process else None
         self.client = start_client(port=self.port)
 
         environment_description = self.initialize_environment(num_envs)
