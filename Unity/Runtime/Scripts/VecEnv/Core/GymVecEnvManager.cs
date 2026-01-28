@@ -76,8 +76,11 @@ namespace Scripts.VecEnv.Core
 
         public void RegisterAgent(GymAgent externalAgent)
         {
-            externalAgent.AssignIndex(_agents.Count);
-            _agents.Add(externalAgent);
+            if (!_agents.Contains(externalAgent))
+            {
+                externalAgent.AssignIndex(_agents.Count);
+                _agents.Add(externalAgent);
+            }
         }
 
         public void UnregisterAgent(GymAgent externalAgent)
@@ -213,7 +216,7 @@ namespace Scripts.VecEnv.Core
                 {
                     EpisodeLength = agent.GetCurrentStep(),
                     EpisodeReward = agent.GetEpisodeReward(),
-                    AgentIndex = agent.AgentIndex
+                    AgentIndex = agent.GymAgentIndex
                 }).ToArray();
             }
 

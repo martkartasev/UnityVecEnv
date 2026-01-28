@@ -47,7 +47,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Watercraft-v1"
     """the id of the environment"""
-    total_timesteps: int = 50000000
+    total_timesteps: int = 75000000
     """total timesteps of the experiments"""
     learning_rate: float = 3e-4
     """the learning rate of the optimizer"""
@@ -209,6 +209,10 @@ if __name__ == "__main__":
             lrnow = frac * args.learning_rate
             optimizer.param_groups[0]["lr"] = lrnow
 
+        sum_episode_length = 0
+        sum_episode_return = 0
+        episode_count = 0
+
         t0 = time.time()
         for step in range(0, args.num_steps):
             global_step += args.num_envs
@@ -234,8 +238,10 @@ if __name__ == "__main__":
                 for info in infos["final_info"]:
                     if info and "episode" in info:
                         # print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                        sum_episode_return += info["episode"]["r"]
+                        sum_episode_length += info["episode"]["l"]
+                        episode_count += 1
+
         t_env = time.time() - t0
 
         # bootstrap value if not done
@@ -324,6 +330,11 @@ if __name__ == "__main__":
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
         # TRY NOT TO MODIFY: record rewards for plotting purposes
+        print("SPS:", int(global_step / (time.time() - start_time)), "env_step_ms:", 1000 * t_env, "train_ms:", 1000 * t_train)
+        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        writer.add_scalar("charts/avg_episodic_return", sum_episode_return / episode_count, global_step)
+        writer.add_scalar("charts/avg_episodic_length", sum_episode_length / episode_count, global_step)
+
         writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
@@ -332,8 +343,6 @@ if __name__ == "__main__":
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)), "env_step_ms:", 1000 * t_env, "train_ms:", 1000 * t_train)
-        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
 
     if args.save_model:
         model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"

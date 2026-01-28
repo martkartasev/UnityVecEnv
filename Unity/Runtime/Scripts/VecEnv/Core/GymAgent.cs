@@ -26,9 +26,14 @@ namespace Scripts.VecEnv.Core
         protected int CurrentStep;
         protected EnvironmentState DoneStatus;
         protected float EpisodeReward;
-        protected internal int AgentIndex;
+        protected internal int GymAgentIndex;
+
+        public int GetGymAgentIndex()
+        {
+            return GymAgentIndex;
+        }
         protected abstract float CollectReward();
-        protected abstract void Reset();
+        protected abstract void GymReset();
         public abstract void SetAction(Action action);
         protected abstract EnvironmentState GymStep();
         protected abstract void CollectObservation(ref AgentObservation observation);
@@ -76,12 +81,12 @@ namespace Scripts.VecEnv.Core
             EpisodeReward = 0;
             CurrentStep = 0;
             DoneStatus = EnvironmentState.Running;
-            Reset();
+            GymReset();
         }
 
         protected internal void AssignIndex(int index)
         {
-            AgentIndex = index;
+            GymAgentIndex = index;
         }
 
         protected internal void DoInternalAction()
