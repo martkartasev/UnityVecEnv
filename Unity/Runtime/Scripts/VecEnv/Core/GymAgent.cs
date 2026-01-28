@@ -34,7 +34,7 @@ namespace Scripts.VecEnv.Core
         }
         protected abstract float CollectReward();
         protected abstract void GymReset();
-        public abstract void SetAction(Action action);
+        public abstract void SetAction(AgentAction agentAction);
         protected abstract EnvironmentState GymStep();
         protected abstract void CollectObservation(ref AgentObservation observation);
 
@@ -42,9 +42,9 @@ namespace Scripts.VecEnv.Core
         {
         }
 
-        protected virtual Action ProduceDummyAction(Action dummyAction)
+        protected virtual AgentAction ProduceDummyAction(AgentAction dummyAgentAction)
         {
-            return dummyAction;
+            return dummyAgentAction;
         }
 
         protected internal void DoInitialize()
@@ -93,14 +93,14 @@ namespace Scripts.VecEnv.Core
         {
             if (_model != null && inferenceEnabled)
             {
-                SetAction(new Action
+                SetAction(new AgentAction
                 {
                     Continuous = _model.DoInference(_latestObservation.Continuous)
                 });
             }
             else
             {
-                SetAction(ProduceDummyAction(new Action(continuousActions, discreteActions.Count)));
+                SetAction(ProduceDummyAction(new AgentAction(continuousActions, discreteActions.Count)));
             }
         }
 

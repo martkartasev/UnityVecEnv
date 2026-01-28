@@ -21,9 +21,9 @@ namespace Scripts.VecEnv.Message
             return reset;
         }
 
-        public Action MapAction(ExternalCommunication.Action msg)
+        public AgentAction MapAction(ExternalCommunication.Action msg)
         {
-            return new Action
+            return new AgentAction
             {
                 Continuous = msg.Continuous.ToArray(),
                 Discrete = msg.Discrete.ToArray()

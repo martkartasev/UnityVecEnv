@@ -5,7 +5,7 @@ namespace Scripts.VecEnv.Message
     public interface IMessageMapper
     {
         Reset MapReset(ExternalCommunication.Reset resetParameters);
-        Action MapAction(ExternalCommunication.Action msg);
+        AgentAction MapAction(ExternalCommunication.Action msg);
         Step MapStep(ExternalCommunication.Step step);
         InitializeEnvironment MapInitialize(InitializeEnvironments initialize);
         ExternalCommunication.Info MapInfo(Info info);

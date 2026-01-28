@@ -14,6 +14,7 @@ from unity_vecenv.protobuf_gen.communication_pb2 import ResetParameters, Reset, 
 class UnityVectorEnv(VectorEnv):
 
     def __init__(self,
+                 executable_path: Optional[str] = None,
                  start_process: bool = True,
                  no_graphics: bool = True,
                  time_scale=10,

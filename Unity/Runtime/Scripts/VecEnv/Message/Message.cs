@@ -1,5 +1,7 @@
 ﻿using ExternalCommunication;
 using UnityEngine;
+using Quaternion = UnityEngine.Quaternion;
+using Vector3 = UnityEngine.Vector3;
 
 namespace Scripts.VecEnv.Message
 {
@@ -31,7 +33,7 @@ namespace Scripts.VecEnv.Message
 
     public struct Step
     {
-        public Action[] AgentActions;
+        public AgentAction[] AgentActions;
         public int PhysicsStepCount;
         public float TimeScale;
         public bool ApplyActionEveryStep;
@@ -74,6 +76,33 @@ namespace Scripts.VecEnv.Message
             return this;
         }
 
+        public AgentObservation AppendContinuous(float[] values)
+        {
+            foreach (var value in values)
+            {
+                AppendContinuous(value);
+            }
+
+            return this;
+        }
+
+        public AgentObservation AppendContinuous(Vector3 value)
+        {
+            AppendContinuous(value.x);
+            AppendContinuous(value.y);
+            AppendContinuous(value.z);
+            return this;
+        }
+
+        public AgentObservation AppendContinuous(Quaternion value)
+        {
+            AppendContinuous(value.x);
+            AppendContinuous(value.y);
+            AppendContinuous(value.z);
+            AppendContinuous(value.w);
+            return this;
+        }
+
         public AgentObservation AppendDiscrete(int value)
         {
             Discrete[_continuousIndex] = value;
@@ -88,6 +117,7 @@ namespace Scripts.VecEnv.Message
             {
                 log += continuous.ToString("0.00") + "  ";
             }
+
             Debug.Log(log);
         }
     }
@@ -103,12 +133,12 @@ namespace Scripts.VecEnv.Message
         public float[] Continuous;
     }
 
-    public struct Action
+    public struct AgentAction
     {
         public float[] Continuous;
         public int[] Discrete;
 
-        public Action(int continuousSize, int discreteSize)
+        public AgentAction(int continuousSize, int discreteSize)
         {
             Continuous = new float[continuousSize];
             Discrete = new int[discreteSize];
