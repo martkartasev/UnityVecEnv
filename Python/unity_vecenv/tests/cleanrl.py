@@ -55,7 +55,7 @@ class Args:
     """the number of parallel game environments"""
     num_instances: int = 6
     """the number of parallel game environments per instance"""
-    num_steps: int = 100
+    num_steps: int = 300
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -65,7 +65,7 @@ class Args:
     """the lambda for the general advantage estimation"""
     num_minibatches: int = 32  # 32
     """the number of mini-batches"""
-    update_epochs: int = 3  # 10
+    update_epochs: int = 5  # 10
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
