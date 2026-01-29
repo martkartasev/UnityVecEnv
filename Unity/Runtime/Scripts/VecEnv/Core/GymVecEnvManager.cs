@@ -19,7 +19,7 @@ namespace Scripts.VecEnv.Core
         private static Lazy<GymVecEnvManager> _sLazy = new(CreateGymVecEnvManager);
         public static bool IsInitialized => _sLazy.IsValueCreated;
         public static GymVecEnvManager Instance => _sLazy.Value;
-        public static int physicsStepsPerGymStep = 10;
+        public static int PhysicsStepsPerGymStep = 10;
 
         public event Action PreObservation;
         public event Action EarlyObservation;
@@ -177,7 +177,7 @@ namespace Scripts.VecEnv.Core
         {
             Time.timeScale = step.TimeScale;
 
-            if (step.PhysicsStepCount == 0) step.PhysicsStepCount = physicsStepsPerGymStep;
+            if (step.PhysicsStepCount == 0) step.PhysicsStepCount = PhysicsStepsPerGymStep;
 
             for (int i = 0; i < _agents.Count; i++)
             {
@@ -237,7 +237,7 @@ namespace Scripts.VecEnv.Core
 
             while (!_gymStepOngoing && !_firstResetComplete && !_connectionInitialized)
             {
-                for (int i = 0; i < physicsStepsPerGymStep; i++)
+                for (int i = 0; i < PhysicsStepsPerGymStep; i++)
                 {
                     if (_gymStepOngoing)
                     {
@@ -245,7 +245,7 @@ namespace Scripts.VecEnv.Core
                         yield break;
                     }
 
-                    if (i == physicsStepsPerGymStep / 2)
+                    if (i == PhysicsStepsPerGymStep / 2)
                     {
                         EarlyObservation?.Invoke();
                     }

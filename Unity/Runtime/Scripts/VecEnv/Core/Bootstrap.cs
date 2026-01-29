@@ -53,7 +53,7 @@ namespace Scripts.VecEnv.Core
             if (_args.TryGetValue("-decisionperiod", out var requestPeriod))
             {
                 int.TryParse(requestPeriod, out var requestPeriodValue);
-                //          CommunicationServiceOld.decisionPeriod = requestPeriodValue;
+                GymVecEnvManager.PhysicsStepsPerGymStep = requestPeriodValue;
                 Debug.Log($"Request period value: {requestPeriodValue}");
             }
         }
