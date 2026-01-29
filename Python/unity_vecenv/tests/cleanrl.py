@@ -335,8 +335,9 @@ if __name__ == "__main__":
         # TRY NOT TO MODIFY: record rewards for plotting purposes
         print("SPS:", int(global_step / (time.time() - start_time)), "env_step_ms:", 1000 * t_env, "train_ms:", 1000 * t_train)
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
-        writer.add_scalar("charts/avg_episodic_return", sum_episode_return / episode_count, global_step)
-        writer.add_scalar("charts/avg_episodic_length", sum_episode_length / episode_count, global_step)
+        if episode_count != 0:
+            writer.add_scalar("charts/avg_episodic_return", sum_episode_return / episode_count, global_step)
+            writer.add_scalar("charts/avg_episodic_length", sum_episode_length / episode_count, global_step)
 
         writer.add_scalar("charts/learning_rate", optimizer.param_groups[0]["lr"], global_step)
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
