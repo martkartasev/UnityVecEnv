@@ -20,21 +20,25 @@ namespace Scripts.VecEnv.Core
         public bool inferenceEnabled;
         private InferenceHelper _model;
         private AgentObservation _latestObservation;
+        private AgentAction _latestAction;
 
         [Header("Agent")] public int gymSteps;
 
         protected int CurrentStep;
         protected EnvironmentState DoneStatus;
         protected float EpisodeReward;
+        protected float PreviousEpisodeReward;
+        private float _latestStepReward;
         protected internal int GymAgentIndex;
 
         public int GetGymAgentIndex()
         {
             return GymAgentIndex;
         }
+
         protected abstract float CollectReward();
         protected abstract void GymReset();
-        public abstract void SetAction(AgentAction agentAction);
+        protected abstract void SetAction(AgentAction agentAction);
         protected abstract EnvironmentState GymStep();
         protected abstract void CollectObservation(ref AgentObservation observation);
 
@@ -71,17 +75,25 @@ namespace Scripts.VecEnv.Core
 
         protected internal float DoCollectReward()
         {
-            var reward = CollectReward();
-            EpisodeReward += reward;
-            return reward;
+            _latestStepReward = CollectReward();
+            EpisodeReward += _latestStepReward;
+            return _latestStepReward;
         }
 
         protected internal void DoReset()
         {
+            PreviousEpisodeReward = EpisodeReward;
             EpisodeReward = 0;
+            _latestStepReward = 0;
             CurrentStep = 0;
             DoneStatus = EnvironmentState.Running;
             GymReset();
+        }
+
+        protected internal void DoSetAction(AgentAction agentAction)
+        {
+            _latestAction = agentAction;
+            SetAction(agentAction);
         }
 
         protected internal void AssignIndex(int index)
@@ -93,14 +105,14 @@ namespace Scripts.VecEnv.Core
         {
             if (_model != null && inferenceEnabled)
             {
-                SetAction(new AgentAction
+                DoSetAction(new AgentAction
                 {
                     Continuous = _model.DoInference(_latestObservation.Continuous)
                 });
             }
             else
             {
-                SetAction(ProduceDummyAction(new AgentAction(continuousActions, discreteActions.Count)));
+                DoSetAction(ProduceDummyAction(new AgentAction(continuousActions, discreteActions.Count)));
             }
         }
 

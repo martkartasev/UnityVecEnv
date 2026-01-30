@@ -181,7 +181,7 @@ namespace Scripts.VecEnv.Core
 
             for (int i = 0; i < _agents.Count; i++)
             {
-                _agents[i].SetAction(step.AgentActions[i]);
+                _agents[i].DoSetAction(step.AgentActions[i]);
             }
 
             _gymStepOngoing = true;
