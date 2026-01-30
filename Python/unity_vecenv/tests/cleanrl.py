@@ -167,7 +167,7 @@ if __name__ == "__main__":
             monitor_gym=True,
             save_code=True,
         )
-    writer = SummaryWriter(f"runs/{run_name}")
+    writer = SummaryWriter(f"../../../../BoundaryValueBTRL/python/boundary_value_btrl/runs/{run_name}" )
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -349,11 +349,11 @@ if __name__ == "__main__":
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
 
     if args.save_model:
-        model_path = f"runs/{run_name}/{args.exp_name}.cleanrl_model"
+        model_path = f"../../../../BoundaryValueBTRL/python/boundary_value_btrl/runs/{run_name}/{args.exp_name}.cleanrl_model"
         torch.save(agent.state_dict(), model_path)
         print(f"model saved to {model_path}")
 
-        onnx_path = f"runs/{run_name}/{args.exp_name}.inference_engine.onnx"
+        onnx_path = f"../../../../BoundaryValueBTRL/python/boundary_value_btrl/runs/{run_name}/{args.exp_name}.inference_engine.onnx"
         export_unity_onnx(agent, envs, onnx_path, device)
         print(f"onnx saved to {onnx_path}")
         # from cleanrl_utils.evals.ppo_eval import evaluate

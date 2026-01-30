@@ -8,6 +8,6 @@ def test_execution():
     reset = env.reset()
     print(reset)
     while True:
-        sample = env.action_space.sample()
-        obs, dones, rewards, _, _ = env.step(sample)
+        actions = env.action_space.sample()
+        obs, dones, rewards, _, _ = env.step(actions)
         print(obs)
