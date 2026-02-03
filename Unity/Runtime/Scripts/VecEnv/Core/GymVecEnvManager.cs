@@ -131,7 +131,7 @@ namespace Scripts.VecEnv.Core
                         ));
                     }
                 }
-            } while (!_gymStepOngoing);
+            } while (!_gymStepOngoing); //TODO: This can cause hard blocks, need a reasonable timeout so we can quit gracefully
         }
 
 
