@@ -46,6 +46,7 @@ class UnityVectorEnv(VectorEnv):
 
         self.num_envs = environment_description.trueNumberOfEnvs
 
+        # TODO: Dict, Discrete obs / action spaces from Env.
         self.single_action_space = spaces.Box(low=-1, high=1, shape=(environment_description.singleActionSpace.continuousSize,), dtype=np.float32)
         self.single_observation_space = spaces.Box(low=-1, high=1, shape=(environment_description.singleObservationSpace.continuousSize,), dtype=np.float32)
         # TODO: Ranges ?
@@ -117,16 +118,13 @@ class UnityVectorEnv(VectorEnv):
             truncates[i] = result.truncated
             rewards[i] = result.reward
 
-        # --- Parse infos (Gymnasium-like) ---
+        # TODO: Investigate why the normal episode recorder is having trouble, might be able to get rid of this
         info = {}
 
-        # defaults: vector-env-style lists aligned with agent index
         final_info = [None] * self.num_envs
         final_observation = [None] * self.num_envs
 
-        # Step-level custom info (global array)
         if hasattr(results, "infos") and results.infos is not None:
-            # final_infos: per-agent terminal episode stats
             for fi in results.infos.final_infos:
                 idx = int(fi.agentIndex)
                 if 0 <= idx < self.num_envs:

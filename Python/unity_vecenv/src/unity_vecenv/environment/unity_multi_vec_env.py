@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from gymnasium import spaces
 from gymnasium.vector import VectorEnv, AutoresetMode
 
-# -------- Worker --------
-
 import threading
 
 

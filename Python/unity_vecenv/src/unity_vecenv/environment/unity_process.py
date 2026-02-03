@@ -23,7 +23,7 @@ def start_unity_process(executable_path: str,
         args += ["-decision_period", str(decision_period)]
 
     if no_graphics:
-        args += ["-headless", "-batchmode", "-nographics"]  # "-nographics" causes no renderer
+        args += ["-headless", "-batchmode", "-nographics"]  # "-nographics" causes no renderer!
 
     popen = subprocess.Popen(args)
     print("Started Unity process on port {}".format(port))
