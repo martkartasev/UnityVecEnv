@@ -8,7 +8,7 @@ Install the "./Unity/Package.json" from the Unity Package Manager using "Install
 ```
 pip install -e ./python/unity_vecenv
 ```
-If torch aint pre-installed in your vend, you can use these for installing with torch as a specified GPU version (convenience method)
+If torch aint pre-installed in your venv, you can use these for installing with torch as a specified GPU version (convenience method)
 
 ```
 pip install -e UnityVecEnv/python/unity_vecenv/[cuda118] --extra-index-url https://download.pytorch.org/whl/cu118
