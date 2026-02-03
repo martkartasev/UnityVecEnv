@@ -262,7 +262,6 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         if self._pending_kind is not None:
             raise RuntimeError("reset_async called while another async call is pending")
 
-        # seed: None | int | sequence length n
         seeds_per_env = [None] * len(self.envs)
         if seed is None:
             seeds_per_env = [None] * len(self.envs)
@@ -303,14 +302,11 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         if self._pending_kind is not None:
             raise RuntimeError("step_async called while another async call is pending")
 
-        # Ensure numpy array and correct leading dim
         actions = np.asarray(actions)
         if actions.shape[0] != self.num_envs:
             raise ValueError(f"Expected actions with first dim {self.num_envs}, got {actions.shape}")
 
-        # Split and submit to workers
         for w, slc in zip(self.workers, self._slices):
-            # NOTE: slicing creates a view (cheap) if actions is contiguous; worker/env may copy internally though
             w.submit_step(actions[slc.start:slc.end])
 
         self._pending_kind = "step"
@@ -323,10 +319,8 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         results = [w.get_result(timeout=timeout) for w in self.workers]
         self._pending_kind = None
 
-        # Fill preallocated buffers (no concatenate)
         infos = []
         for (obs, rew, done, trunc, info), slc in zip(results, self._slices):
-            # Normalize types and write into slices
             obs = np.asarray(obs, dtype=np.float32)
             rew = np.asarray(rew, dtype=np.float32)
             done = np.asarray(done, dtype=np.bool_)
@@ -341,7 +335,6 @@ class FlattenedVectorEnvThreaded(VectorEnv):
 
         merged_info = _merge_infos(infos, self._slices)
 
-        # Return views to the buffers (don’t copy)
         return self._obs_buf, self._rew_buf, self._done_buf, self._trunc_buf, merged_info
 
     def close(self):

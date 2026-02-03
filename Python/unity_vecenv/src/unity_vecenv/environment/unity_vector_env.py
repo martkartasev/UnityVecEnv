@@ -64,7 +64,7 @@ class UnityVectorEnv(VectorEnv):
         reset_msg = Reset()
         reset_msg.reloadScene = False
 
-        if options is not None:
+        if options is not None: #TODO: Proper seeding and options passing
             agent_inits = options["init"]
             for i in range(self.num_envs):
                 reset_msg.envsToReset.append(self.map_reset_params_to_proto(i, agent_inits[i, :]))
