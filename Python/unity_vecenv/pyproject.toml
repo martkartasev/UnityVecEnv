@@ -13,8 +13,13 @@ authors = [
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 
-dependencies = [
-    "numpy==1.23.5"
+dependencies = [ # pip install -e UnityVecEnv/python/unity_vecenv/
+    "numpy==1.23.5",
+    "torch==2.2.2",
+    "gymnasium==1.2.3",
+    "tyro==1.0.5",
+    "tensorboard",
+    "requests"
 ]
 
 [project.optional-dependencies]
@@ -22,6 +27,12 @@ dev = [
     "pytest",
     "black",
     "ruff"
+]
+cuda118 = [ # pip install -e UnityVecEnv/python/unity_vecenv/[cuda118] --extra-index-url https://download.pytorch.org/whl/cu118
+  "torch==2.1.2+cu118"
+]
+cuda121 = [ # pip install -e UnityVecEnv/python/unity_vecenv/[cuda121] --extra-index-url https://download.pytorch.org/whl/cu121
+  "torch==2.2.2+cu121"
 ]
 
 [tool.setuptools]
