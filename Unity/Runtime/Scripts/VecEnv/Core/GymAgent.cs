@@ -17,7 +17,7 @@ namespace Scripts.VecEnv.Core
         public List<int> discreteActions = new();
 
         [Header("Inference")] public ModelAsset inferencePolicy;
-        public bool inferenceEnabled;
+        protected bool InferenceEnabled;
         private InferenceHelper _model;
         private AgentObservation _latestObservation;
         private AgentAction _latestAction;
@@ -53,7 +53,6 @@ namespace Scripts.VecEnv.Core
 
         protected internal void DoInitialize()
         {
-            if (inferencePolicy != null) _model = new InferenceHelper(inferencePolicy);
             Initialize();
         }
 
@@ -103,8 +102,10 @@ namespace Scripts.VecEnv.Core
 
         protected internal void DoInternalAction()
         {
-            if (_model != null && inferenceEnabled)
+            if (inferencePolicy != null)
             {
+                if (_model == null || _model.InferencePolicy != inferencePolicy) _model = new InferenceHelper(inferencePolicy);
+                InferenceEnabled = true;
                 DoSetAction(new AgentAction
                 {
                     Continuous = _model.DoInference(_latestObservation.Continuous)
@@ -112,6 +113,7 @@ namespace Scripts.VecEnv.Core
             }
             else
             {
+                InferenceEnabled = false;
                 DoSetAction(ProduceDummyAction(new AgentAction(continuousActions, discreteActions.Count)));
             }
         }

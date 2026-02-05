@@ -1,15 +1,18 @@
 ﻿using Unity.InferenceEngine;
+using UnityEngine;
 
 namespace Scripts.VecEnv.Inference
 {
     public class InferenceHelper
     {
         private Worker _worker;
+        public readonly ModelAsset InferencePolicy;
 
         public InferenceHelper(ModelAsset modelAsset)
         {
             var runtimeModel = ModelLoader.Load(modelAsset);
             _worker = new Worker(runtimeModel, BackendType.CPU);
+            InferencePolicy = modelAsset;
         }
 
         public float[] DoInference(float[] data)
