@@ -13,8 +13,23 @@ namespace Editor.Scripts
     {
         bool _showStats = true;
         const float RowH = 18f;
+        double _next;
+        void OnEnable()
+        {
+            EditorApplication.update += EditorTick;
+        }
 
-
+        void OnDisable()
+        {
+            EditorApplication.update -= EditorTick;
+        }
+        
+        void EditorTick()
+        {
+            if (EditorApplication.timeSinceStartup < _next) return;
+            _next = EditorApplication.timeSinceStartup + 0.1; // 10 Hz
+            Repaint();
+        }
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
