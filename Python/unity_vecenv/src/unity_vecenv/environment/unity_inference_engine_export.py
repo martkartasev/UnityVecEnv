@@ -21,6 +21,8 @@ class InferenceEnginePolicy(nn.Module):
 
     def forward(self, obs: torch.Tensor):
         # obs expected shape: (B, obs_dim...) already flattened by caller if needed
+        obs = self.agent._apply_obs_mask(obs)
+
         action_mean = self.agent.actor_mean(obs)
 
         # If your Unity env expects [-1, 1] actions, clamp here (ClipAction does this at runtime too).
@@ -33,15 +35,14 @@ class InferenceEnginePolicy(nn.Module):
         return action_mean
 
 
-def export_unity_onnx(agent, envs, onnx_path: str, device: torch.device):
+def export_unity_onnx(agent, onnx_path: str, device: torch.device):
     os.makedirs(os.path.dirname(onnx_path), exist_ok=True)
 
     was_training = agent.training
     agent.eval()
     wrapper = InferenceEnginePolicy(agent, export_value=True, clamp_actions=True).to(device).eval()
 
-    obs_dim = int(np.array(envs.single_observation_space.shape).prod())
-    dummy_obs = torch.zeros(1, obs_dim, device=device, dtype=torch.float32)
+    dummy_obs = torch.zeros(1, agent.obs_dim, device=device, dtype=torch.float32)
 
     torch.onnx.export(
         wrapper,

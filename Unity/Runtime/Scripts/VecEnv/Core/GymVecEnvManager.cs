@@ -202,7 +202,6 @@ namespace Scripts.VecEnv.Core
                 yield return new WaitForFixedUpdate();
             }
 
-
             var rewards = _agents.Select(agent => agent.DoCollectReward()).ToArray();
             var dones = _agents.Select(agent => agent.DoGymStep()).ToArray();
             var doneAgents = _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ToList();
@@ -253,12 +252,13 @@ namespace Scripts.VecEnv.Core
                     yield return new WaitForFixedUpdate();
                 }
 
-                _agents.ForEach(agent => agent.DoCollectReward());
-                _agents.ForEach(agent => agent.DoGymStep());
+                var enabledAgents = _agents.FindAll(agent => agent.enabled);
+                enabledAgents.ForEach(agent => agent.DoCollectReward());
+                enabledAgents.ForEach(agent => agent.DoGymStep());
                 PreObservation?.Invoke();
-                _agents.ForEach(agent => agent.ProduceObservation());
-                _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ForEach(agent => { agent.DoReset(); });
-                _agents.ForEach(agent => agent.DoInternalAction());
+                enabledAgents.ForEach(agent => agent.ProduceObservation());
+                enabledAgents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ForEach(agent => { agent.DoReset(); });
+                enabledAgents.ForEach(agent => agent.DoInternalAction());
             }
 
             _disconnectedStepper = null;
