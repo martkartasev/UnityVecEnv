@@ -51,18 +51,21 @@ namespace Scripts.VecEnv.Message
         public ExternalCommunication.EnvironmentDescription MapEnvironmentDescription(EnvironmentDescription description)
         {
             var mapEnvironmentDescription = new ExternalCommunication.EnvironmentDescription();
-            mapEnvironmentDescription.SingleActionSpace = new Space();
-            mapEnvironmentDescription.SingleObservationSpace = new Space();
+            var actionSpace = new Space();
+            actionSpace.ContinuousSize = description.ContinuousActions;
+            actionSpace.ContinuousRange = new MinMax();
+            actionSpace.ContinuousRange.MaxValue = 1;
+            actionSpace.ContinuousRange.MinValue = -1;
 
-            mapEnvironmentDescription.SingleActionSpace.ContinuousSize = description.ContinuousActions;
-            mapEnvironmentDescription.SingleActionSpace.ContinuousRange = new MinMax();
-            mapEnvironmentDescription.SingleActionSpace.ContinuousRange.MaxValue = 1;
-            mapEnvironmentDescription.SingleActionSpace.ContinuousRange.MinValue = -1;
+            var observationSpace = new Space();
 
-            mapEnvironmentDescription.SingleObservationSpace.ContinuousSize = description.ContinuousObservations;
-            mapEnvironmentDescription.SingleObservationSpace.ContinuousRange = new MinMax();
-            mapEnvironmentDescription.SingleObservationSpace.ContinuousRange.MaxValue = 1;
-            mapEnvironmentDescription.SingleObservationSpace.ContinuousRange.MinValue = -1;
+            observationSpace.ContinuousSize = description.ContinuousObservations;
+            observationSpace.ContinuousRange = new MinMax();
+            observationSpace.ContinuousRange.MaxValue = 1;
+            observationSpace.ContinuousRange.MinValue = -1;
+
+            mapEnvironmentDescription.SingleActionSpace.Add(actionSpace);
+            mapEnvironmentDescription.SingleObservationSpace.Add(observationSpace);
 
             mapEnvironmentDescription.TrueNumberOfEnvs = description.AgentCount;
             return mapEnvironmentDescription;
