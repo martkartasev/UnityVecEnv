@@ -1,9 +1,11 @@
 import numpy as np
 from gymnasium import spaces
 
+
 def _safe_key(name: str | None, prefix: str, i: int) -> str:
     name = (name or "").strip()
     return name if name else f"{prefix}_{i}"
+
 
 def _box_from_proto(space_proto, dtype=np.float32,
                     default_low=-np.inf, default_high=np.inf):
@@ -28,6 +30,7 @@ def _box_from_proto(space_proto, dtype=np.float32,
 
     return spaces.Box(low=low, high=high, shape=(n,), dtype=dtype)
 
+
 def _discrete_from_proto(space_proto):
     """
     Build Discrete/MultiDiscrete from repeated discreteSize.
@@ -40,6 +43,7 @@ def _discrete_from_proto(space_proto):
         return spaces.Discrete(sizes[0])
     return spaces.MultiDiscrete(np.array(sizes, dtype=np.int64))
 
+
 def space_from_proto(space_proto, *, dtype=np.float32,
                      default_low=-np.inf, default_high=np.inf) -> spaces.Space:
     """
@@ -48,8 +52,7 @@ def space_from_proto(space_proto, *, dtype=np.float32,
       - discrete only   -> Discrete or MultiDiscrete
       - both            -> Dict({"continuous": Box, "discrete": ...})
     """
-    box = _box_from_proto(space_proto, dtype=dtype,
-                          default_low=default_low, default_high=default_high)
+    box = _box_from_proto(space_proto, dtype=dtype, default_low=default_low, default_high=default_high)
     disc = _discrete_from_proto(space_proto)
 
     if box is not None and disc is not None:
@@ -67,6 +70,7 @@ def space_from_proto(space_proto, *, dtype=np.float32,
         dtype=dtype
     )
 
+
 def space_from_repeated(space_list, *, prefix: str,
                         dtype=np.float32,
                         default_low=-np.inf, default_high=np.inf) -> spaces.Space:
@@ -76,8 +80,7 @@ def space_from_repeated(space_list, *, prefix: str,
     """
     if len(space_list) == 1:
         sp = space_list[0]
-        return space_from_proto(sp, dtype=dtype,
-                                default_low=default_low, default_high=default_high)
+        return space_from_proto(sp, dtype=dtype, default_low=default_low, default_high=default_high)
 
     out = {}
     used = set()
@@ -90,12 +93,10 @@ def space_from_repeated(space_list, *, prefix: str,
             k += 1
         used.add(key)
 
-        out[key] = space_from_proto(
-            sp, dtype=dtype,
-            default_low=default_low, default_high=default_high
-        )
+        out[key] = space_from_proto(sp, dtype=dtype, default_low=default_low, default_high=default_high)
 
     return spaces.Dict(out)
+
 
 def batch_space(single: spaces.Space, num_envs: int) -> spaces.Space:
     """

@@ -53,16 +53,9 @@ namespace Scripts.VecEnv.Message
             var mapEnvironmentDescription = new ExternalCommunication.EnvironmentDescription();
             var actionSpace = new Space();
             actionSpace.ContinuousSize = description.ContinuousActions;
-            actionSpace.ContinuousRange = new MinMax();
-            actionSpace.ContinuousRange.MaxValue = 1;
-            actionSpace.ContinuousRange.MinValue = -1;
-
+            
             var observationSpace = new Space();
-
             observationSpace.ContinuousSize = description.ContinuousObservations;
-            observationSpace.ContinuousRange = new MinMax();
-            observationSpace.ContinuousRange.MaxValue = 1;
-            observationSpace.ContinuousRange.MinValue = -1;
 
             mapEnvironmentDescription.SingleActionSpace.Add(actionSpace);
             mapEnvironmentDescription.SingleObservationSpace.Add(observationSpace);

@@ -32,7 +32,7 @@ namespace ExternalCommunication {
             "eHRlcm5hbENvbW11bmljYXRpb24uU3BhY2USNwoRc2luZ2xlQWN0aW9uU3Bh",
             "Y2UYAiADKAsyHC5FeHRlcm5hbENvbW11bmljYXRpb24uU3BhY2USGAoQdHJ1",
             "ZU51bWJlck9mRW52cxgDIAEoBSJ7CgVTcGFjZRIMCgRuYW1lGAEgASgJEhYK",
-            "DmNvbnRpbnVvdXNTaXplGAIgASgFEjYKD2NvbnRpbnVvdXNSYW5nZRgDIAEo",
+            "DmNvbnRpbnVvdXNTaXplGAIgASgFEjYKD2NvbnRpbnVvdXNSYW5nZRgDIAMo",
             "CzIdLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5NaW5NYXgSFAoMZGlzY3JldGVT",
             "aXplGAQgAygFIjsKBk1pbk1heBINCgVpbmRleBgBIAEoBRIQCghtaW5WYWx1",
             "ZRgCIAEoAhIQCghtYXhWYWx1ZRgDIAEoAiJZCgVSZXNldBI7CgtlbnZzVG9S",
@@ -607,7 +607,7 @@ namespace ExternalCommunication {
     public Space(Space other) : this() {
       name_ = other.name_;
       continuousSize_ = other.continuousSize_;
-      continuousRange_ = other.continuousRange_ != null ? other.continuousRange_.Clone() : null;
+      continuousRange_ = other.continuousRange_.Clone();
       discreteSize_ = other.discreteSize_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
@@ -644,14 +644,13 @@ namespace ExternalCommunication {
 
     /// <summary>Field number for the "continuousRange" field.</summary>
     public const int ContinuousRangeFieldNumber = 3;
-    private global::ExternalCommunication.MinMax continuousRange_;
+    private static readonly pb::FieldCodec<global::ExternalCommunication.MinMax> _repeated_continuousRange_codec
+        = pb::FieldCodec.ForMessage(26, global::ExternalCommunication.MinMax.Parser);
+    private readonly pbc::RepeatedField<global::ExternalCommunication.MinMax> continuousRange_ = new pbc::RepeatedField<global::ExternalCommunication.MinMax>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::ExternalCommunication.MinMax ContinuousRange {
+    public pbc::RepeatedField<global::ExternalCommunication.MinMax> ContinuousRange {
       get { return continuousRange_; }
-      set {
-        continuousRange_ = value;
-      }
     }
 
     /// <summary>Field number for the "discreteSize" field.</summary>
@@ -682,7 +681,7 @@ namespace ExternalCommunication {
       }
       if (Name != other.Name) return false;
       if (ContinuousSize != other.ContinuousSize) return false;
-      if (!object.Equals(ContinuousRange, other.ContinuousRange)) return false;
+      if(!continuousRange_.Equals(other.continuousRange_)) return false;
       if(!discreteSize_.Equals(other.discreteSize_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -693,7 +692,7 @@ namespace ExternalCommunication {
       int hash = 1;
       if (Name.Length != 0) hash ^= Name.GetHashCode();
       if (ContinuousSize != 0) hash ^= ContinuousSize.GetHashCode();
-      if (continuousRange_ != null) hash ^= ContinuousRange.GetHashCode();
+      hash ^= continuousRange_.GetHashCode();
       hash ^= discreteSize_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -721,10 +720,7 @@ namespace ExternalCommunication {
         output.WriteRawTag(16);
         output.WriteInt32(ContinuousSize);
       }
-      if (continuousRange_ != null) {
-        output.WriteRawTag(26);
-        output.WriteMessage(ContinuousRange);
-      }
+      continuousRange_.WriteTo(output, _repeated_continuousRange_codec);
       discreteSize_.WriteTo(output, _repeated_discreteSize_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -744,10 +740,7 @@ namespace ExternalCommunication {
         output.WriteRawTag(16);
         output.WriteInt32(ContinuousSize);
       }
-      if (continuousRange_ != null) {
-        output.WriteRawTag(26);
-        output.WriteMessage(ContinuousRange);
-      }
+      continuousRange_.WriteTo(ref output, _repeated_continuousRange_codec);
       discreteSize_.WriteTo(ref output, _repeated_discreteSize_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -765,9 +758,7 @@ namespace ExternalCommunication {
       if (ContinuousSize != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(ContinuousSize);
       }
-      if (continuousRange_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ContinuousRange);
-      }
+      size += continuousRange_.CalculateSize(_repeated_continuousRange_codec);
       size += discreteSize_.CalculateSize(_repeated_discreteSize_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -787,12 +778,7 @@ namespace ExternalCommunication {
       if (other.ContinuousSize != 0) {
         ContinuousSize = other.ContinuousSize;
       }
-      if (other.continuousRange_ != null) {
-        if (continuousRange_ == null) {
-          ContinuousRange = new global::ExternalCommunication.MinMax();
-        }
-        ContinuousRange.MergeFrom(other.ContinuousRange);
-      }
+      continuousRange_.Add(other.continuousRange_);
       discreteSize_.Add(other.discreteSize_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -818,10 +804,7 @@ namespace ExternalCommunication {
             break;
           }
           case 26: {
-            if (continuousRange_ == null) {
-              ContinuousRange = new global::ExternalCommunication.MinMax();
-            }
-            input.ReadMessage(ContinuousRange);
+            continuousRange_.AddEntriesFrom(input, _repeated_continuousRange_codec);
             break;
           }
           case 34:
@@ -853,10 +836,7 @@ namespace ExternalCommunication {
             break;
           }
           case 26: {
-            if (continuousRange_ == null) {
-              ContinuousRange = new global::ExternalCommunication.MinMax();
-            }
-            input.ReadMessage(ContinuousRange);
+            continuousRange_.AddEntriesFrom(ref input, _repeated_continuousRange_codec);
             break;
           }
           case 34:

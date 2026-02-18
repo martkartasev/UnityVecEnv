@@ -5,7 +5,7 @@ import numpy as np
 from gymnasium import spaces
 from gymnasium.vector import VectorEnv, AutoresetMode
 
-from spaces import space_from_repeated, batch_space
+from unity_vecenv.environment.spaces import space_from_repeated, batch_space
 from unity_vecenv.environment.network_utils import is_port_in_use
 from unity_vecenv.environment.unity_client import start_client
 from unity_vecenv.environment.unity_process import start_unity_process

@@ -22,7 +22,7 @@ message Space {
   string name = 1;
 
   int32 continuousSize = 2;
-  MinMax continuousRange = 3;
+  repeated MinMax continuousRange = 3;
 
   repeated int32 discreteSize = 4;
 }

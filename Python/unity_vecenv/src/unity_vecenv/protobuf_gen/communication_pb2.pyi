@@ -42,9 +42,9 @@ class Space(_message.Message):
     DISCRETESIZE_FIELD_NUMBER: _ClassVar[int]
     name: str
     continuousSize: int
-    continuousRange: MinMax
+    continuousRange: _containers.RepeatedCompositeFieldContainer[MinMax]
     discreteSize: _containers.RepeatedScalarFieldContainer[int]
-    def __init__(self, name: _Optional[str] = ..., continuousSize: _Optional[int] = ..., continuousRange: _Optional[_Union[MinMax, _Mapping]] = ..., discreteSize: _Optional[_Iterable[int]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., continuousSize: _Optional[int] = ..., continuousRange: _Optional[_Iterable[_Union[MinMax, _Mapping]]] = ..., discreteSize: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class MinMax(_message.Message):
     __slots__ = ("index", "minValue", "maxValue")
