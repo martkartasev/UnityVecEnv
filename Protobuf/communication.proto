@@ -13,20 +13,25 @@ message InitializeEnvironments {
 }
 
 message EnvironmentDescription {
-  Space singleObservationSpace = 1;
-  Space singleActionSpace = 2;
+  repeated Space singleObservationSpace = 1;
+  repeated Space singleActionSpace = 2;
   int32 trueNumberOfEnvs = 3;
 }
 
 message Space {
-  int32 continuousSize = 1;
-  MinMax continuousRange = 2;
-  int32 discreteSize = 3;
+  string name = 1;
+
+  int32 continuousSize = 2;
+  MinMax continuousRange = 3;
+
+  repeated int32 discreteSize = 4;
 }
 
 message MinMax {
-  float minValue = 1;
-  float maxValue = 2;
+  int32 index = 1;
+
+  float minValue = 2;
+  float maxValue = 3;
 }
 
 message Reset {

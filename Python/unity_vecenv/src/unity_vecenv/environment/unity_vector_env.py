@@ -5,6 +5,7 @@ import numpy as np
 from gymnasium import spaces
 from gymnasium.vector import VectorEnv, AutoresetMode
 
+from spaces import space_from_repeated, batch_space
 from unity_vecenv.environment.network_utils import is_port_in_use
 from unity_vecenv.environment.unity_client import start_client
 from unity_vecenv.environment.unity_process import start_unity_process
@@ -44,14 +45,26 @@ class UnityVectorEnv(VectorEnv):
         if environment_description.trueNumberOfEnvs == 0:
             raise RuntimeError("Failed to initialize environment connection. Number of envs returns 0.")
 
-        self.num_envs = environment_description.trueNumberOfEnvs
+        self.num_envs = int(environment_description.trueNumberOfEnvs)
 
-        # TODO: Dict, Discrete obs / action spaces from Env.
-        self.single_action_space = spaces.Box(low=-1, high=1, shape=(environment_description.singleActionSpace.continuousSize,), dtype=np.float32)
-        self.single_observation_space = spaces.Box(low=-1, high=1, shape=(environment_description.singleObservationSpace.continuousSize,), dtype=np.float32)
-        # TODO: Ranges ?
-        self.action_space = spaces.Box(low=-1, high=1, shape=(self.num_envs, environment_description.singleActionSpace.continuousSize), dtype=np.float32)
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(self.num_envs, environment_description.singleObservationSpace.continuousSize), dtype=np.float32)
+        self.single_action_space = space_from_repeated(
+            environment_description.singleActionSpace,
+            prefix="action",
+            dtype=np.float32,
+            default_low=-1.0,
+            default_high=1.0
+        )
+
+        self.single_observation_space = space_from_repeated(
+            environment_description.singleObservationSpace,
+            prefix="obs",
+            dtype=np.float32,
+            default_low=-1.0,
+            default_high=1.0
+        )
+
+        self.action_space = batch_space(self.single_action_space, self.num_envs)
+        self.observation_space = batch_space(self.single_observation_space, self.num_envs)
 
     def initialize_environment(self, num_envs):
         init = InitializeEnvironments()
@@ -64,7 +77,7 @@ class UnityVectorEnv(VectorEnv):
         reset_msg = Reset()
         reset_msg.reloadScene = False
 
-        if options is not None: #TODO: Proper seeding and options passing
+        if options is not None:  # TODO: Proper seeding and options passing
             agent_inits = options["init"]
             for i in range(self.num_envs):
                 reset_msg.envsToReset.append(self.map_reset_params_to_proto(i, agent_inits[i, :]))
@@ -84,7 +97,7 @@ class UnityVectorEnv(VectorEnv):
 
     def render(self, mode='human'):
         pass
-        # TODO: Screenshot manager back into API
+        # TODO: Screenshot/Video manager back into API
 
     def close(self):
         if self.process is not None:

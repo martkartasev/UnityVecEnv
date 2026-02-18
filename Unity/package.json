@@ -10,5 +10,8 @@
     "name": "Mart Kartasev",
     "email": "mart.kartasev@gmail.com",
     "url": "https://www.linkedin.com/in/mart-karta%C5%A1ev-a67410114/"
+  },
+  "dependencies": {
+    "com.unity.ai.inference": "2.4.1"
   }
 }

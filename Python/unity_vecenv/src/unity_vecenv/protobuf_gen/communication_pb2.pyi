@@ -29,28 +29,32 @@ class EnvironmentDescription(_message.Message):
     SINGLEOBSERVATIONSPACE_FIELD_NUMBER: _ClassVar[int]
     SINGLEACTIONSPACE_FIELD_NUMBER: _ClassVar[int]
     TRUENUMBEROFENVS_FIELD_NUMBER: _ClassVar[int]
-    singleObservationSpace: Space
-    singleActionSpace: Space
+    singleObservationSpace: _containers.RepeatedCompositeFieldContainer[Space]
+    singleActionSpace: _containers.RepeatedCompositeFieldContainer[Space]
     trueNumberOfEnvs: int
-    def __init__(self, singleObservationSpace: _Optional[_Union[Space, _Mapping]] = ..., singleActionSpace: _Optional[_Union[Space, _Mapping]] = ..., trueNumberOfEnvs: _Optional[int] = ...) -> None: ...
+    def __init__(self, singleObservationSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., singleActionSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., trueNumberOfEnvs: _Optional[int] = ...) -> None: ...
 
 class Space(_message.Message):
-    __slots__ = ("continuousSize", "continuousRange", "discreteSize")
+    __slots__ = ("name", "continuousSize", "continuousRange", "discreteSize")
+    NAME_FIELD_NUMBER: _ClassVar[int]
     CONTINUOUSSIZE_FIELD_NUMBER: _ClassVar[int]
     CONTINUOUSRANGE_FIELD_NUMBER: _ClassVar[int]
     DISCRETESIZE_FIELD_NUMBER: _ClassVar[int]
+    name: str
     continuousSize: int
     continuousRange: MinMax
-    discreteSize: int
-    def __init__(self, continuousSize: _Optional[int] = ..., continuousRange: _Optional[_Union[MinMax, _Mapping]] = ..., discreteSize: _Optional[int] = ...) -> None: ...
+    discreteSize: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, name: _Optional[str] = ..., continuousSize: _Optional[int] = ..., continuousRange: _Optional[_Union[MinMax, _Mapping]] = ..., discreteSize: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class MinMax(_message.Message):
-    __slots__ = ("minValue", "maxValue")
+    __slots__ = ("index", "minValue", "maxValue")
+    INDEX_FIELD_NUMBER: _ClassVar[int]
     MINVALUE_FIELD_NUMBER: _ClassVar[int]
     MAXVALUE_FIELD_NUMBER: _ClassVar[int]
+    index: int
     minValue: float
     maxValue: float
-    def __init__(self, minValue: _Optional[float] = ..., maxValue: _Optional[float] = ...) -> None: ...
+    def __init__(self, index: _Optional[int] = ..., minValue: _Optional[float] = ..., maxValue: _Optional[float] = ...) -> None: ...
 
 class Reset(_message.Message):
     __slots__ = ("envsToReset", "reloadScene")

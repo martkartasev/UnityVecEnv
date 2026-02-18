@@ -28,52 +28,53 @@ namespace ExternalCommunication {
             "dAoWSW5pdGlhbGl6ZUVudmlyb25tZW50cxI7Cg1hdXRvUmVzZXRNb2RlGAEg",
             "ASgOMiQuRXh0ZXJuYWxDb21tdW5pY2F0aW9uLkF1dG9SZXNldE1vZGUSHQoV",
             "cmVxdWVzdGVkTnVtYmVyT2ZFbnZzGAIgASgFIqkBChZFbnZpcm9ubWVudERl",
-            "c2NyaXB0aW9uEjwKFnNpbmdsZU9ic2VydmF0aW9uU3BhY2UYASABKAsyHC5F",
+            "c2NyaXB0aW9uEjwKFnNpbmdsZU9ic2VydmF0aW9uU3BhY2UYASADKAsyHC5F",
             "eHRlcm5hbENvbW11bmljYXRpb24uU3BhY2USNwoRc2luZ2xlQWN0aW9uU3Bh",
-            "Y2UYAiABKAsyHC5FeHRlcm5hbENvbW11bmljYXRpb24uU3BhY2USGAoQdHJ1",
-            "ZU51bWJlck9mRW52cxgDIAEoBSJtCgVTcGFjZRIWCg5jb250aW51b3VzU2l6",
-            "ZRgBIAEoBRI2Cg9jb250aW51b3VzUmFuZ2UYAiABKAsyHS5FeHRlcm5hbENv",
-            "bW11bmljYXRpb24uTWluTWF4EhQKDGRpc2NyZXRlU2l6ZRgDIAEoBSIsCgZN",
-            "aW5NYXgSEAoIbWluVmFsdWUYASABKAISEAoIbWF4VmFsdWUYAiABKAIiWQoF",
-            "UmVzZXQSOwoLZW52c1RvUmVzZXQYASADKAsyJi5FeHRlcm5hbENvbW11bmlj",
-            "YXRpb24uUmVzZXRQYXJhbWV0ZXJzEhMKC3JlbG9hZFNjZW5lGAIgASgIIjQK",
-            "D1Jlc2V0UGFyYW1ldGVycxINCgVpbmRleBgBIAEoBRISCgpjb250aW51b3Vz",
-            "GAIgAygCIqcBCgRTdGVwEi4KB2FjdGlvbnMYASADKAsyHS5FeHRlcm5hbENv",
-            "bW11bmljYXRpb24uQWN0aW9uEhYKCXN0ZXBDb3VudBgCIAEoBUgAiAEBEhYK",
-            "CXRpbWVTY2FsZRgDIAEoAkgBiAEBEiMKG2FwcGx5QWN0aW9uRXZlcnlQaHlz",
-            "aWNzU3RlcBgEIAEoCEIMCgpfc3RlcENvdW50QgwKCl90aW1lU2NhbGUiQgoG",
-            "QWN0aW9uEhIKCmFnZW50SW5kZXgYASABKAUSEgoKY29udGludW91cxgCIAMo",
-            "AhIQCghkaXNjcmV0ZRgDIAMoBSJCCgtPYnNlcnZhdGlvbhINCgVpbmRleBgB",
-            "IAEoBRISCgpjb250aW51b3VzGAIgAygCEhAKCGRpc2NyZXRlGAMgAygFIkgK",
-            "DE9ic2VydmF0aW9ucxI4CgxvYnNlcnZhdGlvbnMYASADKAsyIi5FeHRlcm5h",
-            "bENvbW11bmljYXRpb24uT2JzZXJ2YXRpb24idgoKU3RlcFJlc3VsdBI3Cgtv",
-            "YnNlcnZhdGlvbhgBIAEoCzIiLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5PYnNl",
-            "cnZhdGlvbhIOCgZyZXdhcmQYAiABKAISDAoEZG9uZRgDIAEoCBIRCgl0cnVu",
-            "Y2F0ZWQYBCABKAgicQoLU3RlcFJlc3VsdHMSNgoLc3RlcFJlc3VsdHMYASAD",
-            "KAsyIS5FeHRlcm5hbENvbW11bmljYXRpb24uU3RlcFJlc3VsdBIqCgVpbmZv",
-            "cxgCIAEoCzIbLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5JbmZvIj4KClNjcmVl",
-            "bnNob3QSMAoGY2FtZXJhGAEgASgLMiAuRXh0ZXJuYWxDb21tdW5pY2F0aW9u",
-            "LlRyYW5zZm9ybSKNAQoESW5mbxI1CgtmaW5hbF9pbmZvcxgBIAMoCzIgLkV4",
-            "dGVybmFsQ29tbXVuaWNhdGlvbi5GaW5hbEluZm8SPgoSZmluYWxfb2JzZXJ2",
-            "YXRpb25zGAIgAygLMiIuRXh0ZXJuYWxDb21tdW5pY2F0aW9uLk9ic2VydmF0",
-            "aW9uEg4KBmN1c3RvbRgKIAMoAiJfCglGaW5hbEluZm8SEgoKYWdlbnRJbmRl",
-            "eBgBIAEoBRIWCg5lcGlzb2RlX3Jld2FyZBgCIAEoAhIWCg5lcGlzb2RlX2xl",
-            "bmd0aBgDIAEoAhIOCgZjdXN0b20YCiADKAIiyAEKCVRyYW5zZm9ybRIwCghw",
-            "b3NpdGlvbhgBIAEoCzIeLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5WZWN0b3Iz",
-            "EjIKBWV1bGVyGAIgASgLMh4uRXh0ZXJuYWxDb21tdW5pY2F0aW9uLlZlY3Rv",
-            "cjNIAIgBARI7CgtvcmllbnRhdGlvbhgDIAEoCzIhLkV4dGVybmFsQ29tbXVu",
-            "aWNhdGlvbi5RdWF0ZXJuaW9uSAGIAQFCCAoGX2V1bGVyQg4KDF9vcmllbnRh",
-            "dGlvbiIqCgdWZWN0b3IzEgkKAXgYASABKAISCQoBeRgCIAEoAhIJCgF6GAMg",
-            "ASgCIjgKClF1YXRlcm5pb24SCQoBeBgBIAEoAhIJCgF5GAIgASgCEgkKAXoY",
-            "AyABKAISCQoBdxgEIAEoAio5Cg1BdXRvUmVzZXRNb2RlEgwKCE5leHRTdGVw",
-            "EAASDAoIU2FtZVN0ZXAQARIMCghEaXNhYmxlZBACYgZwcm90bzM="));
+            "Y2UYAiADKAsyHC5FeHRlcm5hbENvbW11bmljYXRpb24uU3BhY2USGAoQdHJ1",
+            "ZU51bWJlck9mRW52cxgDIAEoBSJ7CgVTcGFjZRIMCgRuYW1lGAEgASgJEhYK",
+            "DmNvbnRpbnVvdXNTaXplGAIgASgFEjYKD2NvbnRpbnVvdXNSYW5nZRgDIAEo",
+            "CzIdLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5NaW5NYXgSFAoMZGlzY3JldGVT",
+            "aXplGAQgAygFIjsKBk1pbk1heBINCgVpbmRleBgBIAEoBRIQCghtaW5WYWx1",
+            "ZRgCIAEoAhIQCghtYXhWYWx1ZRgDIAEoAiJZCgVSZXNldBI7CgtlbnZzVG9S",
+            "ZXNldBgBIAMoCzImLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5SZXNldFBhcmFt",
+            "ZXRlcnMSEwoLcmVsb2FkU2NlbmUYAiABKAgiNAoPUmVzZXRQYXJhbWV0ZXJz",
+            "Eg0KBWluZGV4GAEgASgFEhIKCmNvbnRpbnVvdXMYAiADKAIipwEKBFN0ZXAS",
+            "LgoHYWN0aW9ucxgBIAMoCzIdLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5BY3Rp",
+            "b24SFgoJc3RlcENvdW50GAIgASgFSACIAQESFgoJdGltZVNjYWxlGAMgASgC",
+            "SAGIAQESIwobYXBwbHlBY3Rpb25FdmVyeVBoeXNpY3NTdGVwGAQgASgIQgwK",
+            "Cl9zdGVwQ291bnRCDAoKX3RpbWVTY2FsZSJCCgZBY3Rpb24SEgoKYWdlbnRJ",
+            "bmRleBgBIAEoBRISCgpjb250aW51b3VzGAIgAygCEhAKCGRpc2NyZXRlGAMg",
+            "AygFIkIKC09ic2VydmF0aW9uEg0KBWluZGV4GAEgASgFEhIKCmNvbnRpbnVv",
+            "dXMYAiADKAISEAoIZGlzY3JldGUYAyADKAUiSAoMT2JzZXJ2YXRpb25zEjgK",
+            "DG9ic2VydmF0aW9ucxgBIAMoCzIiLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5P",
+            "YnNlcnZhdGlvbiJ2CgpTdGVwUmVzdWx0EjcKC29ic2VydmF0aW9uGAEgASgL",
+            "MiIuRXh0ZXJuYWxDb21tdW5pY2F0aW9uLk9ic2VydmF0aW9uEg4KBnJld2Fy",
+            "ZBgCIAEoAhIMCgRkb25lGAMgASgIEhEKCXRydW5jYXRlZBgEIAEoCCJxCgtT",
+            "dGVwUmVzdWx0cxI2CgtzdGVwUmVzdWx0cxgBIAMoCzIhLkV4dGVybmFsQ29t",
+            "bXVuaWNhdGlvbi5TdGVwUmVzdWx0EioKBWluZm9zGAIgASgLMhsuRXh0ZXJu",
+            "YWxDb21tdW5pY2F0aW9uLkluZm8iPgoKU2NyZWVuc2hvdBIwCgZjYW1lcmEY",
+            "ASABKAsyIC5FeHRlcm5hbENvbW11bmljYXRpb24uVHJhbnNmb3JtIo0BCgRJ",
+            "bmZvEjUKC2ZpbmFsX2luZm9zGAEgAygLMiAuRXh0ZXJuYWxDb21tdW5pY2F0",
+            "aW9uLkZpbmFsSW5mbxI+ChJmaW5hbF9vYnNlcnZhdGlvbnMYAiADKAsyIi5F",
+            "eHRlcm5hbENvbW11bmljYXRpb24uT2JzZXJ2YXRpb24SDgoGY3VzdG9tGAog",
+            "AygCIl8KCUZpbmFsSW5mbxISCgphZ2VudEluZGV4GAEgASgFEhYKDmVwaXNv",
+            "ZGVfcmV3YXJkGAIgASgCEhYKDmVwaXNvZGVfbGVuZ3RoGAMgASgCEg4KBmN1",
+            "c3RvbRgKIAMoAiLIAQoJVHJhbnNmb3JtEjAKCHBvc2l0aW9uGAEgASgLMh4u",
+            "RXh0ZXJuYWxDb21tdW5pY2F0aW9uLlZlY3RvcjMSMgoFZXVsZXIYAiABKAsy",
+            "Hi5FeHRlcm5hbENvbW11bmljYXRpb24uVmVjdG9yM0gAiAEBEjsKC29yaWVu",
+            "dGF0aW9uGAMgASgLMiEuRXh0ZXJuYWxDb21tdW5pY2F0aW9uLlF1YXRlcm5p",
+            "b25IAYgBAUIICgZfZXVsZXJCDgoMX29yaWVudGF0aW9uIioKB1ZlY3RvcjMS",
+            "CQoBeBgBIAEoAhIJCgF5GAIgASgCEgkKAXoYAyABKAIiOAoKUXVhdGVybmlv",
+            "bhIJCgF4GAEgASgCEgkKAXkYAiABKAISCQoBehgDIAEoAhIJCgF3GAQgASgC",
+            "KjkKDUF1dG9SZXNldE1vZGUSDAoITmV4dFN0ZXAQABIMCghTYW1lU3RlcBAB",
+            "EgwKCERpc2FibGVkEAJiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::ExternalCommunication.AutoResetMode), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.InitializeEnvironments), global::ExternalCommunication.InitializeEnvironments.Parser, new[]{ "AutoResetMode", "RequestedNumberOfEnvs" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.EnvironmentDescription), global::ExternalCommunication.EnvironmentDescription.Parser, new[]{ "SingleObservationSpace", "SingleActionSpace", "TrueNumberOfEnvs" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.Space), global::ExternalCommunication.Space.Parser, new[]{ "ContinuousSize", "ContinuousRange", "DiscreteSize" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.MinMax), global::ExternalCommunication.MinMax.Parser, new[]{ "MinValue", "MaxValue" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.Space), global::ExternalCommunication.Space.Parser, new[]{ "Name", "ContinuousSize", "ContinuousRange", "DiscreteSize" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.MinMax), global::ExternalCommunication.MinMax.Parser, new[]{ "Index", "MinValue", "MaxValue" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.Reset), global::ExternalCommunication.Reset.Parser, new[]{ "EnvsToReset", "ReloadScene" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.ResetParameters), global::ExternalCommunication.ResetParameters.Parser, new[]{ "Index", "Continuous" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.Step), global::ExternalCommunication.Step.Parser, new[]{ "Actions", "StepCount", "TimeScale", "ApplyActionEveryPhysicsStep" }, new[]{ "StepCount", "TimeScale" }, null, null, null),
@@ -363,8 +364,8 @@ namespace ExternalCommunication {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public EnvironmentDescription(EnvironmentDescription other) : this() {
-      singleObservationSpace_ = other.singleObservationSpace_ != null ? other.singleObservationSpace_.Clone() : null;
-      singleActionSpace_ = other.singleActionSpace_ != null ? other.singleActionSpace_.Clone() : null;
+      singleObservationSpace_ = other.singleObservationSpace_.Clone();
+      singleActionSpace_ = other.singleActionSpace_.Clone();
       trueNumberOfEnvs_ = other.trueNumberOfEnvs_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
@@ -377,26 +378,24 @@ namespace ExternalCommunication {
 
     /// <summary>Field number for the "singleObservationSpace" field.</summary>
     public const int SingleObservationSpaceFieldNumber = 1;
-    private global::ExternalCommunication.Space singleObservationSpace_;
+    private static readonly pb::FieldCodec<global::ExternalCommunication.Space> _repeated_singleObservationSpace_codec
+        = pb::FieldCodec.ForMessage(10, global::ExternalCommunication.Space.Parser);
+    private readonly pbc::RepeatedField<global::ExternalCommunication.Space> singleObservationSpace_ = new pbc::RepeatedField<global::ExternalCommunication.Space>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::ExternalCommunication.Space SingleObservationSpace {
+    public pbc::RepeatedField<global::ExternalCommunication.Space> SingleObservationSpace {
       get { return singleObservationSpace_; }
-      set {
-        singleObservationSpace_ = value;
-      }
     }
 
     /// <summary>Field number for the "singleActionSpace" field.</summary>
     public const int SingleActionSpaceFieldNumber = 2;
-    private global::ExternalCommunication.Space singleActionSpace_;
+    private static readonly pb::FieldCodec<global::ExternalCommunication.Space> _repeated_singleActionSpace_codec
+        = pb::FieldCodec.ForMessage(18, global::ExternalCommunication.Space.Parser);
+    private readonly pbc::RepeatedField<global::ExternalCommunication.Space> singleActionSpace_ = new pbc::RepeatedField<global::ExternalCommunication.Space>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::ExternalCommunication.Space SingleActionSpace {
+    public pbc::RepeatedField<global::ExternalCommunication.Space> SingleActionSpace {
       get { return singleActionSpace_; }
-      set {
-        singleActionSpace_ = value;
-      }
     }
 
     /// <summary>Field number for the "trueNumberOfEnvs" field.</summary>
@@ -426,8 +425,8 @@ namespace ExternalCommunication {
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (!object.Equals(SingleObservationSpace, other.SingleObservationSpace)) return false;
-      if (!object.Equals(SingleActionSpace, other.SingleActionSpace)) return false;
+      if(!singleObservationSpace_.Equals(other.singleObservationSpace_)) return false;
+      if(!singleActionSpace_.Equals(other.singleActionSpace_)) return false;
       if (TrueNumberOfEnvs != other.TrueNumberOfEnvs) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -436,8 +435,8 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (singleObservationSpace_ != null) hash ^= SingleObservationSpace.GetHashCode();
-      if (singleActionSpace_ != null) hash ^= SingleActionSpace.GetHashCode();
+      hash ^= singleObservationSpace_.GetHashCode();
+      hash ^= singleActionSpace_.GetHashCode();
       if (TrueNumberOfEnvs != 0) hash ^= TrueNumberOfEnvs.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -457,14 +456,8 @@ namespace ExternalCommunication {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (singleObservationSpace_ != null) {
-        output.WriteRawTag(10);
-        output.WriteMessage(SingleObservationSpace);
-      }
-      if (singleActionSpace_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(SingleActionSpace);
-      }
+      singleObservationSpace_.WriteTo(output, _repeated_singleObservationSpace_codec);
+      singleActionSpace_.WriteTo(output, _repeated_singleActionSpace_codec);
       if (TrueNumberOfEnvs != 0) {
         output.WriteRawTag(24);
         output.WriteInt32(TrueNumberOfEnvs);
@@ -479,14 +472,8 @@ namespace ExternalCommunication {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (singleObservationSpace_ != null) {
-        output.WriteRawTag(10);
-        output.WriteMessage(SingleObservationSpace);
-      }
-      if (singleActionSpace_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(SingleActionSpace);
-      }
+      singleObservationSpace_.WriteTo(ref output, _repeated_singleObservationSpace_codec);
+      singleActionSpace_.WriteTo(ref output, _repeated_singleActionSpace_codec);
       if (TrueNumberOfEnvs != 0) {
         output.WriteRawTag(24);
         output.WriteInt32(TrueNumberOfEnvs);
@@ -501,12 +488,8 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (singleObservationSpace_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(SingleObservationSpace);
-      }
-      if (singleActionSpace_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(SingleActionSpace);
-      }
+      size += singleObservationSpace_.CalculateSize(_repeated_singleObservationSpace_codec);
+      size += singleActionSpace_.CalculateSize(_repeated_singleActionSpace_codec);
       if (TrueNumberOfEnvs != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(TrueNumberOfEnvs);
       }
@@ -522,18 +505,8 @@ namespace ExternalCommunication {
       if (other == null) {
         return;
       }
-      if (other.singleObservationSpace_ != null) {
-        if (singleObservationSpace_ == null) {
-          SingleObservationSpace = new global::ExternalCommunication.Space();
-        }
-        SingleObservationSpace.MergeFrom(other.SingleObservationSpace);
-      }
-      if (other.singleActionSpace_ != null) {
-        if (singleActionSpace_ == null) {
-          SingleActionSpace = new global::ExternalCommunication.Space();
-        }
-        SingleActionSpace.MergeFrom(other.SingleActionSpace);
-      }
+      singleObservationSpace_.Add(other.singleObservationSpace_);
+      singleActionSpace_.Add(other.singleActionSpace_);
       if (other.TrueNumberOfEnvs != 0) {
         TrueNumberOfEnvs = other.TrueNumberOfEnvs;
       }
@@ -553,17 +526,11 @@ namespace ExternalCommunication {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
-            if (singleObservationSpace_ == null) {
-              SingleObservationSpace = new global::ExternalCommunication.Space();
-            }
-            input.ReadMessage(SingleObservationSpace);
+            singleObservationSpace_.AddEntriesFrom(input, _repeated_singleObservationSpace_codec);
             break;
           }
           case 18: {
-            if (singleActionSpace_ == null) {
-              SingleActionSpace = new global::ExternalCommunication.Space();
-            }
-            input.ReadMessage(SingleActionSpace);
+            singleActionSpace_.AddEntriesFrom(input, _repeated_singleActionSpace_codec);
             break;
           }
           case 24: {
@@ -586,17 +553,11 @@ namespace ExternalCommunication {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
-            if (singleObservationSpace_ == null) {
-              SingleObservationSpace = new global::ExternalCommunication.Space();
-            }
-            input.ReadMessage(SingleObservationSpace);
+            singleObservationSpace_.AddEntriesFrom(ref input, _repeated_singleObservationSpace_codec);
             break;
           }
           case 18: {
-            if (singleActionSpace_ == null) {
-              SingleActionSpace = new global::ExternalCommunication.Space();
-            }
-            input.ReadMessage(SingleActionSpace);
+            singleActionSpace_.AddEntriesFrom(ref input, _repeated_singleActionSpace_codec);
             break;
           }
           case 24: {
@@ -644,9 +605,10 @@ namespace ExternalCommunication {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public Space(Space other) : this() {
+      name_ = other.name_;
       continuousSize_ = other.continuousSize_;
       continuousRange_ = other.continuousRange_ != null ? other.continuousRange_.Clone() : null;
-      discreteSize_ = other.discreteSize_;
+      discreteSize_ = other.discreteSize_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -656,8 +618,20 @@ namespace ExternalCommunication {
       return new Space(this);
     }
 
+    /// <summary>Field number for the "name" field.</summary>
+    public const int NameFieldNumber = 1;
+    private string name_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Name {
+      get { return name_; }
+      set {
+        name_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     /// <summary>Field number for the "continuousSize" field.</summary>
-    public const int ContinuousSizeFieldNumber = 1;
+    public const int ContinuousSizeFieldNumber = 2;
     private int continuousSize_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -669,7 +643,7 @@ namespace ExternalCommunication {
     }
 
     /// <summary>Field number for the "continuousRange" field.</summary>
-    public const int ContinuousRangeFieldNumber = 2;
+    public const int ContinuousRangeFieldNumber = 3;
     private global::ExternalCommunication.MinMax continuousRange_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -681,15 +655,14 @@ namespace ExternalCommunication {
     }
 
     /// <summary>Field number for the "discreteSize" field.</summary>
-    public const int DiscreteSizeFieldNumber = 3;
-    private int discreteSize_;
+    public const int DiscreteSizeFieldNumber = 4;
+    private static readonly pb::FieldCodec<int> _repeated_discreteSize_codec
+        = pb::FieldCodec.ForInt32(34);
+    private readonly pbc::RepeatedField<int> discreteSize_ = new pbc::RepeatedField<int>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int DiscreteSize {
+    public pbc::RepeatedField<int> DiscreteSize {
       get { return discreteSize_; }
-      set {
-        discreteSize_ = value;
-      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -707,9 +680,10 @@ namespace ExternalCommunication {
       if (ReferenceEquals(other, this)) {
         return true;
       }
+      if (Name != other.Name) return false;
       if (ContinuousSize != other.ContinuousSize) return false;
       if (!object.Equals(ContinuousRange, other.ContinuousRange)) return false;
-      if (DiscreteSize != other.DiscreteSize) return false;
+      if(!discreteSize_.Equals(other.discreteSize_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -717,9 +691,10 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
+      if (Name.Length != 0) hash ^= Name.GetHashCode();
       if (ContinuousSize != 0) hash ^= ContinuousSize.GetHashCode();
       if (continuousRange_ != null) hash ^= ContinuousRange.GetHashCode();
-      if (DiscreteSize != 0) hash ^= DiscreteSize.GetHashCode();
+      hash ^= discreteSize_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -738,18 +713,19 @@ namespace ExternalCommunication {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
+      if (Name.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Name);
+      }
       if (ContinuousSize != 0) {
-        output.WriteRawTag(8);
+        output.WriteRawTag(16);
         output.WriteInt32(ContinuousSize);
       }
       if (continuousRange_ != null) {
-        output.WriteRawTag(18);
+        output.WriteRawTag(26);
         output.WriteMessage(ContinuousRange);
       }
-      if (DiscreteSize != 0) {
-        output.WriteRawTag(24);
-        output.WriteInt32(DiscreteSize);
-      }
+      discreteSize_.WriteTo(output, _repeated_discreteSize_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -760,18 +736,19 @@ namespace ExternalCommunication {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Name.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Name);
+      }
       if (ContinuousSize != 0) {
-        output.WriteRawTag(8);
+        output.WriteRawTag(16);
         output.WriteInt32(ContinuousSize);
       }
       if (continuousRange_ != null) {
-        output.WriteRawTag(18);
+        output.WriteRawTag(26);
         output.WriteMessage(ContinuousRange);
       }
-      if (DiscreteSize != 0) {
-        output.WriteRawTag(24);
-        output.WriteInt32(DiscreteSize);
-      }
+      discreteSize_.WriteTo(ref output, _repeated_discreteSize_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -782,15 +759,16 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
+      if (Name.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Name);
+      }
       if (ContinuousSize != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(ContinuousSize);
       }
       if (continuousRange_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(ContinuousRange);
       }
-      if (DiscreteSize != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(DiscreteSize);
-      }
+      size += discreteSize_.CalculateSize(_repeated_discreteSize_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -803,6 +781,9 @@ namespace ExternalCommunication {
       if (other == null) {
         return;
       }
+      if (other.Name.Length != 0) {
+        Name = other.Name;
+      }
       if (other.ContinuousSize != 0) {
         ContinuousSize = other.ContinuousSize;
       }
@@ -812,9 +793,7 @@ namespace ExternalCommunication {
         }
         ContinuousRange.MergeFrom(other.ContinuousRange);
       }
-      if (other.DiscreteSize != 0) {
-        DiscreteSize = other.DiscreteSize;
-      }
+      discreteSize_.Add(other.discreteSize_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -830,19 +809,24 @@ namespace ExternalCommunication {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
-          case 8: {
+          case 10: {
+            Name = input.ReadString();
+            break;
+          }
+          case 16: {
             ContinuousSize = input.ReadInt32();
             break;
           }
-          case 18: {
+          case 26: {
             if (continuousRange_ == null) {
               ContinuousRange = new global::ExternalCommunication.MinMax();
             }
             input.ReadMessage(ContinuousRange);
             break;
           }
-          case 24: {
-            DiscreteSize = input.ReadInt32();
+          case 34:
+          case 32: {
+            discreteSize_.AddEntriesFrom(input, _repeated_discreteSize_codec);
             break;
           }
         }
@@ -860,19 +844,24 @@ namespace ExternalCommunication {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
-          case 8: {
+          case 10: {
+            Name = input.ReadString();
+            break;
+          }
+          case 16: {
             ContinuousSize = input.ReadInt32();
             break;
           }
-          case 18: {
+          case 26: {
             if (continuousRange_ == null) {
               ContinuousRange = new global::ExternalCommunication.MinMax();
             }
             input.ReadMessage(ContinuousRange);
             break;
           }
-          case 24: {
-            DiscreteSize = input.ReadInt32();
+          case 34:
+          case 32: {
+            discreteSize_.AddEntriesFrom(ref input, _repeated_discreteSize_codec);
             break;
           }
         }
@@ -916,6 +905,7 @@ namespace ExternalCommunication {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public MinMax(MinMax other) : this() {
+      index_ = other.index_;
       minValue_ = other.minValue_;
       maxValue_ = other.maxValue_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
@@ -927,8 +917,20 @@ namespace ExternalCommunication {
       return new MinMax(this);
     }
 
+    /// <summary>Field number for the "index" field.</summary>
+    public const int IndexFieldNumber = 1;
+    private int index_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int Index {
+      get { return index_; }
+      set {
+        index_ = value;
+      }
+    }
+
     /// <summary>Field number for the "minValue" field.</summary>
-    public const int MinValueFieldNumber = 1;
+    public const int MinValueFieldNumber = 2;
     private float minValue_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -940,7 +942,7 @@ namespace ExternalCommunication {
     }
 
     /// <summary>Field number for the "maxValue" field.</summary>
-    public const int MaxValueFieldNumber = 2;
+    public const int MaxValueFieldNumber = 3;
     private float maxValue_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -966,6 +968,7 @@ namespace ExternalCommunication {
       if (ReferenceEquals(other, this)) {
         return true;
       }
+      if (Index != other.Index) return false;
       if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(MinValue, other.MinValue)) return false;
       if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(MaxValue, other.MaxValue)) return false;
       return Equals(_unknownFields, other._unknownFields);
@@ -975,6 +978,7 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
+      if (Index != 0) hash ^= Index.GetHashCode();
       if (MinValue != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(MinValue);
       if (MaxValue != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(MaxValue);
       if (_unknownFields != null) {
@@ -995,12 +999,16 @@ namespace ExternalCommunication {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
+      if (Index != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(Index);
+      }
       if (MinValue != 0F) {
-        output.WriteRawTag(13);
+        output.WriteRawTag(21);
         output.WriteFloat(MinValue);
       }
       if (MaxValue != 0F) {
-        output.WriteRawTag(21);
+        output.WriteRawTag(29);
         output.WriteFloat(MaxValue);
       }
       if (_unknownFields != null) {
@@ -1013,12 +1021,16 @@ namespace ExternalCommunication {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Index != 0) {
+        output.WriteRawTag(8);
+        output.WriteInt32(Index);
+      }
       if (MinValue != 0F) {
-        output.WriteRawTag(13);
+        output.WriteRawTag(21);
         output.WriteFloat(MinValue);
       }
       if (MaxValue != 0F) {
-        output.WriteRawTag(21);
+        output.WriteRawTag(29);
         output.WriteFloat(MaxValue);
       }
       if (_unknownFields != null) {
@@ -1031,6 +1043,9 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
+      if (Index != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Index);
+      }
       if (MinValue != 0F) {
         size += 1 + 4;
       }
@@ -1048,6 +1063,9 @@ namespace ExternalCommunication {
     public void MergeFrom(MinMax other) {
       if (other == null) {
         return;
+      }
+      if (other.Index != 0) {
+        Index = other.Index;
       }
       if (other.MinValue != 0F) {
         MinValue = other.MinValue;
@@ -1070,11 +1088,15 @@ namespace ExternalCommunication {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
-          case 13: {
-            MinValue = input.ReadFloat();
+          case 8: {
+            Index = input.ReadInt32();
             break;
           }
           case 21: {
+            MinValue = input.ReadFloat();
+            break;
+          }
+          case 29: {
             MaxValue = input.ReadFloat();
             break;
           }
@@ -1093,11 +1115,15 @@ namespace ExternalCommunication {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
-          case 13: {
-            MinValue = input.ReadFloat();
+          case 8: {
+            Index = input.ReadInt32();
             break;
           }
           case 21: {
+            MinValue = input.ReadFloat();
+            break;
+          }
+          case 29: {
             MaxValue = input.ReadFloat();
             break;
           }
