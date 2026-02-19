@@ -175,9 +175,53 @@ class UnityVectorEnv(VectorEnv):
 
     def map_action_to_proto(self, action):
         step = Step()
-        for i in range(self.num_envs):
-            action_msg = Action()
-            action_msg.continuous.extend(action[i, :])  #
 
+        def _append_action_msg(*, discrete=None, continuous=None):
+            action_msg = Action()
+            if discrete is not None:
+                # store as repeated int32
+                if np.isscalar(discrete):
+                    action_msg.discrete.append(int(discrete))
+                else:
+                    action_msg.discrete.extend([int(x) for x in np.asarray(discrete).tolist()])
+            if continuous is not None:
+                if np.isscalar(continuous):
+                    action_msg.continuous.append(float(continuous))
+                else:
+                    action_msg.continuous.extend([float(x) for x in np.asarray(continuous).tolist()])
             step.actions.append(action_msg)
+
+        sas = self.single_action_space
+
+
+        if isinstance(sas, spaces.Discrete):
+            a = np.asarray(action)
+            for i in range(self.num_envs):
+                _append_action_msg(discrete=int(a[i]))
+
+
+        elif isinstance(sas, spaces.MultiDiscrete) or isinstance(sas, spaces.MultiBinary):
+            a = np.asarray(action)
+            for i in range(self.num_envs):
+                _append_action_msg(discrete=a[i])
+
+
+        elif isinstance(sas, spaces.Box):
+            a = np.asarray(action, dtype=np.float32)
+            for i in range(self.num_envs):
+                _append_action_msg(continuous=a[i].ravel())
+
+        elif isinstance(sas, spaces.Dict):
+            for i in range(self.num_envs):
+                disc_i = None
+                cont_i = None
+                if "discrete" in action:
+                    disc_i = np.asarray(action["discrete"])[i]
+                if "continuous" in action:
+                    cont_i = np.asarray(action["continuous"], dtype=np.float32)[i]
+                _append_action_msg(discrete=disc_i, continuous=cont_i)
+
+        else:
+            raise TypeError(f"Unsupported single_action_space: {type(sas)}")
+
         return step

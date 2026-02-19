@@ -88,11 +88,54 @@ class _Slice:
         return self.end - self.start
 
 
-def _as_box(space: spaces.Space) -> spaces.Box:
-    if not isinstance(space, spaces.Box):
-        raise TypeError(f"Only Box spaces supported, got {type(space)}")
-    return space
+def _split_by_slices(space: spaces.Space, batched, slices: Sequence[_Slice]):
+    if isinstance(space, spaces.Box):
+        a = np.asarray(batched)
+        return [a[slc.start:slc.end] for slc in slices]
 
+    if isinstance(space, spaces.Discrete):
+        a = np.asarray(batched, dtype=np.int64)
+        return [a[slc.start:slc.end] for slc in slices]
+
+    if isinstance(space, spaces.MultiDiscrete) or isinstance(space, spaces.MultiBinary):
+        a = np.asarray(batched, dtype=np.int64)
+        return [a[slc.start:slc.end] for slc in slices]
+
+    if isinstance(space, spaces.Dict):
+        return [
+            {k: _split_by_slices(space.spaces[k], batched[k], [slc])[0] for k in space.spaces.keys()}
+            for slc in slices
+        ]
+
+    if isinstance(space, spaces.Tuple):
+        parts = []
+        for slc in slices:
+            parts.append(tuple(
+                _split_by_slices(subsp, batched[i], [slc])[0]
+                for i, subsp in enumerate(space.spaces)
+            ))
+        return parts
+
+    raise TypeError(f"Unsupported space type: {type(space)}")
+
+
+def _concat_by_space(space: spaces.Space, parts: Sequence[Any]):
+    if isinstance(space, spaces.Box):
+        return np.concatenate([np.asarray(p) for p in parts], axis=0)
+
+    if isinstance(space, spaces.Discrete):
+        return np.concatenate([np.asarray(p, dtype=np.int64) for p in parts], axis=0)
+
+    if isinstance(space, spaces.MultiDiscrete) or isinstance(space, spaces.MultiBinary):
+        return np.concatenate([np.asarray(p, dtype=np.int64) for p in parts], axis=0)
+
+    if isinstance(space, spaces.Dict):
+        return {k: _concat_by_space(space.spaces[k], [p[k] for p in parts]) for k in space.spaces.keys()}
+
+    if isinstance(space, spaces.Tuple):
+        return tuple(_concat_by_space(subsp, [p[i] for p in parts]) for i, subsp in enumerate(space.spaces))
+
+    raise TypeError(f"Unsupported space type: {type(space)}")
 
 def _merge_infos(infos_per_env: Sequence[Dict[str, Any]], slices: Sequence[_Slice]) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
@@ -154,6 +197,37 @@ def _merge_infos(infos_per_env: Sequence[Dict[str, Any]], slices: Sequence[_Slic
 
     return out
 
+def _batch_space(single: spaces.Space, num_envs: int) -> spaces.Space:
+    if isinstance(single, spaces.Box):
+        low = np.broadcast_to(single.low, (num_envs,) + single.shape)
+        high = np.broadcast_to(single.high, (num_envs,) + single.shape)
+        return spaces.Box(low=low, high=high, dtype=single.dtype)
+
+    if isinstance(single, spaces.Discrete):
+        # vector of independent discrete actions
+        return spaces.MultiDiscrete(
+            np.full((num_envs,), single.n, dtype=np.int64)
+        )
+
+    if isinstance(single, spaces.MultiDiscrete):
+        nvec = np.broadcast_to(single.nvec, (num_envs,) + single.nvec.shape)
+        return spaces.MultiDiscrete(nvec.astype(np.int64))
+
+    if isinstance(single, spaces.MultiBinary):
+        return spaces.MultiBinary((num_envs,) + single.shape)
+
+    if isinstance(single, spaces.Dict):
+        return spaces.Dict({
+            k: _batch_space(v, num_envs)
+            for k, v in single.spaces.items()
+        })
+
+    if isinstance(single, spaces.Tuple):
+        return spaces.Tuple(
+            tuple(_batch_space(s, num_envs) for s in single.spaces)
+        )
+
+    raise TypeError(f"Unsupported space type: {type(single)}")
 
 class FlattenedVectorEnvThreaded(VectorEnv):
     def __init__(self, envs: Union[Sequence[VectorEnv], Sequence[Callable[[], VectorEnv]]]):
@@ -177,24 +251,14 @@ class FlattenedVectorEnvThreaded(VectorEnv):
 
         # spaces (assume identical single spaces)
         e0 = self.envs[0]
-        sa0 = _as_box(getattr(e0, "single_action_space", None) or e0.action_space)
-        so0 = _as_box(getattr(e0, "single_observation_space", None) or e0.observation_space)
+        sa0 = getattr(e0, "single_action_space", None) or e0.single_action_space
+        so0 = getattr(e0, "single_observation_space", None) or e0.single_observation_space
 
         self.single_action_space = sa0
         self.single_observation_space = so0
 
-        self.action_space = spaces.Box(
-            low=np.broadcast_to(sa0.low, (self.num_envs,) + sa0.shape),
-            high=np.broadcast_to(sa0.high, (self.num_envs,) + sa0.shape),
-            shape=(self.num_envs,) + sa0.shape,
-            dtype=sa0.dtype,
-        )
-        self.observation_space = spaces.Box(
-            low=np.broadcast_to(so0.low, (self.num_envs,) + so0.shape),
-            high=np.broadcast_to(so0.high, (self.num_envs,) + so0.shape),
-            shape=(self.num_envs,) + so0.shape,
-            dtype=so0.dtype,
-        )
+        self.action_space = _batch_space(sa0, self.num_envs)
+        self.observation_space = _batch_space(so0, self.num_envs)
 
         self.metadata = dict(getattr(e0, "metadata", {}) or {})
         self.metadata["num_envs"] = self.num_envs
@@ -205,11 +269,15 @@ class FlattenedVectorEnvThreaded(VectorEnv):
 
         self._pending_kind: Optional[str] = None
 
-        obs_shape = (self.num_envs,) + self.single_observation_space.shape
-        self._obs_buf = np.empty(obs_shape, dtype=np.float32)
         self._rew_buf = np.empty((self.num_envs,), dtype=np.float32)
         self._done_buf = np.empty((self.num_envs,), dtype=np.bool_)
         self._trunc_buf = np.empty((self.num_envs,), dtype=np.bool_)
+
+        if isinstance(self.single_observation_space, spaces.Box):
+            obs_shape = (self.num_envs,) + self.single_observation_space.shape
+            self._obs_buf = np.empty(obs_shape, dtype=self.single_observation_space.dtype)
+        else:
+            self._obs_buf = None  # structured or discrete obs
 
     def reset(
             self,
@@ -217,7 +285,6 @@ class FlattenedVectorEnvThreaded(VectorEnv):
             seed: Optional[Union[int, Sequence[int]]] = None,
             options: Optional[dict] = None,
     ):
-        # Explicitly implement to avoid relying on base VectorEnv.reset()
         self.reset_async(seed=seed, options=options)
         obs, info = self.reset_wait()
         if info is None:
@@ -233,11 +300,8 @@ class FlattenedVectorEnvThreaded(VectorEnv):
 
     # --- splitting helpers ---
 
-    def _split_actions(self, actions: np.ndarray) -> List[np.ndarray]:
-        actions = np.asarray(actions)
-        if actions.shape[0] != self.num_envs:
-            raise ValueError(f"Expected actions with first dim {self.num_envs}, got {actions.shape}")
-        return [actions[slc.start:slc.end] for slc in self._slices]
+    def _split_actions(self, actions):
+        return _split_by_slices(self.single_action_space, actions, self._slices)
 
     def _split_inits_from_options(self, options: Optional[dict]) -> List[Optional[dict]]:
         if options is None:
@@ -292,22 +356,19 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         obs_parts = []
         infos = []
         for obs, info in results:
-            obs_parts.append(np.asarray(obs))
+            obs_parts.append(obs)
             infos.append(info or {})
 
-        obs = np.concatenate(obs_parts, axis=0)
+        obs = _concat_by_space(self.single_observation_space, obs_parts)
         return obs, _merge_infos(infos, self._slices)
 
-    def step_async(self, actions: np.ndarray):
+    def step_async(self, actions):
         if self._pending_kind is not None:
             raise RuntimeError("step_async called while another async call is pending")
 
-        actions = np.asarray(actions)
-        if actions.shape[0] != self.num_envs:
-            raise ValueError(f"Expected actions with first dim {self.num_envs}, got {actions.shape}")
-
-        for w, slc in zip(self.workers, self._slices):
-            w.submit_step(actions[slc.start:slc.end])
+        parts = self._split_actions(actions)
+        for w, a_part in zip(self.workers, parts):
+            w.submit_step(a_part)
 
         self._pending_kind = "step"
 
@@ -315,27 +376,33 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         if self._pending_kind != "step":
             raise RuntimeError("step_wait called without pending step_async")
 
-        # Collect results (one per sub-VectorEnv)
         results = [w.get_result(timeout=timeout) for w in self.workers]
         self._pending_kind = None
 
         infos = []
+        obs_parts = []
         for (obs, rew, done, trunc, info), slc in zip(results, self._slices):
-            obs = np.asarray(obs, dtype=np.float32)
             rew = np.asarray(rew, dtype=np.float32)
             done = np.asarray(done, dtype=np.bool_)
             trunc = np.asarray(trunc, dtype=np.bool_)
 
-            self._obs_buf[slc.start:slc.end] = obs
             self._rew_buf[slc.start:slc.end] = rew
             self._done_buf[slc.start:slc.end] = done
             self._trunc_buf[slc.start:slc.end] = trunc
 
+            obs_parts.append(obs)
             infos.append(info or {})
 
         merged_info = _merge_infos(infos, self._slices)
 
-        return self._obs_buf, self._rew_buf, self._done_buf, self._trunc_buf, merged_info
+        if self._obs_buf is not None:
+            obs_cat = np.concatenate([np.asarray(o) for o in obs_parts], axis=0)
+            self._obs_buf[...] = obs_cat
+            obs_out = self._obs_buf
+        else:
+            obs_out = _concat_by_space(self.single_observation_space, obs_parts)
+
+        return obs_out, self._rew_buf, self._done_buf, self._trunc_buf, merged_info
 
     def close(self):
         for w in self.workers:

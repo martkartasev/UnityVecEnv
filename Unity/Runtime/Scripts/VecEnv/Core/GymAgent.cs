@@ -29,10 +29,11 @@ namespace Scripts.VecEnv.Core
         protected float EpisodeReward;
         protected float PreviousEpisodeReward;
         private float _latestStepReward;
-        protected internal int GymAgentIndex;
+        protected internal int GymAgentIndex = -1;
 
         public int GetGymAgentIndex()
         {
+            if (GymAgentIndex == -1) GymVecEnvManager.Instance.RegisterAgent(this);
             return GymAgentIndex;
         }
 
@@ -106,7 +107,7 @@ namespace Scripts.VecEnv.Core
             {
                 if (_model == null || _model.InferencePolicy != inferencePolicy) _model = new InferenceHelper(inferencePolicy);
                 InferenceEnabled = true;
-                DoSetAction(new AgentAction
+                DoSetAction(new AgentAction  //TODO: Properly support discrete actions
                 {
                     Continuous = _model.DoInference(_latestObservation.Continuous)
                 });

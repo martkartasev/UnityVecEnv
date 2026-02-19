@@ -15,7 +15,7 @@ namespace Scripts.VecEnv.Inference
             InferencePolicy = modelAsset;
         }
 
-        public float[] DoInference(float[] data)
+        public float[] DoInference(float[] data) //TODO: Support other action types
         {
             TensorShape shape = new TensorShape(1, data.Length);
             Tensor<float> inputTensor = new Tensor<float>(shape, data);
