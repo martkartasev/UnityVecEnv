@@ -71,7 +71,7 @@ namespace Scripts.VecEnv.Core
             {
                 ContinuousObservations = agentTemplate.continuousObservations,
                 ContinuousActions = agentTemplate.continuousActions,
-                DiscreteActions =  agentTemplate.discreteActions.ToArray(),
+                DiscreteActions = agentTemplate.discreteActions.ToArray(),
             };
         }
 
@@ -231,9 +231,10 @@ namespace Scripts.VecEnv.Core
 
         private IEnumerator DisconnectedActionStepper()
         {
-            _agents.ForEach(agent => agent.DoReset());
-            _agents.ForEach(agent => agent.ProduceObservation());
-            _agents.ForEach(agent => agent.DoInternalAction());
+            var enabledAgents = _agents.FindAll(agent => agent.isActiveAndEnabled);
+            enabledAgents.ForEach(agent => agent.DoReset());
+            enabledAgents.ForEach(agent => agent.ProduceObservation());
+            enabledAgents.ForEach(agent => agent.DoInternalAction());
 
             while (!_gymStepOngoing && !_firstResetComplete && !_connectionInitialized)
             {
@@ -253,7 +254,7 @@ namespace Scripts.VecEnv.Core
                     yield return new WaitForFixedUpdate();
                 }
 
-                var enabledAgents = _agents.FindAll(agent => agent.enabled);
+                enabledAgents = _agents.FindAll(agent => agent.isActiveAndEnabled);
                 enabledAgents.ForEach(agent => agent.DoCollectReward());
                 enabledAgents.ForEach(agent => agent.DoGymStep());
                 PreObservation?.Invoke();
