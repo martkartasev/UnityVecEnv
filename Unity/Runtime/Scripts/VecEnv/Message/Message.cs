@@ -12,13 +12,6 @@ namespace Scripts.VecEnv.Message
         Truncated
     }
 
-    public enum AutoResetMode
-    {
-        NextStep,
-        SameStep,
-        Done,
-    }
-
     public struct InitializeEnvironment
     {
         public int AgentCount;
@@ -133,6 +126,7 @@ namespace Scripts.VecEnv.Message
 
     public struct ResetParameters
     {
+        public int AgentIndex;
         public float[] Continuous;
     }
 

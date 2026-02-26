@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Scripts.VecEnv.Message;
 using Scripts.VecEnv.Networking;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Action = System.Action;
+using Debug = UnityEngine.Debug;
 using Info = Scripts.VecEnv.Message.Info;
 using Reset = Scripts.VecEnv.Message.Reset;
 using Step = Scripts.VecEnv.Message.Step;
@@ -19,8 +22,10 @@ namespace Scripts.VecEnv.Core
         private static Lazy<GymVecEnvManager> _sLazy = new(CreateGymVecEnvManager);
         public static bool IsInitialized => _sLazy.IsValueCreated;
         public static GymVecEnvManager Instance => _sLazy.Value;
-        public static int PhysicsStepsPerGymStep = 10;
-
+        
+        public int physicsStepsPerGymStep = 10;
+        public int timeoutMilliseconds = 3000;
+        
         public event Action PreObservation;
         public event Action EarlyObservation;
         public event Action PostInitialize;
@@ -31,6 +36,7 @@ namespace Scripts.VecEnv.Core
         private bool _firstResetComplete;
         private bool _connectionInitialized;
         private bool _gymStepOngoing;
+        private bool IsShuttingDown;
 
         private Step _gymStep;
         private EnvironmentDescription _environmentDescription;
@@ -97,6 +103,11 @@ namespace Scripts.VecEnv.Core
 
         public void FixedUpdate()
         {
+            if (IsShuttingDown) return;
+            
+            Stopwatch timeout = new Stopwatch();
+            timeout.Start();
+            
             do
             {
                 var fetchInitialize = _communicator.FetchInitialize();
@@ -118,6 +129,7 @@ namespace Scripts.VecEnv.Core
 #if UNITY_EDITOR
                     if (_disconnectedStepper == null) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
 #endif
+                    timeout.Restart();
                     return;
                 }
 
@@ -132,9 +144,25 @@ namespace Scripts.VecEnv.Core
                         ));
                     }
                 }
-            } while (!_gymStepOngoing); //TODO: This can cause hard blocks, need a reasonable timeout so we can quit gracefully
+
+                if (timeout.ElapsedMilliseconds >= timeoutMilliseconds)
+                {
+                    Debug.Log($"No Step message in {timeoutMilliseconds}ms. Quitting. If needed, increase timeout with GymVecEnvManager.Instance.timeoutMilliseconds. ");
+                    Shutdown();
+                    break;
+                }
+            } while (!_gymStepOngoing); //TODO: Consider alternatives like stopping sim with time = 0 or doing manual Physics.Simulate. Fixed update becomes meaningless and breaks "Unity Native" though, needs consideration.
         }
 
+        public void Shutdown()
+        {
+            #if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+            #else
+            Application.Quit();
+            #endif
+            IsShuttingDown = true;
+        }
 
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
         {
@@ -178,7 +206,7 @@ namespace Scripts.VecEnv.Core
         {
             Time.timeScale = step.TimeScale;
 
-            if (step.PhysicsStepCount == 0) step.PhysicsStepCount = PhysicsStepsPerGymStep;
+            if (step.PhysicsStepCount == 0) step.PhysicsStepCount = physicsStepsPerGymStep;
 
             for (int i = 0; i < _agents.Count; i++)
             {
@@ -238,7 +266,7 @@ namespace Scripts.VecEnv.Core
 
             while (!_gymStepOngoing && !_firstResetComplete && !_connectionInitialized)
             {
-                for (int i = 0; i < PhysicsStepsPerGymStep; i++)
+                for (int i = 0; i < physicsStepsPerGymStep; i++)
                 {
                     if (_gymStepOngoing)
                     {
@@ -246,7 +274,7 @@ namespace Scripts.VecEnv.Core
                         yield break;
                     }
 
-                    if (i == PhysicsStepsPerGymStep / 2)
+                    if (i == physicsStepsPerGymStep / 2)
                     {
                         EarlyObservation?.Invoke();
                     }
@@ -273,6 +301,7 @@ namespace Scripts.VecEnv.Core
 
         private void OnApplicationQuit()
         {
+            IsShuttingDown = true;
             _communicator.Dispose();
         }
 
