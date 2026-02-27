@@ -8,16 +8,19 @@ def start_unity_process(executable_path: str,
                         log_file: str = "./",
                         timescale: float = 1,
                         decision_period: int = 10,
+                        timeout_ms: int = 15000,
                         no_graphics: bool = True):
     args = [executable_path,
             "-agents", str(nr_agents),  # Number of agents
             "-channel", str(port),  # Param to change connection port. If you want to start multiple instances
+            "-timeout", str(timeout_ms)
             ]
     if log_file != "":
         args += ["-logfile", log_file + str(port) + ".log"]
 
     if timescale != 1:
         args += ["-timescale", str(timescale)]
+
 
     if decision_period != 10:
         args += ["-decision_period", str(decision_period)]

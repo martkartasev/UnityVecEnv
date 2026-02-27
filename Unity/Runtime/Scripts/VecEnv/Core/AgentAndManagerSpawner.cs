@@ -17,7 +17,10 @@ namespace Scripts.VecEnv.Core
         public int SpawnAgents(int agents)
         {
             var agentsInScene = FindObjectsByType<GymAgent>(FindObjectsSortMode.None);
-            if (agentsInScene.Length > 0) _agentTemplate = agentsInScene[0].gameObject;
+            if (agentsInScene.Length > 0)
+            {
+                _agentTemplate = agentsInScene[0].gameObject;
+            }
             if (agents <= 0) return agentsInScene.Length;
 
             agentCount = agents;
