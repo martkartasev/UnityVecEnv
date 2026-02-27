@@ -8,7 +8,7 @@ def start_unity_process(executable_path: str,
                         log_file: str = "./",
                         timescale: float = 1,
                         decision_period: int = 10,
-                        timeout_ms: int = 15000,
+                        timeout_ms: int = 0,
                         no_graphics: bool = True):
     args = [executable_path,
             "-agents", str(nr_agents),  # Number of agents

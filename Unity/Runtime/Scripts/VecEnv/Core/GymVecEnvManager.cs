@@ -150,7 +150,7 @@ namespace Scripts.VecEnv.Core
                     }
                 }
 
-                if (!_gymStepOngoing && timeout.ElapsedMilliseconds >= timeoutMilliseconds)
+                if (!_gymStepOngoing && timeoutMilliseconds > 0 && timeout.ElapsedMilliseconds >= timeoutMilliseconds)
                 {
                     Debug.Log($"No Step message in {timeoutMilliseconds}ms. Quitting. If needed, increase timeout with GymVecEnvManager.Instance.timeoutMilliseconds. ");
                     Shutdown();
