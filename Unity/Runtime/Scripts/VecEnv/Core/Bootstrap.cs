@@ -35,6 +35,13 @@ namespace Scripts.VecEnv.Core
                 CommunicatorHttpServer.channel = channelValue;
                 Debug.Log($"Channel value: {channelValue}");
             }
+            
+            if (_args.TryGetValue("-timeout", out var timeout))
+            {
+                int.TryParse(timeout, out var timeoutValue);
+                GymVecEnvManager.Instance.timeoutMilliseconds = timeoutValue;
+                Debug.Log($"Timeout value: {timeoutValue}");
+            }
 
             if (_args.TryGetValue("-timescale", out var timeScale))
             {

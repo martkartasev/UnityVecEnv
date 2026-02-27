@@ -22,10 +22,10 @@ namespace Scripts.VecEnv.Core
         private static Lazy<GymVecEnvManager> _sLazy = new(CreateGymVecEnvManager);
         public static bool IsInitialized => _sLazy.IsValueCreated;
         public static GymVecEnvManager Instance => _sLazy.Value;
-        
+
         public int physicsStepsPerGymStep = 10;
         public int timeoutMilliseconds = 3000;
-        
+
         public event Action PreObservation;
         public event Action EarlyObservation;
         public event Action PostInitialize;
@@ -104,10 +104,10 @@ namespace Scripts.VecEnv.Core
         public void FixedUpdate()
         {
             if (IsShuttingDown) return;
-            
+
             Stopwatch timeout = new Stopwatch();
             timeout.Start();
-            
+
             do
             {
                 var fetchInitialize = _communicator.FetchInitialize();
@@ -124,11 +124,16 @@ namespace Scripts.VecEnv.Core
                     return;
                 }
 
-                if (!_connectionInitialized && !_firstResetComplete)
+                if (!_connectionInitialized)
                 {
 #if UNITY_EDITOR
-                    if (_disconnectedStepper == null) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
+                    // if (_disconnectedStepper == null) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
 #endif
+                    return;
+                }
+
+                if (!_firstResetComplete)
+                {
                     timeout.Restart();
                     return;
                 }
@@ -145,7 +150,7 @@ namespace Scripts.VecEnv.Core
                     }
                 }
 
-                if (timeout.ElapsedMilliseconds >= timeoutMilliseconds)
+                if (!_gymStepOngoing && timeout.ElapsedMilliseconds >= timeoutMilliseconds)
                 {
                     Debug.Log($"No Step message in {timeoutMilliseconds}ms. Quitting. If needed, increase timeout with GymVecEnvManager.Instance.timeoutMilliseconds. ");
                     Shutdown();
@@ -156,11 +161,11 @@ namespace Scripts.VecEnv.Core
 
         public void Shutdown()
         {
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
-            #else
+#else
             Application.Quit();
-            #endif
+#endif
             IsShuttingDown = true;
         }
 
@@ -180,6 +185,7 @@ namespace Scripts.VecEnv.Core
             PostInitialize?.Invoke();
 
             _environmentDescription.AgentCount = _agents.Count;
+            _connectionInitialized = true;
             callback?.Invoke(_environmentDescription);
         }
 
@@ -268,7 +274,7 @@ namespace Scripts.VecEnv.Core
             {
                 for (int i = 0; i < physicsStepsPerGymStep; i++)
                 {
-                    if (_gymStepOngoing)
+                    if (_gymStepOngoing || _firstResetComplete || _connectionInitialized)
                     {
                         _disconnectedStepper = null;
                         yield break;
