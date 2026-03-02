@@ -105,12 +105,9 @@ namespace Scripts.VecEnv.Core
         {
             if (inferencePolicy != null)
             {
-                if (_model == null || _model.InferencePolicy != inferencePolicy) _model = new InferenceHelper(inferencePolicy);
+                if (_model == null || _model.PolicyAsset != inferencePolicy) _model = new InferenceHelper(inferencePolicy);
                 InferenceEnabled = true;
-                DoSetAction(new AgentAction  //TODO: Properly support discrete actions
-                {
-                    Continuous = _model.DoInference(_latestObservation.Continuous)
-                });
+                DoSetAction(_model.DoInference(_latestObservation));
             }
             else
             {

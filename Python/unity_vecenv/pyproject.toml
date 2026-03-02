@@ -19,7 +19,8 @@ dependencies = [ # pip install -e UnityVecEnv/python/unity_vecenv/
     "gymnasium==1.2.3",
     "tyro==1.0.5",
     "tensorboard",
-    "requests"
+    "requests",
+    "httpx"
 ]
 
 [project.optional-dependencies]
