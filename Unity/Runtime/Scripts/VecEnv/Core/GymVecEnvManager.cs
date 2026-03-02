@@ -41,7 +41,7 @@ namespace Scripts.VecEnv.Core
         private Step _gymStep;
         private EnvironmentDescription _environmentDescription;
         private Coroutine _disconnectedStepper;
-        public AgentAndManagerSpawner Spawner { get; set; }
+        public AgentSpawner Spawner { get; set; }
 
         static GymVecEnvManager CreateGymVecEnvManager()
         {

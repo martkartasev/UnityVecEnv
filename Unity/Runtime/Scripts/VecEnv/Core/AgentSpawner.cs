@@ -3,12 +3,13 @@
 namespace Scripts.VecEnv.Core
 {
     [DefaultExecutionOrder(-501)]
-    public class AgentAndManagerSpawner : MonoBehaviour
+    public class AgentSpawner : MonoBehaviour
     {
         public int agentCount;
         private GameObject _agentTemplate;
 
-        private void Awake()
+
+        public void HandleSceneLoad()
         {
             var agentsInScene = SpawnAgents(agentCount);
             if (agentsInScene > 0) InitializeEnvAndRegisterAgents();
@@ -21,6 +22,7 @@ namespace Scripts.VecEnv.Core
             {
                 _agentTemplate = agentsInScene[0].gameObject;
             }
+
             if (agents <= 0) return agentsInScene.Length;
 
             agentCount = agents;
@@ -41,7 +43,7 @@ namespace Scripts.VecEnv.Core
 
         public void InitializeEnvAndRegisterAgents()
         {
-            var manager = GymVecEnvManager.Instance; //Lazy Loads the EnvManager on first call
+            var manager = GymVecEnvManager.Instance;
             manager.Spawner = this;
             manager.ClearAgents();
 

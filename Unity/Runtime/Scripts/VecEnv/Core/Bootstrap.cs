@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Scripts.VecEnv.Networking;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -9,17 +10,28 @@ namespace Scripts.VecEnv.Core
 {
     public static class Bootstrap
     {
-        public static AgentAndManagerSpawner AgentAndManagerSpawner { get; set; }
+        public static bool LoadingDone = false;
+        public static string SceneToLoad = null;
+        public static AgentSpawner AgentSpawner { get; set; }
         private static Dictionary<string, string> _args;
 
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void BeforeSceneLoad()
         {
-            AgentAndManagerSpawner = CreateSpawner();
+            AgentSpawner = CreateOrFetchSpawner();
 
             if (Application.isEditor) return;
             ParseCommandLine();
+
+            if (SceneToLoad != null && SceneManager.GetSceneByBuildIndex(0).name != SceneToLoad && !LoadingDone)
+            {
+                SceneManager.LoadScene(SceneToLoad);
+            }
+            else
+            {
+                LoadingDone = true;
+            }
         }
 
         private static void ParseCommandLine()
@@ -27,15 +39,13 @@ namespace Scripts.VecEnv.Core
             Console.TreatControlCAsInput = true;
             _args = GetCommandlineArgs();
 
-            //     if (args.ContainsKey("-nographics") || args.ContainsKey("-headless") || args.ContainsKey("-batchmode")) CommunicationServiceOld.noGraphics = true;
-
             if (_args.TryGetValue("-channel", out var channel))
             {
                 int.TryParse(channel, out var channelValue);
                 CommunicatorHttpServer.channel = channelValue;
                 Debug.Log($"Channel value: {channelValue}");
             }
-            
+
             if (_args.TryGetValue("-timeout", out var timeout))
             {
                 int.TryParse(timeout, out var timeoutValue);
@@ -53,7 +63,7 @@ namespace Scripts.VecEnv.Core
             if (_args.TryGetValue("-agentCount", out var agents))
             {
                 int.TryParse(agents, out var agentsValue);
-                AgentAndManagerSpawner.agentCount = agentsValue;
+                AgentSpawner.agentCount = agentsValue;
                 Debug.Log($"Agents value: {agentsValue}");
             }
 
@@ -63,15 +73,22 @@ namespace Scripts.VecEnv.Core
                 GymVecEnvManager.Instance.physicsStepsPerGymStep = requestPeriodValue;
                 Debug.Log($"Request period value: {requestPeriodValue}");
             }
+
+            if (_args.TryGetValue("-scene", out var scene))
+            {
+                SceneToLoad = scene;
+            }
         }
 
-        private static AgentAndManagerSpawner CreateSpawner()
+        private static AgentSpawner CreateOrFetchSpawner()
         {
+            if (AgentSpawner != null) return AgentSpawner;
+
             var spawnerObject = new GameObject("AgentSpawner");
             spawnerObject.hideFlags = HideFlags.HideAndDontSave;
             spawnerObject.SetActive(false);
 
-            var component = spawnerObject.AddComponent<AgentAndManagerSpawner>();
+            var component = spawnerObject.AddComponent<AgentSpawner>();
             UnityEngine.Object.DontDestroyOnLoad(spawnerObject);
 
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -81,7 +98,8 @@ namespace Scripts.VecEnv.Core
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            AgentAndManagerSpawner.gameObject.SetActive(true);
+            LoadingDone = SceneToLoad == null || SceneManager.GetActiveScene().name == SceneToLoad;
+            AgentSpawner.HandleSceneLoad();
         }
 
         public static Dictionary<string, string> GetCommandlineArgs()
