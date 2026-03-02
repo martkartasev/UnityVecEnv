@@ -127,7 +127,7 @@ namespace Scripts.VecEnv.Core
                 if (!_connectionInitialized)
                 {
 #if UNITY_EDITOR
-                    // if (_disconnectedStepper == null) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
+                    if (_disconnectedStepper == null) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
 #endif
                     return;
                 }
