@@ -44,16 +44,17 @@ def export_unity_onnx(agent, onnx_path: str, device: torch.device):
 
     dummy_obs = torch.zeros(1, agent.obs_dim, device=device, dtype=torch.float32)
 
+    #TODO: Write a proper exporter that supports different space types. Merge with other exporter.
     torch.onnx.export(
         wrapper,
         (dummy_obs,),
         onnx_path,
         opset_version=15,
-        input_names=["obs"],
-        output_names=["action_mean", "value"],
+        input_names=["obs_continuous"],
+        output_names=["action_continuous", "value"],
         dynamic_axes={
-            "obs": {0: "batch"},
-            "action_mean": {0: "batch"},
+            "obs_continuous": {0: "batch"},
+            "action_continuous": {0: "batch"},
             "value": {0: "batch"},
         },
         do_constant_folding=True,
