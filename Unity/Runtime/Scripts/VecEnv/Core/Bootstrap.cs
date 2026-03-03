@@ -26,6 +26,7 @@ namespace Scripts.VecEnv.Core
 
             if (SceneToLoad != null && SceneManager.GetSceneByBuildIndex(0).name != SceneToLoad && !LoadingDone)
             {
+                Debug.Log($"Loading scene {SceneToLoad}");
                 SceneManager.LoadScene(SceneToLoad);
             }
             else
@@ -77,6 +78,7 @@ namespace Scripts.VecEnv.Core
             if (_args.TryGetValue("-scene", out var scene))
             {
                 SceneToLoad = scene;
+                Debug.Log($"Scene value: {scene}");
             }
         }
 
@@ -113,7 +115,7 @@ namespace Scripts.VecEnv.Core
                 var arg = args[i].ToLower();
                 if (arg.StartsWith("-"))
                 {
-                    var value = i < args.Length - 1 ? args[i + 1].ToLower() : null;
+                    var value = i < args.Length - 1 ? args[i + 1] : null;
                     value = value?.StartsWith("-") ?? false ? null : value;
 
                     argDictionary.Add(arg, value);

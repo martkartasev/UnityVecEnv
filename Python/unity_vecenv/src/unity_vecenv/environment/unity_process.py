@@ -9,7 +9,8 @@ def start_unity_process(executable_path: str,
                         timescale: float = 1,
                         decision_period: int = 10,
                         timeout_ms: int = 0,
-                        no_graphics: bool = True):
+                        no_graphics: bool = True,
+                        scene_load: str = ""):
     args = [executable_path,
             "-agents", str(nr_agents),  # Number of agents
             "-channel", str(port),  # Param to change connection port. If you want to start multiple instances
@@ -21,6 +22,8 @@ def start_unity_process(executable_path: str,
     if timescale != 1:
         args += ["-timescale", str(timescale)]
 
+    if scene_load != "":
+        args += ["-scene", str(scene_load)]
 
     if decision_period != 10:
         args += ["-decision_period", str(decision_period)]

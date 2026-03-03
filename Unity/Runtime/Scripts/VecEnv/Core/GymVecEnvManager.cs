@@ -171,6 +171,8 @@ namespace Scripts.VecEnv.Core
 
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
         {
+            while (!Bootstrap.LoadingDone) yield return new WaitForFixedUpdate();
+
             if (_agents.Count != initializeEnvironments.AgentCount)
             {
                 Spawner.SpawnAgents(initializeEnvironments.AgentCount);
