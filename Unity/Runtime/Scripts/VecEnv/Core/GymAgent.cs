@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Scripts.VecEnv.Inference;
 using Scripts.VecEnv.Message;
 using Unity.InferenceEngine;
@@ -129,6 +130,11 @@ namespace Scripts.VecEnv.Core
         public int GetCurrentStep()
         {
             return CurrentStep;
+        }
+
+        private void OnDestroy()
+        {
+            GymVecEnvManager.Instance.UnregisterAgent(this);
         }
     }
 }

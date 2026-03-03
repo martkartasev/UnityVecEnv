@@ -17,8 +17,6 @@ public class FlyCamera : MonoBehaviour
 
     Camera cam;
 
-    public bool stored = false;
-
     static bool Focused
     {
         get => Cursor.lockState == CursorLockMode.Locked;
@@ -32,12 +30,6 @@ public class FlyCamera : MonoBehaviour
     void OnEnable()
     {
         if (focusOnEnable) Focused = true;
-        if (!stored)
-        {
-            DontDestroyOnLoad(gameObject);
-            stored = true;
-        }
-
         cam = GetComponentInParent<Camera>();
     }
 

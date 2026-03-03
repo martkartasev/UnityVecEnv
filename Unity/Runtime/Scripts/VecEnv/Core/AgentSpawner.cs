@@ -11,6 +11,7 @@ namespace Scripts.VecEnv.Core
 
         public void HandleSceneLoad()
         {
+            GymVecEnvManager.Instance.ClearAgents();
             var agentsInScene = SpawnAgents(agentCount);
             if (agentsInScene > 0) InitializeEnvAndRegisterAgents();
         }
@@ -45,7 +46,6 @@ namespace Scripts.VecEnv.Core
         {
             var manager = GymVecEnvManager.Instance;
             manager.Spawner = this;
-            manager.ClearAgents();
 
             var externalAgents = FindObjectsByType<GymAgent>(FindObjectsSortMode.None);
             foreach (var externalAgent in externalAgents)
