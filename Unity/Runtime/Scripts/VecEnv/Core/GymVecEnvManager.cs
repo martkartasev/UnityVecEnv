@@ -167,6 +167,7 @@ namespace Scripts.VecEnv.Core
             Application.Quit();
 #endif
             IsShuttingDown = true;
+            _communicator.Dispose();
         }
 
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
