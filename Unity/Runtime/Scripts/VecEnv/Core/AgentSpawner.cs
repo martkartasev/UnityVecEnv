@@ -11,7 +11,6 @@ namespace Scripts.VecEnv.Core
 
         public void HandleSceneLoad()
         {
-            GymVecEnvManager.Instance.ClearAgents();
             var agentsInScene = SpawnAgents(agentCount);
             if (agentsInScene > 0) InitializeEnvAndRegisterAgents();
         }
@@ -60,7 +59,11 @@ namespace Scripts.VecEnv.Core
         private void RemoveAgents(GymAgent[] agentsInScene, int length)
         {
             for (int i = 0; i < length; i++)
+            {
+                GymVecEnvManager.Instance.UnregisterAgent(agentsInScene[agentsInScene.Length - 1 - i]);
                 Destroy(agentsInScene[agentsInScene.Length - 1 - i].gameObject);
+            }
+                
         }
 
         private void AddAgents(int nr)

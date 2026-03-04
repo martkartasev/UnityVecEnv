@@ -94,8 +94,14 @@ namespace Scripts.VecEnv.Core
             UnityEngine.Object.DontDestroyOnLoad(spawnerObject);
 
             SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
 
             return component;
+        }
+
+        private static void OnSceneUnloaded(Scene arg0)
+        {
+            GymVecEnvManager.Instance.ClearAgents();
         }
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)

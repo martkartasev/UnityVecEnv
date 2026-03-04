@@ -253,7 +253,7 @@ namespace Scripts.VecEnv.Core
                 {
                     EpisodeLength = agent.GetCurrentStep(),
                     EpisodeReward = agent.GetEpisodeReward(),
-                    AgentIndex = agent.GymAgentIndex
+                    AgentIndex = agent.GetGymAgentIndex()
                 }).ToArray();
             }
 

@@ -50,6 +50,10 @@ namespace Editor.Scripts
                 var agent = (GymAgent)target;
                 using (new EditorGUI.DisabledScope(false))
                 {
+                    var index = (int)typeof(GymAgent).GetField("_gymAgentIndex", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(agent);
+                    DrawRow("Gym Index", index.ToString());
+                    
+                    EditorGUILayout.Space(4);
                     var step = (int)typeof(GymAgent).GetField("CurrentStep", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(agent);
                     DrawRow("Current Step", step.ToString());
                     

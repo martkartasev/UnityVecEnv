@@ -30,12 +30,12 @@ namespace Scripts.VecEnv.Core
         protected float EpisodeReward;
         protected float PreviousEpisodeReward;
         private float _latestStepReward;
-        protected internal int GymAgentIndex = -1;
+        private int _gymAgentIndex = -1;
 
         public int GetGymAgentIndex()
         {
-            if (GymAgentIndex == -1) GymVecEnvManager.Instance.RegisterAgent(this);
-            return GymAgentIndex;
+            if (_gymAgentIndex == -1) GymVecEnvManager.Instance.RegisterAgent(this);
+            return _gymAgentIndex;
         }
 
         protected abstract float CollectReward();
@@ -99,7 +99,7 @@ namespace Scripts.VecEnv.Core
 
         protected internal void AssignIndex(int index)
         {
-            GymAgentIndex = index;
+            _gymAgentIndex = index;
         }
 
         protected internal void DoInternalAction()
