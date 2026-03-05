@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Scripts.VecEnv.Message;
 using Scripts.VecEnv.Networking;
@@ -105,58 +104,63 @@ namespace Scripts.VecEnv.Core
         {
             if (IsShuttingDown) return;
 
-            Stopwatch timeout = new Stopwatch();
-            timeout.Start();
-
-            do
+            if (TryHandleControlMessages())
             {
-                var fetchInitialize = _communicator.FetchInitialize();
-                if (fetchInitialize.HasValue)
-                {
-                    StartCoroutine(DoInitialize(fetchInitialize.Value, init => _communicator.InitializeCompleted(init)));
-                    return;
-                }
+                return;
+            }
 
-                var fetchReset = _communicator.FetchReset();
-                if (fetchReset.HasValue)
-                {
-                    StartCoroutine(DoReset(fetchReset.Value, obs => _communicator.ResetCompleted(obs)));
-                    return;
-                }
-
-                if (!_connectionInitialized)
-                {
+            if (!_connectionInitialized)
+            {
 #if UNITY_EDITOR
-                    if (_disconnectedStepper == null) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
+                if (_disconnectedStepper == null) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
 #endif
-                    return;
-                }
+                return;
+            }
 
-                if (!_firstResetComplete)
-                {
-                    timeout.Restart();
-                    return;
-                }
+            if (!_firstResetComplete || _gymStepOngoing)
+            {
+                return;
+            }
 
-                if (!_gymStepOngoing)
-                {
-                    var fetchNextStep = _communicator.FetchNextStep();
-                    if (fetchNextStep.HasValue)
-                    {
-                        _gymStep = ReceiveStep(fetchNextStep.Value);
-                        StartCoroutine(ManageStep(_gymStep,
-                            (agentObservations, dones, rewards, infos) => _communicator.StepCompleted(agentObservations, dones, rewards, infos)
-                        ));
-                    }
-                }
+            if (!_communicator.WaitForNextMessage(timeoutMilliseconds))
+            {
+                Debug.Log($"No Step message in {timeoutMilliseconds}ms. Quitting. If needed, increase timeout with GymVecEnvManager.Instance.timeoutMilliseconds. ");
+                Shutdown();
+                return;
+            }
 
-                if (!_gymStepOngoing && timeoutMilliseconds > 0 && timeout.ElapsedMilliseconds >= timeoutMilliseconds)
-                {
-                    Debug.Log($"No Step message in {timeoutMilliseconds}ms. Quitting. If needed, increase timeout with GymVecEnvManager.Instance.timeoutMilliseconds. ");
-                    Shutdown();
-                    break;
-                }
-            } while (!_gymStepOngoing); //TODO: Consider alternatives like stopping sim with time = 0 or doing manual Physics.Simulate. Fixed update becomes meaningless and breaks "Unity Native" though, needs consideration.
+            if (TryHandleControlMessages())
+            {
+                return;
+            }
+
+            var fetchNextStep = _communicator.FetchNextStep();
+            if (fetchNextStep.HasValue)
+            {
+                _gymStep = ReceiveStep(fetchNextStep.Value);
+                StartCoroutine(ManageStep(_gymStep,
+                    (agentObservations, dones, rewards, infos) => _communicator.StepCompleted(agentObservations, dones, rewards, infos)
+                ));
+            }
+        }
+
+        private bool TryHandleControlMessages()
+        {
+            var fetchInitialize = _communicator.FetchInitialize();
+            if (fetchInitialize.HasValue)
+            {
+                StartCoroutine(DoInitialize(fetchInitialize.Value, init => _communicator.InitializeCompleted(init)));
+                return true;
+            }
+
+            var fetchReset = _communicator.FetchReset();
+            if (fetchReset.HasValue)
+            {
+                StartCoroutine(DoReset(fetchReset.Value, obs => _communicator.ResetCompleted(obs)));
+                return true;
+            }
+
+            return false;
         }
 
         public void Shutdown()
@@ -320,3 +324,4 @@ namespace Scripts.VecEnv.Core
         }
     }
 }
+

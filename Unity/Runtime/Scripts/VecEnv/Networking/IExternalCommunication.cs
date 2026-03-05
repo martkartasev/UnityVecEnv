@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Scripts.VecEnv.Message;
 using EnvironmentDescription = Scripts.VecEnv.Message.EnvironmentDescription;
 using Info = Scripts.VecEnv.Message.Info;
@@ -13,8 +13,10 @@ namespace Scripts.VecEnv.Networking
 
         public Step? FetchNextStep();
         public InitializeEnvironment? FetchInitialize();
+        public bool WaitForNextMessage(int timeoutMilliseconds);
         public void StepCompleted(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info info);
         public void ResetCompleted(AgentObservation[] agentObservations);
         public void InitializeCompleted(EnvironmentDescription initialize);
     }
 }
+

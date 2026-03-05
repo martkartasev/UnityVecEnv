@@ -1,5 +1,13 @@
-import os
 import subprocess
+
+from unity_vecenv.environment.protocol_constants import (
+    ARG_AGENT_COUNT,
+    ARG_CHANNEL,
+    ARG_DECISION_PERIOD,
+    ARG_SCENE,
+    ARG_TIMEOUT,
+    ARG_TIMESCALE,
+)
 
 
 def start_unity_process(executable_path: str,
@@ -12,24 +20,24 @@ def start_unity_process(executable_path: str,
                         no_graphics: bool = True,
                         scene_load: str = ""):
     args = [executable_path,
-            "-agentcount", str(nr_agents),  # Number of agents
-            "-channel", str(port),  # Param to change connection port. If you want to start multiple instances
-            "-timeout", str(timeout_ms)
+            ARG_AGENT_COUNT, str(nr_agents),
+            ARG_CHANNEL, str(port),
+            ARG_TIMEOUT, str(timeout_ms)
             ]
     if log_file != "":
         args += ["-logfile", log_file + str(port) + ".log"]
 
     if timescale != 1:
-        args += ["-timescale", str(timescale)]
+        args += [ARG_TIMESCALE, str(timescale)]
 
     if scene_load != "":
-        args += ["-scene", str(scene_load)]
+        args += [ARG_SCENE, str(scene_load)]
 
     if decision_period != 10:
-        args += ["-decisionperiod", str(decision_period)]
+        args += [ARG_DECISION_PERIOD, str(decision_period)]
 
     if no_graphics:
-        args += ["-headless", "-batchmode", "-nographics"]  # "-nographics" causes no renderer!
+        args += ["-headless", "-batchmode", "-nographics"]
 
     popen = subprocess.Popen(args)
     print("Started Unity process on port {}".format(port))

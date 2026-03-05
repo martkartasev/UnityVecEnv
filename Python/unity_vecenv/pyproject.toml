@@ -10,7 +10,6 @@ readme = "README.md"
 authors = [
     { name = "Mart Kartasev", email = "mart.kartasev@gmail.com" }
 ]
-license = { file = "LICENSE" }
 requires-python = ">=3.10"
 
 dependencies = [ # pip install -e UnityVecEnv/python/unity_vecenv/

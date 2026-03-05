@@ -1,35 +1,35 @@
-﻿using Scripts.VecEnv.Core;
+using System.Reflection;
+using Scripts.VecEnv.Core;
 using Scripts.VecEnv.Message;
+using UnityEditor;
+using UnityEngine;
 
 namespace Editor.Scripts
 {
-    using System.Reflection;
-    using System.Text;
-    using UnityEditor;
-    using UnityEngine;
-
     [CustomEditor(typeof(GymAgent), true)]
-    public class GymAgentEditor : Editor
+    public class GymAgentEditor : UnityEditor.Editor
     {
-        bool _showStats = true;
-        const float RowH = 18f;
-        double _next;
-        void OnEnable()
+        private bool _showStats = true;
+        private const float RowH = 18f;
+        private double _next;
+
+        private void OnEnable()
         {
             EditorApplication.update += EditorTick;
         }
 
-        void OnDisable()
+        private void OnDisable()
         {
             EditorApplication.update -= EditorTick;
         }
-        
-        void EditorTick()
+
+        private void EditorTick()
         {
             if (EditorApplication.timeSinceStartup < _next) return;
-            _next = EditorApplication.timeSinceStartup + 0.1; // 10 Hz
+            _next = EditorApplication.timeSinceStartup + 0.1;
             Repaint();
         }
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -41,22 +41,23 @@ namespace Editor.Scripts
             serializedObject.ApplyModifiedProperties();
         }
 
-        void DrawDebugData()
+        private void DrawDebugData()
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 _showStats = EditorGUILayout.Foldout(_showStats, "Debug Data", true);
                 if (!_showStats) return;
+
                 var agent = (GymAgent)target;
                 using (new EditorGUI.DisabledScope(false))
                 {
                     var index = (int)typeof(GymAgent).GetField("_gymAgentIndex", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(agent);
                     DrawRow("Gym Index", index.ToString());
-                    
+
                     EditorGUILayout.Space(4);
                     var step = (int)typeof(GymAgent).GetField("CurrentStep", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(agent);
                     DrawRow("Current Step", step.ToString());
-                    
+
                     EditorGUILayout.Space(4);
                     DrawHeaderRow("Rewards", "");
                     var episodeReward = (float)typeof(GymAgent).GetField("EpisodeReward", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(agent);
@@ -108,8 +109,7 @@ namespace Editor.Scripts
             }
         }
 
-
-        void DrawHeaderRow(string a, string b, float indexColWidth = 80f, float valueColWidth = 180f)
+        private void DrawHeaderRow(string a, string b, float indexColWidth = 80f, float valueColWidth = 180f)
         {
             var r = EditorGUILayout.GetControlRect(false, RowH);
             var left = new Rect(r.x, r.y, indexColWidth, r.height);
@@ -118,20 +118,19 @@ namespace Editor.Scripts
             EditorGUI.LabelField(left, a, EditorStyles.boldLabel);
             EditorGUI.LabelField(right, b, EditorStyles.boldLabel);
 
-            // A thin line
             var line = new Rect(r.x, r.yMax + 2, r.width, 1);
             EditorGUI.DrawRect(line, new Color(0, 0, 0, 0.2f));
             EditorGUILayout.Space(4);
         }
 
-        void DrawRow(string index, string value, float indexColWidth = 80f, float valueColWidth = 180f)
+        private void DrawRow(string index, string value, float indexColWidth = 80f, float valueColWidth = 180f)
         {
             var r = EditorGUILayout.GetControlRect(false, RowH);
             var left = new Rect(r.x, r.y, indexColWidth, r.height);
             var right = new Rect(r.x + indexColWidth, r.y, valueColWidth, r.height);
 
             EditorGUI.LabelField(left, index);
-            EditorGUI.SelectableLabel(right, value); // selectable is nice for quick copying too
+            EditorGUI.SelectableLabel(right, value);
         }
     }
 }
