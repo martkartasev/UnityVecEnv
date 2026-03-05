@@ -101,7 +101,7 @@ namespace Scripts.VecEnv.Message
 
         public AgentObservation AppendDiscrete(int value)
         {
-            Discrete[_continuousIndex] = value;
+            Discrete[_discreteIndex] = value;
             _discreteIndex++;
             return this;
         }

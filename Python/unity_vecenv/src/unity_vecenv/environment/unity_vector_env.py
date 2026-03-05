@@ -123,13 +123,13 @@ class UnityVectorEnv(VectorEnv):
 
     def step_result_to_numpy(self, results: StepResults):
         obs = np.zeros((self.num_envs, self.single_observation_space.shape[0]))
-        dones = np.zeros(self.num_envs)
-        truncates = np.zeros(self.num_envs)
-        rewards = np.zeros(self.num_envs)
+        dones = np.zeros(self.num_envs, dtype=np.bool_)
+        truncates = np.zeros(self.num_envs, dtype=np.bool_)
+        rewards = np.zeros(self.num_envs, dtype=np.float32)
         for i, result in enumerate(results.stepResults):
             obs[i, :] = np.array(result.observation.continuous, dtype=np.float32)
-            dones[i] = result.done
-            truncates[i] = result.truncated
+            dones[i] = bool(result.done)
+            truncates[i] = bool(result.truncated)
             rewards[i] = result.reward
 
         # TODO: Investigate why the normal episode recorder is having trouble, might be able to get rid of this
@@ -225,3 +225,4 @@ class UnityVectorEnv(VectorEnv):
             raise TypeError(f"Unsupported single_action_space: {type(sas)}")
 
         return step
+

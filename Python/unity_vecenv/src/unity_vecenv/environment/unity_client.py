@@ -1,8 +1,6 @@
 import time
 
 import requests
-import traceback
-import socket
 from google.protobuf.message import DecodeError
 
 from unity_vecenv.protobuf_gen.communication_pb2 import Reset, Observations, Step, StepResults, EnvironmentDescription, InitializeEnvironments
@@ -20,59 +18,54 @@ class SimClient:
         self.session = requests.Session()
 
     def initialize(self, message: InitializeEnvironments) -> EnvironmentDescription:
-        attempts = 0
-        environment_description = None
-
-        while attempts < 20:
-            try:
-                obs_bytes = self.do_request(InitializeEnvironments.SerializeToString(message), "initialize", timeout=30)
-                environment_description = EnvironmentDescription.FromString(obs_bytes)
-                break
-            except DecodeError:
-                print("Bad host issue, retrying...")
-                time.sleep(1)
-                attempts += 1
-
-        if attempts >= 20:
-            raise RuntimeError("Failed to initialize environment connection")
-
-        return environment_description
+        obs_bytes = self.do_request(InitializeEnvironments.SerializeToString(message), "initialize", timeout=30)
+        try:
+            return EnvironmentDescription.FromString(obs_bytes)
+        except DecodeError as exc:
+            raise RuntimeError("Failed to decode initialize response") from exc
 
     def reset(self, message: Reset) -> Observations:
         obs_bytes = self.do_request(Reset.SerializeToString(message), "reset", timeout=30)
-        observations = Observations.FromString(obs_bytes)
-
-        return observations
+        try:
+            return Observations.FromString(obs_bytes)
+        except DecodeError as exc:
+            raise RuntimeError("Failed to decode reset response") from exc
 
     def step(self, message: Step) -> StepResults:
         obs_bytes = self.do_request(Step.SerializeToString(message), "step", timeout=30)
-        observations = StepResults.FromString(obs_bytes)
-        return observations
-
+        try:
+            return StepResults.FromString(obs_bytes)
+        except DecodeError as exc:
+            raise RuntimeError("Failed to decode step response") from exc
 
     def do_request(self, msg, method, **kwargs):
-        attempts = 0
-        while attempts < 20:
+        max_attempts = 20
+        retry_delay_sec = 0.25
+        last_error = None
+
+        for attempt in range(1, max_attempts + 1):
             try:
                 response = self.session.post(
-                    f'http://127.0.0.1:{self.port}/{method}/',
+                    f"http://127.0.0.1:{self.port}/{method}/",
                     data=msg,
                     headers={
-                        'Content-Type': 'application/x-protobuf',
+                        "Content-Type": "application/x-protobuf",
                     },
                     allow_redirects=False,
-                    **kwargs
+                    **kwargs,
                 )
+
                 if response.status_code != 200:
                     print("status:", response.status_code)
                     print("headers:", response.headers.get("Content-Type"), response.headers.get("Location"))
                     print("body head:", response.content[:200])
-                    print(socket.getaddrinfo("localhost", self.port))
+
                 response.raise_for_status()
                 return response.content
-            except (ConnectionRefusedError, ConnectionError, requests.exceptions.ConnectionError,requests.exceptions.RequestException) as e:
-                print("Connection refused:", str(self.port), e)
-                attempts += 1
+            except requests.exceptions.RequestException as exc:
+                last_error = exc
+                print(f"Request failed on attempt {attempt}/{max_attempts} at port {self.port}: {exc}")
+                if attempt < max_attempts:
+                    time.sleep(retry_delay_sec)
 
-        print("Connection failed after multiple attempts.")
-        return None
+        raise RuntimeError(f"Connection failed after {max_attempts} attempts to port {self.port} for method '{method}'") from last_error

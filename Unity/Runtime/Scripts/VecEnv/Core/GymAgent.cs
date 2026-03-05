@@ -60,7 +60,7 @@ namespace Scripts.VecEnv.Core
 
         protected internal AgentObservation ProduceObservation()
         {
-            var produceObservation = new AgentObservation(continuousObservations, discreteActions.Count);
+            var produceObservation = new AgentObservation(continuousObservations, discreteObservations.Count);
             CollectObservation(ref produceObservation);
             _latestObservation = produceObservation;
             return produceObservation;

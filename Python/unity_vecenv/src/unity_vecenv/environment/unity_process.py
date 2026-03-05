@@ -12,7 +12,7 @@ def start_unity_process(executable_path: str,
                         no_graphics: bool = True,
                         scene_load: str = ""):
     args = [executable_path,
-            "-agents", str(nr_agents),  # Number of agents
+            "-agentcount", str(nr_agents),  # Number of agents
             "-channel", str(port),  # Param to change connection port. If you want to start multiple instances
             "-timeout", str(timeout_ms)
             ]
@@ -26,7 +26,7 @@ def start_unity_process(executable_path: str,
         args += ["-scene", str(scene_load)]
 
     if decision_period != 10:
-        args += ["-decision_period", str(decision_period)]
+        args += ["-decisionperiod", str(decision_period)]
 
     if no_graphics:
         args += ["-headless", "-batchmode", "-nographics"]  # "-nographics" causes no renderer!
@@ -34,3 +34,4 @@ def start_unity_process(executable_path: str,
     popen = subprocess.Popen(args)
     print("Started Unity process on port {}".format(port))
     return popen
+
