@@ -20,10 +20,15 @@ namespace Scripts.VecEnv.Core
         public static void BeforeSceneLoad()
         {
             GymAgentManager = CreateOrFetchSpawner();
-            GymVecEnvManager.Instance.Manager = GymAgentManager;
 
-            if (Application.isEditor) return;
+            if (Application.isEditor) //TODO: Find a cleaner way to set it up
+            {
+                GymVecEnvManager.Instance.Manager = GymAgentManager;
+                return;
+            }
+
             ParseCommandLine();
+            GymVecEnvManager.Instance.Manager = GymAgentManager;
 
             if (SceneToLoad != null && SceneManager.GetSceneByBuildIndex(0).name != SceneToLoad && !LoadingDone)
             {
