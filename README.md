@@ -33,8 +33,8 @@ To change the API, regenerate both Python and C# files after editing `Protobuf/c
 
 From repo root:
 
-```powershell
-pwsh ./Protobuf/generate_protos.ps1
+```bash
+bash ./Protobuf/generate_protos.sh
 ```
 
 ## Manual Python generation
@@ -58,3 +58,4 @@ Install `protoc` (for example via [Grpc.Tools](https://www.nuget.org/packages/Gr
 ```bash
 protoc -I ./ --csharp_out=../Unity/Runtime/Scripts/ProtobufGenerated ./communication.proto
 ```
+
