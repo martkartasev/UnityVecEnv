@@ -1,49 +1,27 @@
-import os
+from typing import Optional, Sequence
 
 import torch
 from torch import nn
 
-#TODO: Merge with other exporter
-class UnityPolicyExport(nn.Module):
-    def __init__(self, agent: nn.Module):
-        super().__init__()
-        self.actor = agent.actor
-        self.critic = agent.critic
-
-    def forward(self, obs: torch.Tensor):
-        logits = self.actor(obs)
-        action = torch.argmax(logits, dim=-1)  # baked-in argmax
-        value = self.critic(obs)
-        return action, value
+from unity_vecenv.onnx_utilities.unity_inference_engine_export import export_unity_onnx
 
 
 def export_unity_onnx_simple(
     agent: nn.Module,
-    obs_shape,
+    obs_shape: Sequence[int],
     out_path: str,
     opset: int = 13,
+    device: "torch.device | str" = "cpu",
+    action_space_type: Optional[str] = None,
 ):
-    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-
-    agent_cpu = agent.to("cpu").eval()
-    export_model = UnityPolicyExport(agent_cpu).eval()
-
-    dummy_obs = torch.zeros((1,) + tuple(obs_shape), dtype=torch.float32)
-
-    torch.onnx.export(
-        export_model,
-        dummy_obs,
-        out_path,
-        export_params=True,
-        opset_version=opset,
-        do_constant_folding=True,
-        input_names=["obs_continuous"],
-        output_names=["action_discrete", "value"],
-        dynamic_axes={
-            "obs_continuous": {0: "batch"},
-            "action_discrete": {0: "batch"},
-            "value": {0: "batch"},
-        },
+    """Backward-compatible wrapper over unified exporter."""
+    export_unity_onnx(
+        agent=agent,
+        onnx_path=out_path,
+        device=device,
+        obs_shape=obs_shape,
+        action_space_type=action_space_type,
+        export_value=True,
+        clamp_actions=True,
+        opset=opset,
     )
-
-    print(f"✅ Exported argmax ONNX to: {out_path}")
