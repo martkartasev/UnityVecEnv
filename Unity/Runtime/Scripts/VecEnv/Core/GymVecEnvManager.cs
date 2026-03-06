@@ -14,6 +14,12 @@ using Step = Scripts.VecEnv.Message.Step;
 
 namespace Scripts.VecEnv.Core
 {
+    public enum SpawnMode
+    {
+        Gym,
+        Disabled,
+    }
+
     [DefaultExecutionOrder(-500)]
     public class GymVecEnvManager : MonoBehaviour
     {
@@ -22,9 +28,12 @@ namespace Scripts.VecEnv.Core
         public static bool IsInitialized => _sLazy.IsValueCreated;
         public static GymVecEnvManager Instance => _sLazy.Value;
 
+        public SpawnMode SpawnMode = SpawnMode.Gym;
+
         public int physicsStepsPerGymStep = 10;
         public int timeoutMilliseconds = 3000;
 
+        public event Action PreInitialize;
         public event Action PreObservation;
         public event Action EarlyObservation;
         public event Action PostInitialize;
@@ -40,7 +49,7 @@ namespace Scripts.VecEnv.Core
         private Step _gymStep;
         private EnvironmentDescription _environmentDescription;
         private Coroutine _disconnectedStepper;
-        public AgentSpawner Spawner { get; set; }
+        public GymAgentManager Manager { get; set; }
 
         static GymVecEnvManager CreateGymVecEnvManager()
         {
@@ -177,17 +186,18 @@ namespace Scripts.VecEnv.Core
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
         {
             while (!Bootstrap.LoadingDone) yield return new WaitForFixedUpdate();
+            PreInitialize?.Invoke();
 
-            if (_agents.Count != initializeEnvironments.AgentCount)
+            if (SpawnMode == SpawnMode.Gym && _agents.Count != initializeEnvironments.AgentCount)
             {
-                Spawner.SpawnAgents(initializeEnvironments.AgentCount);
+                Manager.SpawnAgents(initializeEnvironments.AgentCount);
             }
 
             _gymStepOngoing = false;
             _firstResetComplete = false;
 
             yield return new WaitForFixedUpdate();
-            Spawner.InitializeEnvAndRegisterAgents();
+            Manager.InitializeEnvAndRegisterAgents();
             _agents.ForEach(agent => agent.DoInitialize());
             PostInitialize?.Invoke();
 
@@ -198,7 +208,7 @@ namespace Scripts.VecEnv.Core
 
         private IEnumerator DoReset(Reset reset, Action<AgentObservation[]> callback)
         {
-            Spawner.InitializeEnvAndRegisterAgents();
+            Manager.InitializeEnvAndRegisterAgents();
             foreach (var externalAgent in _agents)
             {
                 externalAgent.DoReset();
@@ -324,4 +334,3 @@ namespace Scripts.VecEnv.Core
         }
     }
 }
-

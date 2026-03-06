@@ -12,14 +12,15 @@ namespace Scripts.VecEnv.Core
     {
         public static bool LoadingDone = false;
         public static string SceneToLoad = null;
-        public static AgentSpawner AgentSpawner { get; set; }
+        public static GymAgentManager GymAgentManager { get; set; }
         private static Dictionary<string, string> _args;
 
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void BeforeSceneLoad()
         {
-            AgentSpawner = CreateOrFetchSpawner();
+            GymAgentManager = CreateOrFetchSpawner();
+            GymVecEnvManager.Instance.Manager = GymAgentManager;
 
             if (Application.isEditor) return;
             ParseCommandLine();
@@ -61,10 +62,10 @@ namespace Scripts.VecEnv.Core
                 Debug.Log($"Time scale value: {timeScaleValue}");
             }
 
-            if (_args.TryGetValue("-agentCount", out var agents))
+            if (_args.TryGetValue("-agentcount", out var agents))
             {
                 int.TryParse(agents, out var agentsValue);
-                AgentSpawner.agentCount = agentsValue;
+                GymAgentManager.agentCount = agentsValue;
                 Debug.Log($"Agents value: {agentsValue}");
             }
 
@@ -82,15 +83,15 @@ namespace Scripts.VecEnv.Core
             }
         }
 
-        private static AgentSpawner CreateOrFetchSpawner()
+        private static GymAgentManager CreateOrFetchSpawner()
         {
-            if (AgentSpawner != null) return AgentSpawner;
+            if (GymAgentManager != null) return GymAgentManager;
 
             var spawnerObject = new GameObject("AgentSpawner");
             spawnerObject.hideFlags = HideFlags.HideAndDontSave;
             spawnerObject.SetActive(false);
 
-            var component = spawnerObject.AddComponent<AgentSpawner>();
+            var component = spawnerObject.AddComponent<GymAgentManager>();
             UnityEngine.Object.DontDestroyOnLoad(spawnerObject);
 
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -107,7 +108,7 @@ namespace Scripts.VecEnv.Core
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             LoadingDone = SceneToLoad == null || SceneManager.GetActiveScene().name == SceneToLoad;
-            AgentSpawner.HandleSceneLoad();
+            GymAgentManager.HandleSceneLoad();
         }
 
         public static Dictionary<string, string> GetCommandlineArgs()

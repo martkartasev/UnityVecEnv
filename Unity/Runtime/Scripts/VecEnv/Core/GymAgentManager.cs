@@ -3,7 +3,7 @@
 namespace Scripts.VecEnv.Core
 {
     [DefaultExecutionOrder(-501)]
-    public class AgentSpawner : MonoBehaviour
+    public class GymAgentManager : MonoBehaviour
     {
         public int agentCount;
         private GameObject _agentTemplate;
@@ -12,7 +12,14 @@ namespace Scripts.VecEnv.Core
         public void HandleSceneLoad()
         {
             var agentsInScene = SpawnAgents(agentCount);
-            if (agentsInScene > 0) InitializeEnvAndRegisterAgents();
+            if (agentsInScene > 0)
+            {
+                InitializeEnvAndRegisterAgents();
+            }
+            else
+            {
+                GymVecEnvManager.Instance.SpawnMode = SpawnMode.Disabled;
+            }
         }
 
         public int SpawnAgents(int agents)
@@ -44,7 +51,8 @@ namespace Scripts.VecEnv.Core
         public void InitializeEnvAndRegisterAgents()
         {
             var manager = GymVecEnvManager.Instance;
-            manager.Spawner = this;
+
+            if (_agentTemplate == null) _agentTemplate = FindAnyObjectByType<GymAgent>()!.gameObject;
 
             var externalAgents = FindObjectsByType<GymAgent>(FindObjectsSortMode.None);
             foreach (var externalAgent in externalAgents)
@@ -63,7 +71,6 @@ namespace Scripts.VecEnv.Core
                 GymVecEnvManager.Instance.UnregisterAgent(agentsInScene[agentsInScene.Length - 1 - i]);
                 Destroy(agentsInScene[agentsInScene.Length - 1 - i].gameObject);
             }
-                
         }
 
         private void AddAgents(int nr)

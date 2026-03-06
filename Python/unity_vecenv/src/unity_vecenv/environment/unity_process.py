@@ -20,10 +20,12 @@ def start_unity_process(executable_path: str,
                         no_graphics: bool = True,
                         scene_load: str = ""):
     args = [executable_path,
-            ARG_AGENT_COUNT, str(nr_agents),
             ARG_CHANNEL, str(port),
             ARG_TIMEOUT, str(timeout_ms)
             ]
+
+    if nr_agents > 0:
+        args += [ARG_AGENT_COUNT, str(nr_agents)]
     if log_file != "":
         args += ["-logfile", log_file + str(port) + ".log"]
 
@@ -42,4 +44,3 @@ def start_unity_process(executable_path: str,
     popen = subprocess.Popen(args)
     print("Started Unity process on port {}".format(port))
     return popen
-
