@@ -12,13 +12,16 @@ from unity_vecenv.environment.unity_process import start_unity_process
 from unity_vecenv.protobuf_gen.communication_pb2 import (
     ResetParameters,
     Reset,
-    ResetResults,
+    BatchedResetResults,
     Step,
     Action,
-    StepResults,
+    BatchedStepResults,
     InitializeEnvironments,
     AutoResetMode,
 )
+
+_FLOAT32_LE = np.dtype("<f4")
+_INT32_LE = np.dtype("<i4")
 
 
 class UnityVectorEnv(VectorEnv):
@@ -124,29 +127,141 @@ class UnityVectorEnv(VectorEnv):
         params.continuous.extend(initialization)
         return params
 
-    def _observation_to_numpy(self, observation):
-        return np.asarray(observation.continuous, dtype=np.float32)
-
-    def _map_custom_info(self, proto_info) -> Optional[Dict[str, float]]:
-        if proto_info is None or len(proto_info.custom) == 0:
+    def _decode_custom_map(self, custom_map) -> Optional[Dict[str, float]]:
+        if custom_map is None or len(custom_map) == 0:
             return None
 
-        return {str(key): float(value) for key, value in proto_info.custom.items()}
+        return {str(key): float(value) for key, value in custom_map.items()}
 
-    def reset_result_to_numpy(self, results: ResetResults, nr_agents):
-        obs = np.zeros((nr_agents,) + self.single_observation_space.shape, dtype=np.float32)
+    def _decode_float_buffer(self, payload: bytes, expected_size: int, field_name: str) -> np.ndarray:
+        arr = np.frombuffer(payload, dtype=_FLOAT32_LE)
+        if arr.size != expected_size:
+            raise RuntimeError(f"{field_name} has {arr.size} float32 values, expected {expected_size}.")
+        return arr
+
+    def _decode_int_buffer(self, payload: bytes, expected_size: int, field_name: str) -> np.ndarray:
+        arr = np.frombuffer(payload, dtype=_INT32_LE)
+        if arr.size != expected_size:
+            raise RuntimeError(f"{field_name} has {arr.size} int32 values, expected {expected_size}.")
+        return arr
+
+    def _decode_bool_buffer(self, payload: bytes, expected_size: int, field_name: str) -> np.ndarray:
+        arr = np.frombuffer(payload, dtype=np.bool_)
+        if arr.size != expected_size:
+            raise RuntimeError(f"{field_name} has {arr.size} boolean values, expected {expected_size}.")
+        return arr.copy()
+
+    def _observation_to_numpy(self, observation):
+        continuous = np.asarray(observation.continuous, dtype=np.float32)
+        discrete = np.asarray(observation.discrete, dtype=np.int32)
+        sos = self.single_observation_space
+
+        if isinstance(sos, spaces.Box):
+            return continuous
+
+        if isinstance(sos, spaces.Discrete):
+            if discrete.size != 1:
+                raise RuntimeError(f"Expected 1 discrete observation value, got {discrete.size}.")
+            return int(discrete[0])
+
+        if isinstance(sos, spaces.MultiDiscrete) or isinstance(sos, spaces.MultiBinary):
+            return discrete
+
+        if isinstance(sos, spaces.Dict):
+            out = {}
+            if "continuous" in sos.spaces:
+                out["continuous"] = continuous
+            if "discrete" in sos.spaces:
+                discrete_space = sos.spaces["discrete"]
+                if isinstance(discrete_space, spaces.Discrete):
+                    if discrete.size != 1:
+                        raise RuntimeError(f"Expected 1 discrete observation value, got {discrete.size}.")
+                    out["discrete"] = int(discrete[0])
+                else:
+                    out["discrete"] = discrete
+            return out
+
+        return continuous
+
+    def _batched_observation_to_numpy(self, observation, nr_agents):
+        num_envs = int(observation.num_envs or nr_agents)
+        if num_envs != nr_agents:
+            raise RuntimeError(f"Batched observation reports {num_envs} envs, expected {nr_agents}.")
+
+        continuous = None
+        if observation.continuous_size > 0:
+            continuous = self._decode_float_buffer(
+                observation.continuous_f32,
+                nr_agents * int(observation.continuous_size),
+                "observation.continuous_f32",
+            ).reshape((nr_agents, int(observation.continuous_size))).copy()
+
+        discrete = None
+        if observation.discrete_size > 0:
+            discrete = self._decode_int_buffer(
+                observation.discrete_i32,
+                nr_agents * int(observation.discrete_size),
+                "observation.discrete_i32",
+            ).reshape((nr_agents, int(observation.discrete_size))).copy()
+
+        sos = self.single_observation_space
+        if isinstance(sos, spaces.Box):
+            if continuous is None:
+                return np.empty((nr_agents, 0), dtype=sos.dtype)
+            return continuous.astype(sos.dtype, copy=False)
+
+        if isinstance(sos, spaces.Discrete):
+            if discrete is None or discrete.shape[1] != 1:
+                raise RuntimeError("Expected one discrete value per environment in batched observation.")
+            return discrete[:, 0]
+
+        if isinstance(sos, spaces.MultiDiscrete) or isinstance(sos, spaces.MultiBinary):
+            if discrete is None:
+                raise RuntimeError("Expected discrete batched observation payload.")
+            return discrete
+
+        if isinstance(sos, spaces.Dict):
+            out = {}
+            if "continuous" in sos.spaces:
+                cont_space = sos.spaces["continuous"]
+                if continuous is None:
+                    out["continuous"] = np.empty((nr_agents, 0), dtype=cont_space.dtype)
+                else:
+                    out["continuous"] = continuous.astype(cont_space.dtype, copy=False)
+            if "discrete" in sos.spaces:
+                discrete_space = sos.spaces["discrete"]
+                if discrete is None:
+                    raise RuntimeError("Expected discrete batched observation payload.")
+                if isinstance(discrete_space, spaces.Discrete):
+                    if discrete.shape[1] != 1:
+                        raise RuntimeError("Expected one discrete value per environment in batched observation.")
+                    out["discrete"] = discrete[:, 0]
+                else:
+                    out["discrete"] = discrete
+            return out
+
+        raise TypeError(f"Unsupported single_observation_space: {type(sos)}")
+
+    def _select_single_observation(self, obs, index):
+        if isinstance(obs, dict):
+            return {key: np.copy(value[index]) for key, value in obs.items()}
+        return np.copy(obs[index])
+
+    def reset_result_to_numpy(self, results: BatchedResetResults, nr_agents):
+        obs = self._batched_observation_to_numpy(results.observation, nr_agents)
         info: Dict[str, Any] = {}
         custom = np.full((nr_agents,), None, dtype=object)
         custom_mask = np.zeros((nr_agents,), dtype=np.bool_)
 
-        for i, result in enumerate(results.resetResults):
-            obs[i] = self._observation_to_numpy(result.observation)
+        for entry in results.custom:
+            index = int(entry.index)
+            if index < 0 or index >= nr_agents:
+                raise RuntimeError(f"Reset custom info index {index} out of range for {nr_agents} envs.")
 
-            proto_info = result.info if result.HasField("info") else None
-            custom_info = self._map_custom_info(proto_info)
+            custom_info = self._decode_custom_map(entry.custom)
             if custom_info:
-                custom[i] = custom_info
-                custom_mask[i] = True
+                custom[index] = custom_info
+                custom_mask[index] = True
 
         if np.any(custom_mask):
             info["custom"] = custom
@@ -154,56 +269,52 @@ class UnityVectorEnv(VectorEnv):
 
         return obs, info
 
-    def step_result_to_numpy(self, results: StepResults):
-        obs = np.zeros((self.num_envs,) + self.single_observation_space.shape, dtype=np.float32)
-        dones = np.zeros(self.num_envs, dtype=np.bool_)
-        truncates = np.zeros(self.num_envs, dtype=np.bool_)
-        rewards = np.zeros(self.num_envs, dtype=np.float32)
-
+    def step_result_to_numpy(self, results: BatchedStepResults):
+        obs = self._batched_observation_to_numpy(results.observation, self.num_envs)
+        rewards = self._decode_float_buffer(results.rewards_f32, self.num_envs, "rewards_f32").copy()
+        dones = self._decode_bool_buffer(results.dones, self.num_envs, "dones")
+        truncates = self._decode_bool_buffer(results.truncates, self.num_envs, "truncates")
         info: Dict[str, Any] = {}
         custom = np.full((self.num_envs,), None, dtype=object)
-        custom_mask = np.zeros(self.num_envs, dtype=np.bool_)
+        custom_mask = np.zeros((self.num_envs,), dtype=np.bool_)
         final_info = np.full((self.num_envs,), None, dtype=object)
-        final_info_mask = np.zeros(self.num_envs, dtype=np.bool_)
+        final_info_mask = np.zeros((self.num_envs,), dtype=np.bool_)
         final_observation = np.full((self.num_envs,), None, dtype=object)
-        final_observation_mask = np.zeros(self.num_envs, dtype=np.bool_)
+        final_observation_mask = np.zeros((self.num_envs,), dtype=np.bool_)
 
-        for i, result in enumerate(results.stepResults):
-            obs[i] = self._observation_to_numpy(result.observation)
-            dones[i] = bool(result.done)
-            truncates[i] = bool(result.truncated)
-            rewards[i] = result.reward
+        for entry in results.custom:
+            index = int(entry.index)
+            if index < 0 or index >= self.num_envs:
+                raise RuntimeError(f"Step custom info index {index} out of range for {self.num_envs} envs.")
 
-            proto_info = result.info if result.HasField("info") else None
-            custom_info = self._map_custom_info(proto_info)
+            custom_info = self._decode_custom_map(entry.custom)
             if custom_info:
-                custom[i] = custom_info
-                custom_mask[i] = True
+                custom[index] = custom_info
+                custom_mask[index] = True
 
-            if not (dones[i] or truncates[i]):
-                continue
+        for entry in results.final_info:
+            index = int(entry.index)
+            if index < 0 or index >= self.num_envs:
+                raise RuntimeError(f"Final info index {index} out of range for {self.num_envs} envs.")
 
+            custom_info = self._decode_custom_map(entry.custom)
             final_info_entry = {}
-            if proto_info is not None and proto_info.HasField("episode_info"):
+            if entry.HasField("episode_info"):
                 final_info_entry["episode"] = {
-                    "r": float(proto_info.episode_info.episode_reward),
-                    "l": float(proto_info.episode_info.episode_length),
+                    "r": float(entry.episode_info.episode_reward),
+                    "l": float(entry.episode_info.episode_length),
                 }
             if custom_info:
                 final_info_entry["custom"] = custom_info
             if final_info_entry:
-                final_info[i] = final_info_entry
-                final_info_mask[i] = True
+                final_info[index] = final_info_entry
+                final_info_mask[index] = True
 
-            terminal_observation = result.observation
-            if (
-                proto_info is not None
-                and proto_info.HasField("final_observation")
-                and len(proto_info.final_observation.continuous) > 0
-            ):
-                terminal_observation = proto_info.final_observation
-            final_observation[i] = self._observation_to_numpy(terminal_observation)
-            final_observation_mask[i] = True
+            if entry.HasField("final_observation"):
+                final_observation[index] = self._observation_to_numpy(entry.final_observation)
+            else:
+                final_observation[index] = self._select_single_observation(obs, index)
+            final_observation_mask[index] = True
 
         if np.any(custom_mask):
             info["custom"] = custom
@@ -266,3 +377,4 @@ class UnityVectorEnv(VectorEnv):
             raise TypeError(f"Unsupported single_action_space: {type(sas)}")
 
         return step
+

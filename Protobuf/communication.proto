@@ -78,13 +78,46 @@ message ResetResult {
   Info info = 2;
 }
 
-
 message StepResults {
   repeated StepResult stepResults = 1;
 }
 
 message ResetResults {
   repeated ResetResult resetResults = 1;
+}
+
+message BatchedObservation {
+  int32 num_envs = 1;
+  int32 continuous_size = 2;
+  int32 discrete_size = 3;
+  bytes continuous_f32 = 4;
+  bytes discrete_i32 = 5;
+}
+
+message CustomInfoEntry {
+  int32 index = 1;
+  map<string, float> custom = 2;
+}
+
+message FinalStepInfoEntry {
+  int32 index = 1;
+  EpisodeInfo episode_info = 2;
+  Observation final_observation = 3;
+  map<string, float> custom = 4;
+}
+
+message BatchedStepResults {
+  BatchedObservation observation = 1;
+  bytes rewards_f32 = 2;
+  bytes dones = 3;
+  bytes truncates = 4;
+  repeated CustomInfoEntry custom = 5;
+  repeated FinalStepInfoEntry final_info = 6;
+}
+
+message BatchedResetResults {
+  BatchedObservation observation = 1;
+  repeated CustomInfoEntry custom = 2;
 }
 
 message Screenshot {
@@ -102,7 +135,6 @@ message EpisodeInfo {
   float episode_reward = 2;
   float episode_length = 3;
 }
-
 
 message Transform {
   Vector3 position = 1;

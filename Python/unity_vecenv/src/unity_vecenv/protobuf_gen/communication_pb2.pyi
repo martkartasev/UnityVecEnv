@@ -138,6 +138,78 @@ class ResetResults(_message.Message):
     resetResults: _containers.RepeatedCompositeFieldContainer[ResetResult]
     def __init__(self, resetResults: _Optional[_Iterable[_Union[ResetResult, _Mapping]]] = ...) -> None: ...
 
+class BatchedObservation(_message.Message):
+    __slots__ = ("num_envs", "continuous_size", "discrete_size", "continuous_f32", "discrete_i32")
+    NUM_ENVS_FIELD_NUMBER: _ClassVar[int]
+    CONTINUOUS_SIZE_FIELD_NUMBER: _ClassVar[int]
+    DISCRETE_SIZE_FIELD_NUMBER: _ClassVar[int]
+    CONTINUOUS_F32_FIELD_NUMBER: _ClassVar[int]
+    DISCRETE_I32_FIELD_NUMBER: _ClassVar[int]
+    num_envs: int
+    continuous_size: int
+    discrete_size: int
+    continuous_f32: bytes
+    discrete_i32: bytes
+    def __init__(self, num_envs: _Optional[int] = ..., continuous_size: _Optional[int] = ..., discrete_size: _Optional[int] = ..., continuous_f32: _Optional[bytes] = ..., discrete_i32: _Optional[bytes] = ...) -> None: ...
+
+class CustomInfoEntry(_message.Message):
+    __slots__ = ("index", "custom")
+    class CustomEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: float
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[float] = ...) -> None: ...
+    INDEX_FIELD_NUMBER: _ClassVar[int]
+    CUSTOM_FIELD_NUMBER: _ClassVar[int]
+    index: int
+    custom: _containers.ScalarMap[str, float]
+    def __init__(self, index: _Optional[int] = ..., custom: _Optional[_Mapping[str, float]] = ...) -> None: ...
+
+class FinalStepInfoEntry(_message.Message):
+    __slots__ = ("index", "episode_info", "final_observation", "custom")
+    class CustomEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: float
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[float] = ...) -> None: ...
+    INDEX_FIELD_NUMBER: _ClassVar[int]
+    EPISODE_INFO_FIELD_NUMBER: _ClassVar[int]
+    FINAL_OBSERVATION_FIELD_NUMBER: _ClassVar[int]
+    CUSTOM_FIELD_NUMBER: _ClassVar[int]
+    index: int
+    episode_info: EpisodeInfo
+    final_observation: Observation
+    custom: _containers.ScalarMap[str, float]
+    def __init__(self, index: _Optional[int] = ..., episode_info: _Optional[_Union[EpisodeInfo, _Mapping]] = ..., final_observation: _Optional[_Union[Observation, _Mapping]] = ..., custom: _Optional[_Mapping[str, float]] = ...) -> None: ...
+
+class BatchedStepResults(_message.Message):
+    __slots__ = ("observation", "rewards_f32", "dones", "truncates", "custom", "final_info")
+    OBSERVATION_FIELD_NUMBER: _ClassVar[int]
+    REWARDS_F32_FIELD_NUMBER: _ClassVar[int]
+    DONES_FIELD_NUMBER: _ClassVar[int]
+    TRUNCATES_FIELD_NUMBER: _ClassVar[int]
+    CUSTOM_FIELD_NUMBER: _ClassVar[int]
+    FINAL_INFO_FIELD_NUMBER: _ClassVar[int]
+    observation: BatchedObservation
+    rewards_f32: bytes
+    dones: bytes
+    truncates: bytes
+    custom: _containers.RepeatedCompositeFieldContainer[CustomInfoEntry]
+    final_info: _containers.RepeatedCompositeFieldContainer[FinalStepInfoEntry]
+    def __init__(self, observation: _Optional[_Union[BatchedObservation, _Mapping]] = ..., rewards_f32: _Optional[bytes] = ..., dones: _Optional[bytes] = ..., truncates: _Optional[bytes] = ..., custom: _Optional[_Iterable[_Union[CustomInfoEntry, _Mapping]]] = ..., final_info: _Optional[_Iterable[_Union[FinalStepInfoEntry, _Mapping]]] = ...) -> None: ...
+
+class BatchedResetResults(_message.Message):
+    __slots__ = ("observation", "custom")
+    OBSERVATION_FIELD_NUMBER: _ClassVar[int]
+    CUSTOM_FIELD_NUMBER: _ClassVar[int]
+    observation: BatchedObservation
+    custom: _containers.RepeatedCompositeFieldContainer[CustomInfoEntry]
+    def __init__(self, observation: _Optional[_Union[BatchedObservation, _Mapping]] = ..., custom: _Optional[_Iterable[_Union[CustomInfoEntry, _Mapping]]] = ...) -> None: ...
+
 class Screenshot(_message.Message):
     __slots__ = ("camera",)
     CAMERA_FIELD_NUMBER: _ClassVar[int]

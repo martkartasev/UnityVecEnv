@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -29,8 +29,8 @@ namespace Scripts.VecEnv.Networking
         private readonly SemaphoreSlim _stepGate = new(1, 1);
         private readonly ManualResetEventSlim _messageAvailable = new(false);
         private readonly object _messageLock = new();
-        private TaskCompletionSource<ResetResults> _resetTcs;
-        private TaskCompletionSource<StepResults> _stepTcs;
+        private TaskCompletionSource<BatchedResetResults> _resetTcs;
+        private TaskCompletionSource<BatchedStepResults> _stepTcs;
         private TaskCompletionSource<ExternalCommunication.EnvironmentDescription> _initializeTcs;
 
         private ExternalCommunication.Reset _reset;
@@ -118,31 +118,76 @@ namespace Scripts.VecEnv.Networking
 
         public void StepCompleted(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info[] infos)
         {
-            var results = new StepResults();
-            for (int i = 0; i < agentObservations.Length; i++)
+            var results = new BatchedStepResults
             {
-                var result = new StepResult();
-                result.Observation = Mapper.MapObservationToExternal(agentObservations[i]);
-                result.Done = dones[i] == EnvironmentState.Done;
-                result.Truncated = dones[i] == EnvironmentState.Truncated;
-                result.Reward = rewards[i];
-                result.Info = Mapper.MapInfo(infos[i]);
-                results.StepResults_.Add(result);
+                Observation = BuildBatchedObservation(agentObservations),
+                RewardsF32 = FloatArrayToByteString(rewards),
+                Dones = StateArrayToByteString(dones, EnvironmentState.Done),
+                Truncates = StateArrayToByteString(dones, EnvironmentState.Truncated)
+            };
+
+            for (int i = 0; i < infos.Length; i++)
+            {
+                if (infos[i].custom != null && infos[i].custom.Count > 0)
+                {
+                    var customEntry = new CustomInfoEntry
+                    {
+                        Index = i
+                    };
+                    customEntry.Custom.Add(infos[i].custom);
+                    results.Custom.Add(customEntry);
+                }
+
+                if (dones[i] != EnvironmentState.Done && dones[i] != EnvironmentState.Truncated)
+                {
+                    continue;
+                }
+
+                var finalInfoEntry = new FinalStepInfoEntry
+                {
+                    Index = i,
+                    EpisodeInfo = new EpisodeInfo
+                    {
+                        AgentIndex = infos[i].AgentIndex,
+                        EpisodeReward = infos[i].EpisodeReward,
+                        EpisodeLength = infos[i].EpisodeLength
+                    },
+                    FinalObservation = Mapper.MapObservationToExternal(SelectFinalObservation(agentObservations[i], infos[i]))
+                };
+
+                if (infos[i].custom != null && infos[i].custom.Count > 0)
+                {
+                    finalInfoEntry.Custom.Add(infos[i].custom);
+                }
+
+                results.FinalInfo.Add(finalInfoEntry);
             }
-            
+
             _stepTcs?.TrySetResult(results);
         }
 
         public void ResetCompleted(AgentObservation[] agentObservations, Info[] infos)
         {
-            var results = new ResetResults();
-            for (int i = 0; i < agentObservations.Length; i++)
+            var results = new BatchedResetResults
             {
-                var result = new ResetResult();
-                result.Observation = Mapper.MapObservationToExternal(agentObservations[i]);
-                result.Info = Mapper.MapInfo(infos[i]);
-                results.ResetResults_.Add(result);
+                Observation = BuildBatchedObservation(agentObservations)
+            };
+
+            for (int i = 0; i < infos.Length; i++)
+            {
+                if (infos[i].custom == null || infos[i].custom.Count == 0)
+                {
+                    continue;
+                }
+
+                var customEntry = new CustomInfoEntry
+                {
+                    Index = i
+                };
+                customEntry.Custom.Add(infos[i].custom);
+                results.Custom.Add(customEntry);
             }
+
             _resetTcs?.TrySetResult(results);
         }
 
@@ -152,7 +197,102 @@ namespace Scripts.VecEnv.Networking
             _initializeTcs?.TrySetResult(description);
         }
 
-  
+        private static AgentObservation SelectFinalObservation(AgentObservation currentObservation, Info info)
+        {
+            if ((info.FinalObservation.Continuous?.Length ?? 0) > 0 || (info.FinalObservation.Discrete?.Length ?? 0) > 0)
+            {
+                return info.FinalObservation;
+            }
+
+            return currentObservation;
+        }
+
+        private static BatchedObservation BuildBatchedObservation(AgentObservation[] agentObservations)
+        {
+            var batchedObservation = new BatchedObservation();
+            if (agentObservations == null || agentObservations.Length == 0)
+            {
+                return batchedObservation;
+            }
+
+            var continuousSize = agentObservations[0].Continuous?.Length ?? 0;
+            var discreteSize = agentObservations[0].Discrete?.Length ?? 0;
+            var continuousValues = new float[agentObservations.Length * continuousSize];
+            var discreteValues = new int[agentObservations.Length * discreteSize];
+
+            for (int i = 0; i < agentObservations.Length; i++)
+            {
+                var continuous = agentObservations[i].Continuous ?? Array.Empty<float>();
+                var discrete = agentObservations[i].Discrete ?? Array.Empty<int>();
+                if (continuous.Length != continuousSize)
+                {
+                    throw new InvalidOperationException($"Observation {i} has {continuous.Length} continuous values, expected {continuousSize}.");
+                }
+
+                if (discrete.Length != discreteSize)
+                {
+                    throw new InvalidOperationException($"Observation {i} has {discrete.Length} discrete values, expected {discreteSize}.");
+                }
+
+                if (continuousSize > 0)
+                {
+                    Array.Copy(continuous, 0, continuousValues, i * continuousSize, continuousSize);
+                }
+
+                if (discreteSize > 0)
+                {
+                    Array.Copy(discrete, 0, discreteValues, i * discreteSize, discreteSize);
+                }
+            }
+
+            batchedObservation.NumEnvs = agentObservations.Length;
+            batchedObservation.ContinuousSize = continuousSize;
+            batchedObservation.DiscreteSize = discreteSize;
+            batchedObservation.ContinuousF32 = FloatArrayToByteString(continuousValues);
+            batchedObservation.DiscreteI32 = IntArrayToByteString(discreteValues);
+            return batchedObservation;
+        }
+
+        private static ByteString FloatArrayToByteString(float[] values)
+        {
+            if (values == null || values.Length == 0)
+            {
+                return ByteString.Empty;
+            }
+
+            var bytes = new byte[values.Length * sizeof(float)];
+            Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length);
+            return ByteString.CopyFrom(bytes);
+        }
+
+        private static ByteString IntArrayToByteString(int[] values)
+        {
+            if (values == null || values.Length == 0)
+            {
+                return ByteString.Empty;
+            }
+
+            var bytes = new byte[values.Length * sizeof(int)];
+            Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length);
+            return ByteString.CopyFrom(bytes);
+        }
+
+        private static ByteString StateArrayToByteString(EnvironmentState[] states, EnvironmentState activeState)
+        {
+            if (states == null || states.Length == 0)
+            {
+                return ByteString.Empty;
+            }
+
+            var bytes = new byte[states.Length];
+            for (int i = 0; i < states.Length; i++)
+            {
+                bytes[i] = states[i] == activeState ? (byte)1 : (byte)0;
+            }
+
+            return ByteString.CopyFrom(bytes);
+        }
+
         private HttpListener ListenerSetup()
         {
             var l = new HttpListener();
@@ -308,7 +448,7 @@ namespace Scripts.VecEnv.Networking
                 UpdateMessageAvailability_NoLock();
             }
             _resetTcs?.TrySetCanceled();
-            _resetTcs = new TaskCompletionSource<ResetResults>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _resetTcs = new TaskCompletionSource<BatchedResetResults>(TaskCreationOptions.RunContinuationsAsynchronously);
             var tcs = _resetTcs;
 
             var obs = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(30), onTimeout: () =>
@@ -339,7 +479,7 @@ namespace Scripts.VecEnv.Networking
                     UpdateMessageAvailability_NoLock();
                 }
                 _stepTcs?.TrySetCanceled();
-                _stepTcs = new TaskCompletionSource<StepResults>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _stepTcs = new TaskCompletionSource<BatchedStepResults>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var tcs = _stepTcs;
 
                 var sr = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(30), onTimeout: () =>
@@ -412,4 +552,3 @@ namespace Scripts.VecEnv.Networking
         }
     }
 }
-

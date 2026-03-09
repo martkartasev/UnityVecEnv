@@ -1,4 +1,4 @@
-import time
+﻿import time
 
 import requests
 from google.protobuf.message import DecodeError
@@ -12,9 +12,9 @@ from unity_vecenv.environment.protocol_constants import (
 )
 from unity_vecenv.protobuf_gen.communication_pb2 import (
     Reset,
-    ResetResults,
+    BatchedResetResults,
     Step,
-    StepResults,
+    BatchedStepResults,
     EnvironmentDescription,
     InitializeEnvironments,
 )
@@ -38,17 +38,17 @@ class SimClient:
         except DecodeError as exc:
             raise RuntimeError("Failed to decode initialize response") from exc
 
-    def reset(self, message: Reset) -> ResetResults:
+    def reset(self, message: Reset) -> BatchedResetResults:
         obs_bytes = self.do_request(Reset.SerializeToString(message), ENDPOINT_RESET, timeout=30)
         try:
-            return ResetResults.FromString(obs_bytes)
+            return BatchedResetResults.FromString(obs_bytes)
         except DecodeError as exc:
             raise RuntimeError("Failed to decode reset response") from exc
 
-    def step(self, message: Step) -> StepResults:
+    def step(self, message: Step) -> BatchedStepResults:
         obs_bytes = self.do_request(Step.SerializeToString(message), ENDPOINT_STEP, timeout=30)
         try:
-            return StepResults.FromString(obs_bytes)
+            return BatchedStepResults.FromString(obs_bytes)
         except DecodeError as exc:
             raise RuntimeError("Failed to decode step response") from exc
 
