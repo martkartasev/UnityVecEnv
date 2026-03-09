@@ -23,12 +23,12 @@ namespace Scripts.VecEnv.Core
 
             if (Application.isEditor) //TODO: Find a cleaner way to set it up
             {
-                GymVecEnvManager.Instance.Manager = GymAgentManager;
+                GymVecEnvManager.Instance.AgentManager = GymAgentManager;
                 return;
             }
 
             ParseCommandLine();
-            GymVecEnvManager.Instance.Manager = GymAgentManager;
+            GymVecEnvManager.Instance.AgentManager = GymAgentManager;
 
             if (SceneToLoad != null && SceneManager.GetSceneByBuildIndex(0).name != SceneToLoad && !LoadingDone)
             {

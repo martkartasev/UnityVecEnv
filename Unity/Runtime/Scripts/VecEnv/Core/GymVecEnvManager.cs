@@ -49,7 +49,7 @@ namespace Scripts.VecEnv.Core
         private Step _gymStep;
         private EnvironmentDescription _environmentDescription;
         private Coroutine _disconnectedStepper;
-        public GymAgentManager Manager { get; set; }
+        public GymAgentManager AgentManager { get; set; }
 
         static GymVecEnvManager CreateGymVecEnvManager()
         {
@@ -121,7 +121,8 @@ namespace Scripts.VecEnv.Core
             if (!_connectionInitialized)
             {
 #if UNITY_EDITOR
-                if (_disconnectedStepper == null) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
+                if (_disconnectedStepper == null && _agents.Count > 0) _disconnectedStepper = StartCoroutine(DisconnectedActionStepper());
+                if (_agents.Count == 0) AgentManager.InitializeEnvAndRegisterAgents();
 #endif
                 return;
             }
@@ -190,14 +191,14 @@ namespace Scripts.VecEnv.Core
 
             if (SpawnMode == SpawnMode.Gym && _agents.Count != initializeEnvironments.AgentCount)
             {
-                Manager.SpawnAgents(initializeEnvironments.AgentCount);
+                AgentManager.SpawnAgents(initializeEnvironments.AgentCount);
             }
 
             _gymStepOngoing = false;
             _firstResetComplete = false;
 
             yield return new WaitForFixedUpdate();
-            Manager.InitializeEnvAndRegisterAgents();
+            AgentManager.InitializeEnvAndRegisterAgents();
             _agents.ForEach(agent => agent.DoInitialize());
             PostInitialize?.Invoke();
 
@@ -208,7 +209,7 @@ namespace Scripts.VecEnv.Core
 
         private IEnumerator DoReset(Reset reset, Action<AgentObservation[]> callback)
         {
-            Manager.InitializeEnvAndRegisterAgents();
+            AgentManager.InitializeEnvAndRegisterAgents();
             foreach (var externalAgent in _agents)
             {
                 externalAgent.DoReset();
@@ -283,6 +284,7 @@ namespace Scripts.VecEnv.Core
         private IEnumerator DisconnectedActionStepper()
         {
             var enabledAgents = _agents.FindAll(agent => agent.isActiveAndEnabled);
+            enabledAgents.ForEach(agent => agent.DoInitialize());
             enabledAgents.ForEach(agent => agent.DoReset());
             enabledAgents.ForEach(agent => agent.ProduceObservation());
             enabledAgents.ForEach(agent => agent.DoInternalAction());
