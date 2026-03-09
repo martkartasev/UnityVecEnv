@@ -48,7 +48,7 @@ namespace Scripts.VecEnv.Core
         protected abstract float CollectReward();
         protected abstract EnvironmentState GymStep();
 
-        protected virtual void CollectInfo(Dictionary<string, float> dictionary)
+        protected virtual void CollectInfo(Dictionary<string, float> metadata)
         {
         }
 
