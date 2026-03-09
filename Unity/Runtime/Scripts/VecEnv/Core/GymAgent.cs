@@ -38,15 +38,20 @@ namespace Scripts.VecEnv.Core
             return _gymAgentIndex;
         }
 
-        protected abstract float CollectReward();
-        protected abstract void GymReset();
-        protected abstract void SetAction(AgentAction agentAction);
-        protected abstract EnvironmentState GymStep();
-        protected abstract void CollectObservation(ref AgentObservation observation);
-
         protected virtual void Initialize()
         {
         }
+
+        protected abstract void GymReset();
+        protected abstract void SetAction(AgentAction agentAction);
+        protected abstract void CollectObservation(ref AgentObservation observation);
+        protected abstract float CollectReward();
+        protected abstract EnvironmentState GymStep();
+
+        protected virtual void CollectInfo(Dictionary<string, float> dictionary)
+        {
+        }
+
 
         protected virtual AgentAction ProduceDummyAction(AgentAction dummyAgentAction)
         {
@@ -56,6 +61,26 @@ namespace Scripts.VecEnv.Core
         protected internal void DoInitialize()
         {
             Initialize();
+        }
+
+
+        protected internal Info ProduceInfo()
+        {
+            var info = new Info();
+            info.AgentIndex = GetGymAgentIndex();
+
+            if (DoneStatus != EnvironmentState.Running)
+            {
+                info.FinalObservation = _latestObservation;
+                info.EpisodeReward = _latestStepReward;
+                info.EpisodeLength = CurrentStep;
+            }
+
+            var dictionary = new Dictionary<string, float>();
+            CollectInfo(dictionary);
+            info.custom = dictionary;
+
+            return info;
         }
 
         protected internal AgentObservation ProduceObservation()

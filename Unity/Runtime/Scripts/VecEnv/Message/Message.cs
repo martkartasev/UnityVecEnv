@@ -1,4 +1,6 @@
-﻿using ExternalCommunication;
+﻿using System;
+using System.Collections.Generic;
+using ExternalCommunication;
 using UnityEngine;
 using Quaternion = UnityEngine.Quaternion;
 using Vector3 = UnityEngine.Vector3;
@@ -37,15 +39,11 @@ namespace Scripts.VecEnv.Message
 
     public struct Info
     {
-        public AgentInfo[] Infos;
-        public AgentObservation[] Observations;
-    }
-
-    public struct AgentInfo
-    {
         public float EpisodeReward;
         public int EpisodeLength;
         public int AgentIndex;
+        public AgentObservation FinalObservation;
+        public Dictionary<String, float> custom;
     }
 
     public struct AgentObservation

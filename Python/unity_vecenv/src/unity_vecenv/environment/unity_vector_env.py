@@ -1,5 +1,5 @@
 import subprocess
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 from gymnasium import spaces
@@ -9,7 +9,16 @@ from unity_vecenv.environment.spaces import space_from_repeated, batch_space
 from unity_vecenv.environment.network_utils import is_port_in_use
 from unity_vecenv.environment.unity_client import start_client
 from unity_vecenv.environment.unity_process import start_unity_process
-from unity_vecenv.protobuf_gen.communication_pb2 import ResetParameters, Reset, Observations, Step, Action, StepResults, InitializeEnvironments, AutoResetMode
+from unity_vecenv.protobuf_gen.communication_pb2 import (
+    ResetParameters,
+    Reset,
+    ResetResults,
+    Step,
+    Action,
+    StepResults,
+    InitializeEnvironments,
+    AutoResetMode,
+)
 
 
 class UnityVectorEnv(VectorEnv):
@@ -84,8 +93,8 @@ class UnityVectorEnv(VectorEnv):
                 reset_msg.envsToReset.append(self.map_reset_params_to_proto(i, agent_inits[i, :]))
 
         reset = self.client.reset(reset_msg)
-        obs = self.reset_result_to_numpy(reset, self.num_envs)
-        return obs, {}
+        obs, info = self.reset_result_to_numpy(reset, self.num_envs)
+        return obs, info
 
     def step(self, action):
         action_msg = self.map_action_to_proto(action)
@@ -115,62 +124,96 @@ class UnityVectorEnv(VectorEnv):
         params.continuous.extend(initialization)
         return params
 
-    def reset_result_to_numpy(self, results: Observations, nr_agents):
-        obs = np.zeros((nr_agents, self.single_observation_space.shape[0]))
-        for i, observation in enumerate(results.observations):
-            obs[i, :] = np.array(observation.continuous, dtype=np.float32)
-        return obs
+    def _observation_to_numpy(self, observation):
+        return np.asarray(observation.continuous, dtype=np.float32)
+
+    def _map_custom_info(self, proto_info) -> Optional[Dict[str, float]]:
+        if proto_info is None or len(proto_info.custom) == 0:
+            return None
+
+        return {str(key): float(value) for key, value in proto_info.custom.items()}
+
+    def reset_result_to_numpy(self, results: ResetResults, nr_agents):
+        obs = np.zeros((nr_agents,) + self.single_observation_space.shape, dtype=np.float32)
+        info: Dict[str, Any] = {}
+        custom = np.full((nr_agents,), None, dtype=object)
+        custom_mask = np.zeros((nr_agents,), dtype=np.bool_)
+
+        for i, result in enumerate(results.resetResults):
+            obs[i] = self._observation_to_numpy(result.observation)
+
+            proto_info = result.info if result.HasField("info") else None
+            custom_info = self._map_custom_info(proto_info)
+            if custom_info:
+                custom[i] = custom_info
+                custom_mask[i] = True
+
+        if np.any(custom_mask):
+            info["custom"] = custom
+            info["_custom"] = custom_mask
+
+        return obs, info
 
     def step_result_to_numpy(self, results: StepResults):
-        obs = np.zeros((self.num_envs, self.single_observation_space.shape[0]))
+        obs = np.zeros((self.num_envs,) + self.single_observation_space.shape, dtype=np.float32)
         dones = np.zeros(self.num_envs, dtype=np.bool_)
         truncates = np.zeros(self.num_envs, dtype=np.bool_)
         rewards = np.zeros(self.num_envs, dtype=np.float32)
+
+        info: Dict[str, Any] = {}
+        custom = np.full((self.num_envs,), None, dtype=object)
+        custom_mask = np.zeros(self.num_envs, dtype=np.bool_)
+        final_info = np.full((self.num_envs,), None, dtype=object)
+        final_info_mask = np.zeros(self.num_envs, dtype=np.bool_)
+        final_observation = np.full((self.num_envs,), None, dtype=object)
+        final_observation_mask = np.zeros(self.num_envs, dtype=np.bool_)
+
         for i, result in enumerate(results.stepResults):
-            obs[i, :] = np.array(result.observation.continuous, dtype=np.float32)
+            obs[i] = self._observation_to_numpy(result.observation)
             dones[i] = bool(result.done)
             truncates[i] = bool(result.truncated)
             rewards[i] = result.reward
 
-        # TODO: Investigate why the normal episode recorder is having trouble, might be able to get rid of this
-        info = {}
+            proto_info = result.info if result.HasField("info") else None
+            custom_info = self._map_custom_info(proto_info)
+            if custom_info:
+                custom[i] = custom_info
+                custom_mask[i] = True
 
-        final_info = [None] * self.num_envs
-        final_observation = [None] * self.num_envs
+            if not (dones[i] or truncates[i]):
+                continue
 
-        if hasattr(results, "infos") and results.infos is not None:
-            for fi in results.infos.final_infos:
-                idx = int(fi.agentIndex)
-                if 0 <= idx < self.num_envs:
-                    d = {
-                        "episode": {
-                            "r": float(fi.episode_reward),
-                            "l": float(fi.episode_length),
-                        }
-                    }
-                    # keep custom if present
-                    if len(fi.custom) > 0:
-                        d["custom"] = np.asarray(fi.custom, dtype=np.float32)
-                    final_info[idx] = d
+            final_info_entry = {}
+            if proto_info is not None and proto_info.HasField("episode_info"):
+                final_info_entry["episode"] = {
+                    "r": float(proto_info.episode_info.episode_reward),
+                    "l": float(proto_info.episode_info.episode_length),
+                }
+            if custom_info:
+                final_info_entry["custom"] = custom_info
+            if final_info_entry:
+                final_info[i] = final_info_entry
+                final_info_mask[i] = True
 
-            # final_observations: terminal obs (before reset), indexed by Observation.index
-            for fo in results.infos.final_observations:
-                idx = int(fo.index)
-                if 0 <= idx < self.num_envs:
-                    # If you also have discrete obs, you may want to store both.
-                    final_observation[idx] = np.asarray(fo.continuous, dtype=np.float32)
+            terminal_observation = result.observation
+            if (
+                proto_info is not None
+                and proto_info.HasField("final_observation")
+                and len(proto_info.final_observation.continuous) > 0
+            ):
+                terminal_observation = proto_info.final_observation
+            final_observation[i] = self._observation_to_numpy(terminal_observation)
+            final_observation_mask[i] = True
 
-            # custom: global custom floats on this step
-            if len(results.infos.custom) > 0:
-                info["custom"] = np.asarray(results.infos.custom, dtype=np.float32)
-            else:
-                info["custom"] = np.zeros((0,), dtype=np.float32)
-
-        # only include keys if something actually happened (optional, but common)
-        if any(x is not None for x in final_info):
+        if np.any(custom_mask):
+            info["custom"] = custom
+            info["_custom"] = custom_mask
+        if np.any(final_info_mask):
             info["final_info"] = final_info
-        if any(x is not None for x in final_observation):
+            info["_final_info"] = final_info_mask
+        if np.any(final_observation_mask):
             info["final_observation"] = final_observation
+            info["_final_observation"] = final_observation_mask
 
         return obs, dones, truncates, rewards, info
 
@@ -199,12 +242,10 @@ class UnityVectorEnv(VectorEnv):
             for i in range(self.num_envs):
                 _append_action_msg(discrete=int(a[i]))
 
-
         elif isinstance(sas, spaces.MultiDiscrete) or isinstance(sas, spaces.MultiBinary):
             a = np.asarray(action)
             for i in range(self.num_envs):
                 _append_action_msg(discrete=a[i])
-
 
         elif isinstance(sas, spaces.Box):
             a = np.asarray(action, dtype=np.float32)
@@ -225,4 +266,3 @@ class UnityVectorEnv(VectorEnv):
             raise TypeError(f"Unsupported single_action_space: {type(sas)}")
 
         return step
-

@@ -80,24 +80,14 @@ namespace Scripts.VecEnv.Message
         public ExternalCommunication.Info MapInfo(Info info)
         {
             var mapInfo = new ExternalCommunication.Info();
-            if (info.Infos != null && info.Observations != null)
-                for (int i = 0; i < info.Infos.Length; i++)
-                {
-                    mapInfo.FinalObservations.Add(MapObservationToExternal(info.Observations[i]));
-                    mapInfo.FinalInfos.Add(MapInfoToExternal(info.Infos[i]));
-                }
-
+            
+            mapInfo.FinalObservation = MapObservationToExternal(info.FinalObservation);
+            mapInfo.EpisodeInfo = new EpisodeInfo();
+            mapInfo.EpisodeInfo.AgentIndex = info.AgentIndex;
+            mapInfo.EpisodeInfo.EpisodeReward = info.EpisodeReward;
+            mapInfo.EpisodeInfo.EpisodeLength = info.EpisodeLength;
+            mapInfo.Custom.Add(info.custom);
             return mapInfo;
-        }
-
-
-        private FinalInfo MapInfoToExternal(AgentInfo infoInfo)
-        {
-            var extInfo = new FinalInfo();
-            extInfo.AgentIndex = infoInfo.AgentIndex;
-            extInfo.EpisodeLength = infoInfo.EpisodeLength;
-            extInfo.EpisodeReward = infoInfo.EpisodeReward;
-            return extInfo;
         }
     }
 }

@@ -166,7 +166,7 @@ namespace Scripts.VecEnv.Core
             var fetchReset = _communicator.FetchReset();
             if (fetchReset.HasValue)
             {
-                StartCoroutine(DoReset(fetchReset.Value, obs => _communicator.ResetCompleted(obs)));
+                StartCoroutine(DoReset(fetchReset.Value, (obs, infos) => _communicator.ResetCompleted(obs, infos)));
                 return true;
             }
 
@@ -207,7 +207,7 @@ namespace Scripts.VecEnv.Core
             callback?.Invoke(_environmentDescription);
         }
 
-        private IEnumerator DoReset(Reset reset, Action<AgentObservation[]> callback)
+        private IEnumerator DoReset(Reset reset, Action<AgentObservation[], Info[]> callback)
         {
             AgentManager.InitializeEnvAndRegisterAgents();
             foreach (var externalAgent in _agents)
@@ -220,7 +220,7 @@ namespace Scripts.VecEnv.Core
             yield return new WaitForFixedUpdate();
 
             PreObservation?.Invoke();
-            callback.Invoke(_agents.Select(agent => agent.ProduceObservation()).ToArray());
+            callback.Invoke(_agents.Select(agent => agent.ProduceObservation()).ToArray(), _agents.Select(agent => agent.ProduceInfo()).ToArray());
 
             _firstResetComplete = true;
         }
@@ -241,7 +241,7 @@ namespace Scripts.VecEnv.Core
             return step;
         }
 
-        private IEnumerator ManageStep(Step step, Action<AgentObservation[], EnvironmentState[], float[], Info> completedCallback)
+        private IEnumerator ManageStep(Step step, Action<AgentObservation[], EnvironmentState[], float[], Info[]> completedCallback)
         {
             for (int i = 0; i < step.PhysicsStepCount; i++)
             {
@@ -260,22 +260,12 @@ namespace Scripts.VecEnv.Core
             var doneAgents = _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ToList();
 
             PreObservation?.Invoke();
-            Info infos = new Info();
-            if (doneAgents.Count > 0)
-            {
-                infos.Observations = doneAgents.Select(agent => agent.ProduceObservation()).ToArray();
-                infos.Infos = doneAgents.Select(agent => new AgentInfo
-                {
-                    EpisodeLength = agent.GetCurrentStep(),
-                    EpisodeReward = agent.GetEpisodeReward(),
-                    AgentIndex = agent.GetGymAgentIndex()
-                }).ToArray();
-            }
-
+          
             //TODO: Implement autoreset_mode, currently default to next.
             var agentObservations = _agents.Select(agent => agent.ProduceObservation()).ToArray();
+            var infos = _agents.Select(agent => agent.ProduceInfo()).ToArray();
+            
             completedCallback.Invoke(agentObservations, dones, rewards, infos);
-
             doneAgents.ForEach(agent => agent.DoReset());
 
             _gymStepOngoing = false;

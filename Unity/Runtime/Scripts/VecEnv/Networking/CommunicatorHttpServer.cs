@@ -9,9 +9,7 @@ using Scripts.VecEnv.Message;
 using UnityEngine;
 using EnvironmentDescription = Scripts.VecEnv.Message.EnvironmentDescription;
 using Info = Scripts.VecEnv.Message.Info;
-using Observations = ExternalCommunication.Observations;
 using Reset = Scripts.VecEnv.Message.Reset;
-using Step = ExternalCommunication.Step;
 
 namespace Scripts.VecEnv.Networking
 {
@@ -24,28 +22,28 @@ namespace Scripts.VecEnv.Networking
 
         public IMessageMapper Mapper = new DefaultMessageMapper();
 
-        private HttpListener httpListener;
-        private Thread listenerThread;
-        private bool isRunning = true;
+        private HttpListener _httpListener;
+        private Thread _listenerThread;
+        private bool _isRunning = true;
 
         private readonly SemaphoreSlim _stepGate = new(1, 1);
         private readonly ManualResetEventSlim _messageAvailable = new(false);
         private readonly object _messageLock = new();
-        private TaskCompletionSource<Observations> _resetTcs;
+        private TaskCompletionSource<ResetResults> _resetTcs;
         private TaskCompletionSource<StepResults> _stepTcs;
         private TaskCompletionSource<ExternalCommunication.EnvironmentDescription> _initializeTcs;
 
-        private ExternalCommunication.Reset reset;
-        private Step step;
-        private InitializeEnvironments initialize;
+        private ExternalCommunication.Reset _reset;
+        private ExternalCommunication.Step _step;
+        private InitializeEnvironments _initialize;
 
 
         CommunicatorHttpServer()
         {
-            httpListener = ListenerSetup();
+            _httpListener = ListenerSetup();
 
-            listenerThread = new Thread(StartListener);
-            listenerThread.Start();
+            _listenerThread = new Thread(StartListener);
+            _listenerThread.Start();
 
             Debug.Log($"Communication Server started at http://localhost:{channel.ToString()}/");
         }
@@ -54,9 +52,9 @@ namespace Scripts.VecEnv.Networking
         {
             lock (_messageLock)
             {
-                if (reset == null) return null;
-                var fetchReset = Mapper.MapReset(reset);
-                reset = null;
+                if (_reset == null) return null;
+                var fetchReset = Mapper.MapReset(_reset);
+                _reset = null;
                 UpdateMessageAvailability_NoLock();
                 return fetchReset;
             }
@@ -67,9 +65,9 @@ namespace Scripts.VecEnv.Networking
         {
             lock (_messageLock)
             {
-                if (step == null) return null;
-                var fetchNextStep = Mapper.MapStep(step);
-                step = null;
+                if (_step == null) return null;
+                var fetchNextStep = Mapper.MapStep(_step);
+                _step = null;
                 UpdateMessageAvailability_NoLock();
                 return fetchNextStep;
             }
@@ -79,9 +77,9 @@ namespace Scripts.VecEnv.Networking
         {
             lock (_messageLock)
             {
-                if (initialize == null) return null;
-                var fetch = Mapper.MapInitialize(initialize);
-                initialize = null;
+                if (_initialize == null) return null;
+                var fetch = Mapper.MapInitialize(_initialize);
+                _initialize = null;
                 UpdateMessageAvailability_NoLock();
                 return fetch;
             }
@@ -91,7 +89,7 @@ namespace Scripts.VecEnv.Networking
         {
             lock (_messageLock)
             {
-                if (reset != null || step != null || initialize != null)
+                if (_reset != null || _step != null || _initialize != null)
                 {
                     return true;
                 }
@@ -108,7 +106,7 @@ namespace Scripts.VecEnv.Networking
 
         private void UpdateMessageAvailability_NoLock()
         {
-            if (reset == null && step == null && initialize == null)
+            if (_reset == null && _step == null && _initialize == null)
             {
                 _messageAvailable.Reset();
             }
@@ -118,7 +116,7 @@ namespace Scripts.VecEnv.Networking
             }
         }
 
-        public void StepCompleted(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info info)
+        public void StepCompleted(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info[] infos)
         {
             var results = new StepResults();
             for (int i = 0; i < agentObservations.Length; i++)
@@ -128,17 +126,24 @@ namespace Scripts.VecEnv.Networking
                 result.Done = dones[i] == EnvironmentState.Done;
                 result.Truncated = dones[i] == EnvironmentState.Truncated;
                 result.Reward = rewards[i];
+                result.Info = Mapper.MapInfo(infos[i]);
                 results.StepResults_.Add(result);
             }
-
-            results.Infos = Mapper.MapInfo(info);
+            
             _stepTcs?.TrySetResult(results);
         }
 
-        public void ResetCompleted(AgentObservation[] agentObservations)
+        public void ResetCompleted(AgentObservation[] agentObservations, Info[] infos)
         {
-            var observations = BuildObservations(agentObservations);
-            _resetTcs?.TrySetResult(observations);
+            var results = new ResetResults();
+            for (int i = 0; i < agentObservations.Length; i++)
+            {
+                var result = new ResetResult();
+                result.Observation = Mapper.MapObservationToExternal(agentObservations[i]);
+                result.Info = Mapper.MapInfo(infos[i]);
+                results.ResetResults_.Add(result);
+            }
+            _resetTcs?.TrySetResult(results);
         }
 
         public void InitializeCompleted(EnvironmentDescription initialize1)
@@ -147,17 +152,7 @@ namespace Scripts.VecEnv.Networking
             _initializeTcs?.TrySetResult(description);
         }
 
-        private Observations BuildObservations(AgentObservation[] agentObservations)
-        {
-            var observations = new Observations();
-            foreach (var agentObservation in agentObservations)
-            {
-                observations.Observations_.Add(Mapper.MapObservationToExternal(agentObservation));
-            }
-
-            return observations;
-        }
-
+  
         private HttpListener ListenerSetup()
         {
             var l = new HttpListener();
@@ -190,12 +185,12 @@ namespace Scripts.VecEnv.Networking
 
         private void StartListener()
         {
-            while (isRunning)
+            while (_isRunning)
             {
                 HttpListenerContext context = null;
                 try
                 {
-                    context = httpListener.GetContext();
+                    context = _httpListener.GetContext();
                     HandleContextAsync(context).GetAwaiter().GetResult();
                 }
                 catch (HttpListenerException)
@@ -281,7 +276,7 @@ namespace Scripts.VecEnv.Networking
 
             lock (_messageLock)
             {
-                initialize = incoming;
+                _initialize = incoming;
                 UpdateMessageAvailability_NoLock();
             }
             _initializeTcs?.TrySetCanceled();
@@ -309,11 +304,11 @@ namespace Scripts.VecEnv.Networking
 
             lock (_messageLock)
             {
-                reset = incoming;
+                _reset = incoming;
                 UpdateMessageAvailability_NoLock();
             }
             _resetTcs?.TrySetCanceled();
-            _resetTcs = new TaskCompletionSource<Observations>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _resetTcs = new TaskCompletionSource<ResetResults>(TaskCreationOptions.RunContinuationsAsynchronously);
             var tcs = _resetTcs;
 
             var obs = await WaitWithTimeout(tcs.Task, TimeSpan.FromSeconds(30), onTimeout: () =>
@@ -336,11 +331,11 @@ namespace Scripts.VecEnv.Networking
             await _stepGate.WaitAsync();
             try
             {
-                var incoming = Step.Parser.ParseFrom(context.Request.InputStream);
+                var incoming = ExternalCommunication.Step.Parser.ParseFrom(context.Request.InputStream);
 
                 lock (_messageLock)
                 {
-                    step = incoming;
+                    _step = incoming;
                     UpdateMessageAvailability_NoLock();
                 }
                 _stepTcs?.TrySetCanceled();
@@ -410,9 +405,9 @@ namespace Scripts.VecEnv.Networking
 
         public void Dispose()
         {
-            isRunning = false; // TODO: Need to fix handling
-            httpListener.Stop();
-            listenerThread.Join();
+            _isRunning = false; // TODO: Need to fix handling
+            _httpListener.Stop();
+            _listenerThread.Join();
             _messageAvailable.Dispose();
         }
     }

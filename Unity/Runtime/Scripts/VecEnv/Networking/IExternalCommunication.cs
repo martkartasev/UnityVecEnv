@@ -14,8 +14,8 @@ namespace Scripts.VecEnv.Networking
         public Step? FetchNextStep();
         public InitializeEnvironment? FetchInitialize();
         public bool WaitForNextMessage(int timeoutMilliseconds);
-        public void StepCompleted(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info info);
-        public void ResetCompleted(AgentObservation[] agentObservations);
+        public void StepCompleted(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info[] infos);
+        public void ResetCompleted(AgentObservation[] agentObservations, Info[] infos);
         public void InitializeCompleted(EnvironmentDescription initialize);
     }
 }

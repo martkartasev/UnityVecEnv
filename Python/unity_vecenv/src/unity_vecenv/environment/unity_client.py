@@ -10,7 +10,14 @@ from unity_vecenv.environment.protocol_constants import (
     ENDPOINT_RESET,
     ENDPOINT_STEP,
 )
-from unity_vecenv.protobuf_gen.communication_pb2 import Reset, Observations, Step, StepResults, EnvironmentDescription, InitializeEnvironments
+from unity_vecenv.protobuf_gen.communication_pb2 import (
+    Reset,
+    ResetResults,
+    Step,
+    StepResults,
+    EnvironmentDescription,
+    InitializeEnvironments,
+)
 
 
 def start_client(port: int = 50010):
@@ -31,10 +38,10 @@ class SimClient:
         except DecodeError as exc:
             raise RuntimeError("Failed to decode initialize response") from exc
 
-    def reset(self, message: Reset) -> Observations:
+    def reset(self, message: Reset) -> ResetResults:
         obs_bytes = self.do_request(Reset.SerializeToString(message), ENDPOINT_RESET, timeout=30)
         try:
-            return Observations.FromString(obs_bytes)
+            return ResetResults.FromString(obs_bytes)
         except DecodeError as exc:
             raise RuntimeError("Failed to decode reset response") from exc
 
