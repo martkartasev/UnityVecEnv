@@ -58,25 +58,21 @@ namespace ExternalCommunication {
             "IoQBChJCYXRjaGVkT2JzZXJ2YXRpb24SEAoIbnVtX2VudnMYASABKAUSFwoP",
             "Y29udGludW91c19zaXplGAIgASgFEhUKDWRpc2NyZXRlX3NpemUYAyABKAUS",
             "FgoOY29udGludW91c19mMzIYBCABKAwSFAoMZGlzY3JldGVfaTMyGAUgASgM",
-            "IpMBCg9DdXN0b21JbmZvRW50cnkSDQoFaW5kZXgYASABKAUSQgoGY3VzdG9t",
-            "GAIgAygLMjIuRXh0ZXJuYWxDb21tdW5pY2F0aW9uLkN1c3RvbUluZm9FbnRy",
-            "eS5DdXN0b21FbnRyeRotCgtDdXN0b21FbnRyeRILCgNrZXkYASABKAkSDQoF",
-            "dmFsdWUYAiABKAI6AjgBIpICChJGaW5hbFN0ZXBJbmZvRW50cnkSDQoFaW5k",
-            "ZXgYASABKAUSOAoMZXBpc29kZV9pbmZvGAIgASgLMiIuRXh0ZXJuYWxDb21t",
-            "dW5pY2F0aW9uLkVwaXNvZGVJbmZvEj0KEWZpbmFsX29ic2VydmF0aW9uGAMg",
-            "ASgLMiIuRXh0ZXJuYWxDb21tdW5pY2F0aW9uLk9ic2VydmF0aW9uEkUKBmN1",
-            "c3RvbRgEIAMoCzI1LkV4dGVybmFsQ29tbXVuaWNhdGlvbi5GaW5hbFN0ZXBJ",
-            "bmZvRW50cnkuQ3VzdG9tRW50cnkaLQoLQ3VzdG9tRW50cnkSCwoDa2V5GAEg",
-            "ASgJEg0KBXZhbHVlGAIgASgCOgI4ASKCAgoSQmF0Y2hlZFN0ZXBSZXN1bHRz",
-            "Ej4KC29ic2VydmF0aW9uGAEgASgLMikuRXh0ZXJuYWxDb21tdW5pY2F0aW9u",
-            "LkJhdGNoZWRPYnNlcnZhdGlvbhITCgtyZXdhcmRzX2YzMhgCIAEoDBINCgVk",
-            "b25lcxgDIAEoDBIRCgl0cnVuY2F0ZXMYBCABKAwSNgoGY3VzdG9tGAUgAygL",
-            "MiYuRXh0ZXJuYWxDb21tdW5pY2F0aW9uLkN1c3RvbUluZm9FbnRyeRI9Cgpm",
-            "aW5hbF9pbmZvGAYgAygLMikuRXh0ZXJuYWxDb21tdW5pY2F0aW9uLkZpbmFs",
-            "U3RlcEluZm9FbnRyeSKNAQoTQmF0Y2hlZFJlc2V0UmVzdWx0cxI+CgtvYnNl",
-            "cnZhdGlvbhgBIAEoCzIpLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5CYXRjaGVk",
-            "T2JzZXJ2YXRpb24SNgoGY3VzdG9tGAIgAygLMiYuRXh0ZXJuYWxDb21tdW5p",
-            "Y2F0aW9uLkN1c3RvbUluZm9FbnRyeSI+CgpTY3JlZW5zaG90EjAKBmNhbWVy",
+            "IkYKEUJhdGNoZWRDdXN0b21JbmZvEgwKBGtleXMYASADKAkSEgoKdmFsdWVz",
+            "X2YzMhgCIAEoDBIPCgdwcmVzZW50GAMgASgMIlgKEEJhdGNoZWRGaW5hbElu",
+            "Zm8SRAoRZmluYWxfb2JzZXJ2YXRpb24YASABKAsyKS5FeHRlcm5hbENvbW11",
+            "bmljYXRpb24uQmF0Y2hlZE9ic2VydmF0aW9uIrkCChJCYXRjaGVkU3RlcFJl",
+            "c3VsdHMSPgoLb2JzZXJ2YXRpb24YASABKAsyKS5FeHRlcm5hbENvbW11bmlj",
+            "YXRpb24uQmF0Y2hlZE9ic2VydmF0aW9uEhMKC3Jld2FyZHNfZjMyGAIgASgM",
+            "Eg0KBWRvbmVzGAMgASgMEhEKCXRydW5jYXRlcxgEIAEoDBIaChJjdXN0b21f",
+            "aW5kaWNlc19pMzIYBSABKAwSOAoGY3VzdG9tGAYgASgLMiguRXh0ZXJuYWxD",
+            "b21tdW5pY2F0aW9uLkJhdGNoZWRDdXN0b21JbmZvEhkKEWZpbmFsX2luZGlj",
+            "ZXNfaTMyGAcgASgMEjsKCmZpbmFsX2luZm8YCCABKAsyJy5FeHRlcm5hbENv",
+            "bW11bmljYXRpb24uQmF0Y2hlZEZpbmFsSW5mbyKrAQoTQmF0Y2hlZFJlc2V0",
+            "UmVzdWx0cxI+CgtvYnNlcnZhdGlvbhgBIAEoCzIpLkV4dGVybmFsQ29tbXVu",
+            "aWNhdGlvbi5CYXRjaGVkT2JzZXJ2YXRpb24SGgoSY3VzdG9tX2luZGljZXNf",
+            "aTMyGAIgASgMEjgKBmN1c3RvbRgDIAEoCzIoLkV4dGVybmFsQ29tbXVuaWNh",
+            "dGlvbi5CYXRjaGVkQ3VzdG9tSW5mbyI+CgpTY3JlZW5zaG90EjAKBmNhbWVy",
             "YRgBIAEoCzIgLkV4dGVybmFsQ29tbXVuaWNhdGlvbi5UcmFuc2Zvcm0i5wEK",
             "BEluZm8SOAoMZXBpc29kZV9pbmZvGAEgASgLMiIuRXh0ZXJuYWxDb21tdW5p",
             "Y2F0aW9uLkVwaXNvZGVJbmZvEj0KEWZpbmFsX29ic2VydmF0aW9uGAIgASgL",
@@ -111,10 +107,10 @@ namespace ExternalCommunication {
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.StepResults), global::ExternalCommunication.StepResults.Parser, new[]{ "StepResults_" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.ResetResults), global::ExternalCommunication.ResetResults.Parser, new[]{ "ResetResults_" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.BatchedObservation), global::ExternalCommunication.BatchedObservation.Parser, new[]{ "NumEnvs", "ContinuousSize", "DiscreteSize", "ContinuousF32", "DiscreteI32" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.CustomInfoEntry), global::ExternalCommunication.CustomInfoEntry.Parser, new[]{ "Index", "Custom" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
-            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.FinalStepInfoEntry), global::ExternalCommunication.FinalStepInfoEntry.Parser, new[]{ "Index", "EpisodeInfo", "FinalObservation", "Custom" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
-            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.BatchedStepResults), global::ExternalCommunication.BatchedStepResults.Parser, new[]{ "Observation", "RewardsF32", "Dones", "Truncates", "Custom", "FinalInfo" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.BatchedResetResults), global::ExternalCommunication.BatchedResetResults.Parser, new[]{ "Observation", "Custom" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.BatchedCustomInfo), global::ExternalCommunication.BatchedCustomInfo.Parser, new[]{ "Keys", "ValuesF32", "Present" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.BatchedFinalInfo), global::ExternalCommunication.BatchedFinalInfo.Parser, new[]{ "FinalObservation" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.BatchedStepResults), global::ExternalCommunication.BatchedStepResults.Parser, new[]{ "Observation", "RewardsF32", "Dones", "Truncates", "CustomIndicesI32", "Custom", "FinalIndicesI32", "FinalInfo" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.BatchedResetResults), global::ExternalCommunication.BatchedResetResults.Parser, new[]{ "Observation", "CustomIndicesI32", "Custom" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.Screenshot), global::ExternalCommunication.Screenshot.Parser, new[]{ "Camera" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.Info), global::ExternalCommunication.Info.Parser, new[]{ "EpisodeInfo", "FinalObservation", "Custom" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::ExternalCommunication.EpisodeInfo), global::ExternalCommunication.EpisodeInfo.Parser, new[]{ "AgentIndex", "EpisodeReward", "EpisodeLength" }, null, null, null, null),
@@ -3677,16 +3673,16 @@ namespace ExternalCommunication {
 
   }
 
-  public sealed partial class CustomInfoEntry : pb::IMessage<CustomInfoEntry>
+  public sealed partial class BatchedCustomInfo : pb::IMessage<BatchedCustomInfo>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<CustomInfoEntry> _parser = new pb::MessageParser<CustomInfoEntry>(() => new CustomInfoEntry());
+    private static readonly pb::MessageParser<BatchedCustomInfo> _parser = new pb::MessageParser<BatchedCustomInfo>(() => new BatchedCustomInfo());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<CustomInfoEntry> Parser { get { return _parser; } }
+    public static pb::MessageParser<BatchedCustomInfo> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -3702,7 +3698,7 @@ namespace ExternalCommunication {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public CustomInfoEntry() {
+    public BatchedCustomInfo() {
       OnConstruction();
     }
 
@@ -3710,58 +3706,72 @@ namespace ExternalCommunication {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public CustomInfoEntry(CustomInfoEntry other) : this() {
-      index_ = other.index_;
-      custom_ = other.custom_.Clone();
+    public BatchedCustomInfo(BatchedCustomInfo other) : this() {
+      keys_ = other.keys_.Clone();
+      valuesF32_ = other.valuesF32_;
+      present_ = other.present_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public CustomInfoEntry Clone() {
-      return new CustomInfoEntry(this);
+    public BatchedCustomInfo Clone() {
+      return new BatchedCustomInfo(this);
     }
 
-    /// <summary>Field number for the "index" field.</summary>
-    public const int IndexFieldNumber = 1;
-    private int index_;
+    /// <summary>Field number for the "keys" field.</summary>
+    public const int KeysFieldNumber = 1;
+    private static readonly pb::FieldCodec<string> _repeated_keys_codec
+        = pb::FieldCodec.ForString(10);
+    private readonly pbc::RepeatedField<string> keys_ = new pbc::RepeatedField<string>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int Index {
-      get { return index_; }
+    public pbc::RepeatedField<string> Keys {
+      get { return keys_; }
+    }
+
+    /// <summary>Field number for the "values_f32" field.</summary>
+    public const int ValuesF32FieldNumber = 2;
+    private pb::ByteString valuesF32_ = pb::ByteString.Empty;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString ValuesF32 {
+      get { return valuesF32_; }
       set {
-        index_ = value;
+        valuesF32_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
     }
 
-    /// <summary>Field number for the "custom" field.</summary>
-    public const int CustomFieldNumber = 2;
-    private static readonly pbc::MapField<string, float>.Codec _map_custom_codec
-        = new pbc::MapField<string, float>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForFloat(21, 0F), 18);
-    private readonly pbc::MapField<string, float> custom_ = new pbc::MapField<string, float>();
+    /// <summary>Field number for the "present" field.</summary>
+    public const int PresentFieldNumber = 3;
+    private pb::ByteString present_ = pb::ByteString.Empty;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::MapField<string, float> Custom {
-      get { return custom_; }
+    public pb::ByteString Present {
+      get { return present_; }
+      set {
+        present_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as CustomInfoEntry);
+      return Equals(other as BatchedCustomInfo);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(CustomInfoEntry other) {
+    public bool Equals(BatchedCustomInfo other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (Index != other.Index) return false;
-      if (!Custom.Equals(other.Custom)) return false;
+      if(!keys_.Equals(other.keys_)) return false;
+      if (ValuesF32 != other.ValuesF32) return false;
+      if (Present != other.Present) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -3769,8 +3779,9 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (Index != 0) hash ^= Index.GetHashCode();
-      hash ^= Custom.GetHashCode();
+      hash ^= keys_.GetHashCode();
+      if (ValuesF32.Length != 0) hash ^= ValuesF32.GetHashCode();
+      if (Present.Length != 0) hash ^= Present.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3789,11 +3800,15 @@ namespace ExternalCommunication {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (Index != 0) {
-        output.WriteRawTag(8);
-        output.WriteInt32(Index);
+      keys_.WriteTo(output, _repeated_keys_codec);
+      if (ValuesF32.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteBytes(ValuesF32);
       }
-      custom_.WriteTo(output, _map_custom_codec);
+      if (Present.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteBytes(Present);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3804,11 +3819,15 @@ namespace ExternalCommunication {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (Index != 0) {
-        output.WriteRawTag(8);
-        output.WriteInt32(Index);
+      keys_.WriteTo(ref output, _repeated_keys_codec);
+      if (ValuesF32.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteBytes(ValuesF32);
       }
-      custom_.WriteTo(ref output, _map_custom_codec);
+      if (Present.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteBytes(Present);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -3819,10 +3838,13 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (Index != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Index);
+      size += keys_.CalculateSize(_repeated_keys_codec);
+      if (ValuesF32.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(ValuesF32);
       }
-      size += custom_.CalculateSize(_map_custom_codec);
+      if (Present.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(Present);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -3831,14 +3853,17 @@ namespace ExternalCommunication {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(CustomInfoEntry other) {
+    public void MergeFrom(BatchedCustomInfo other) {
       if (other == null) {
         return;
       }
-      if (other.Index != 0) {
-        Index = other.Index;
+      keys_.Add(other.keys_);
+      if (other.ValuesF32.Length != 0) {
+        ValuesF32 = other.ValuesF32;
       }
-      custom_.Add(other.custom_);
+      if (other.Present.Length != 0) {
+        Present = other.Present;
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -3854,12 +3879,16 @@ namespace ExternalCommunication {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
-          case 8: {
-            Index = input.ReadInt32();
+          case 10: {
+            keys_.AddEntriesFrom(input, _repeated_keys_codec);
             break;
           }
           case 18: {
-            custom_.AddEntriesFrom(input, _map_custom_codec);
+            ValuesF32 = input.ReadBytes();
+            break;
+          }
+          case 26: {
+            Present = input.ReadBytes();
             break;
           }
         }
@@ -3877,12 +3906,16 @@ namespace ExternalCommunication {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
-          case 8: {
-            Index = input.ReadInt32();
+          case 10: {
+            keys_.AddEntriesFrom(ref input, _repeated_keys_codec);
             break;
           }
           case 18: {
-            custom_.AddEntriesFrom(ref input, _map_custom_codec);
+            ValuesF32 = input.ReadBytes();
+            break;
+          }
+          case 26: {
+            Present = input.ReadBytes();
             break;
           }
         }
@@ -3892,16 +3925,16 @@ namespace ExternalCommunication {
 
   }
 
-  public sealed partial class FinalStepInfoEntry : pb::IMessage<FinalStepInfoEntry>
+  public sealed partial class BatchedFinalInfo : pb::IMessage<BatchedFinalInfo>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<FinalStepInfoEntry> _parser = new pb::MessageParser<FinalStepInfoEntry>(() => new FinalStepInfoEntry());
+    private static readonly pb::MessageParser<BatchedFinalInfo> _parser = new pb::MessageParser<BatchedFinalInfo>(() => new BatchedFinalInfo());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<FinalStepInfoEntry> Parser { get { return _parser; } }
+    public static pb::MessageParser<BatchedFinalInfo> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -3917,7 +3950,7 @@ namespace ExternalCommunication {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public FinalStepInfoEntry() {
+    public BatchedFinalInfo() {
       OnConstruction();
     }
 
@@ -3925,86 +3958,45 @@ namespace ExternalCommunication {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public FinalStepInfoEntry(FinalStepInfoEntry other) : this() {
-      index_ = other.index_;
-      episodeInfo_ = other.episodeInfo_ != null ? other.episodeInfo_.Clone() : null;
+    public BatchedFinalInfo(BatchedFinalInfo other) : this() {
       finalObservation_ = other.finalObservation_ != null ? other.finalObservation_.Clone() : null;
-      custom_ = other.custom_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public FinalStepInfoEntry Clone() {
-      return new FinalStepInfoEntry(this);
-    }
-
-    /// <summary>Field number for the "index" field.</summary>
-    public const int IndexFieldNumber = 1;
-    private int index_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int Index {
-      get { return index_; }
-      set {
-        index_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "episode_info" field.</summary>
-    public const int EpisodeInfoFieldNumber = 2;
-    private global::ExternalCommunication.EpisodeInfo episodeInfo_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::ExternalCommunication.EpisodeInfo EpisodeInfo {
-      get { return episodeInfo_; }
-      set {
-        episodeInfo_ = value;
-      }
+    public BatchedFinalInfo Clone() {
+      return new BatchedFinalInfo(this);
     }
 
     /// <summary>Field number for the "final_observation" field.</summary>
-    public const int FinalObservationFieldNumber = 3;
-    private global::ExternalCommunication.Observation finalObservation_;
+    public const int FinalObservationFieldNumber = 1;
+    private global::ExternalCommunication.BatchedObservation finalObservation_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::ExternalCommunication.Observation FinalObservation {
+    public global::ExternalCommunication.BatchedObservation FinalObservation {
       get { return finalObservation_; }
       set {
         finalObservation_ = value;
       }
     }
 
-    /// <summary>Field number for the "custom" field.</summary>
-    public const int CustomFieldNumber = 4;
-    private static readonly pbc::MapField<string, float>.Codec _map_custom_codec
-        = new pbc::MapField<string, float>.Codec(pb::FieldCodec.ForString(10, ""), pb::FieldCodec.ForFloat(21, 0F), 34);
-    private readonly pbc::MapField<string, float> custom_ = new pbc::MapField<string, float>();
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::MapField<string, float> Custom {
-      get { return custom_; }
-    }
-
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as FinalStepInfoEntry);
+      return Equals(other as BatchedFinalInfo);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(FinalStepInfoEntry other) {
+    public bool Equals(BatchedFinalInfo other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (Index != other.Index) return false;
-      if (!object.Equals(EpisodeInfo, other.EpisodeInfo)) return false;
       if (!object.Equals(FinalObservation, other.FinalObservation)) return false;
-      if (!Custom.Equals(other.Custom)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -4012,10 +4004,7 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (Index != 0) hash ^= Index.GetHashCode();
-      if (episodeInfo_ != null) hash ^= EpisodeInfo.GetHashCode();
       if (finalObservation_ != null) hash ^= FinalObservation.GetHashCode();
-      hash ^= Custom.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -4034,19 +4023,10 @@ namespace ExternalCommunication {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (Index != 0) {
-        output.WriteRawTag(8);
-        output.WriteInt32(Index);
-      }
-      if (episodeInfo_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(EpisodeInfo);
-      }
       if (finalObservation_ != null) {
-        output.WriteRawTag(26);
+        output.WriteRawTag(10);
         output.WriteMessage(FinalObservation);
       }
-      custom_.WriteTo(output, _map_custom_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -4057,19 +4037,10 @@ namespace ExternalCommunication {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (Index != 0) {
-        output.WriteRawTag(8);
-        output.WriteInt32(Index);
-      }
-      if (episodeInfo_ != null) {
-        output.WriteRawTag(18);
-        output.WriteMessage(EpisodeInfo);
-      }
       if (finalObservation_ != null) {
-        output.WriteRawTag(26);
+        output.WriteRawTag(10);
         output.WriteMessage(FinalObservation);
       }
-      custom_.WriteTo(ref output, _map_custom_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -4080,16 +4051,9 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (Index != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Index);
-      }
-      if (episodeInfo_ != null) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(EpisodeInfo);
-      }
       if (finalObservation_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(FinalObservation);
       }
-      size += custom_.CalculateSize(_map_custom_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -4098,26 +4062,16 @@ namespace ExternalCommunication {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(FinalStepInfoEntry other) {
+    public void MergeFrom(BatchedFinalInfo other) {
       if (other == null) {
         return;
       }
-      if (other.Index != 0) {
-        Index = other.Index;
-      }
-      if (other.episodeInfo_ != null) {
-        if (episodeInfo_ == null) {
-          EpisodeInfo = new global::ExternalCommunication.EpisodeInfo();
-        }
-        EpisodeInfo.MergeFrom(other.EpisodeInfo);
-      }
       if (other.finalObservation_ != null) {
         if (finalObservation_ == null) {
-          FinalObservation = new global::ExternalCommunication.Observation();
+          FinalObservation = new global::ExternalCommunication.BatchedObservation();
         }
         FinalObservation.MergeFrom(other.FinalObservation);
       }
-      custom_.Add(other.custom_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -4133,26 +4087,11 @@ namespace ExternalCommunication {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
-          case 8: {
-            Index = input.ReadInt32();
-            break;
-          }
-          case 18: {
-            if (episodeInfo_ == null) {
-              EpisodeInfo = new global::ExternalCommunication.EpisodeInfo();
-            }
-            input.ReadMessage(EpisodeInfo);
-            break;
-          }
-          case 26: {
+          case 10: {
             if (finalObservation_ == null) {
-              FinalObservation = new global::ExternalCommunication.Observation();
+              FinalObservation = new global::ExternalCommunication.BatchedObservation();
             }
             input.ReadMessage(FinalObservation);
-            break;
-          }
-          case 34: {
-            custom_.AddEntriesFrom(input, _map_custom_codec);
             break;
           }
         }
@@ -4170,26 +4109,11 @@ namespace ExternalCommunication {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
-          case 8: {
-            Index = input.ReadInt32();
-            break;
-          }
-          case 18: {
-            if (episodeInfo_ == null) {
-              EpisodeInfo = new global::ExternalCommunication.EpisodeInfo();
-            }
-            input.ReadMessage(EpisodeInfo);
-            break;
-          }
-          case 26: {
+          case 10: {
             if (finalObservation_ == null) {
-              FinalObservation = new global::ExternalCommunication.Observation();
+              FinalObservation = new global::ExternalCommunication.BatchedObservation();
             }
             input.ReadMessage(FinalObservation);
-            break;
-          }
-          case 34: {
-            custom_.AddEntriesFrom(ref input, _map_custom_codec);
             break;
           }
         }
@@ -4237,8 +4161,10 @@ namespace ExternalCommunication {
       rewardsF32_ = other.rewardsF32_;
       dones_ = other.dones_;
       truncates_ = other.truncates_;
-      custom_ = other.custom_.Clone();
-      finalInfo_ = other.finalInfo_.Clone();
+      customIndicesI32_ = other.customIndicesI32_;
+      custom_ = other.custom_ != null ? other.custom_.Clone() : null;
+      finalIndicesI32_ = other.finalIndicesI32_;
+      finalInfo_ = other.finalInfo_ != null ? other.finalInfo_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -4296,26 +4222,52 @@ namespace ExternalCommunication {
       }
     }
 
-    /// <summary>Field number for the "custom" field.</summary>
-    public const int CustomFieldNumber = 5;
-    private static readonly pb::FieldCodec<global::ExternalCommunication.CustomInfoEntry> _repeated_custom_codec
-        = pb::FieldCodec.ForMessage(42, global::ExternalCommunication.CustomInfoEntry.Parser);
-    private readonly pbc::RepeatedField<global::ExternalCommunication.CustomInfoEntry> custom_ = new pbc::RepeatedField<global::ExternalCommunication.CustomInfoEntry>();
+    /// <summary>Field number for the "custom_indices_i32" field.</summary>
+    public const int CustomIndicesI32FieldNumber = 5;
+    private pb::ByteString customIndicesI32_ = pb::ByteString.Empty;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::ExternalCommunication.CustomInfoEntry> Custom {
+    public pb::ByteString CustomIndicesI32 {
+      get { return customIndicesI32_; }
+      set {
+        customIndicesI32_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "custom" field.</summary>
+    public const int CustomFieldNumber = 6;
+    private global::ExternalCommunication.BatchedCustomInfo custom_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::ExternalCommunication.BatchedCustomInfo Custom {
       get { return custom_; }
+      set {
+        custom_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "final_indices_i32" field.</summary>
+    public const int FinalIndicesI32FieldNumber = 7;
+    private pb::ByteString finalIndicesI32_ = pb::ByteString.Empty;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString FinalIndicesI32 {
+      get { return finalIndicesI32_; }
+      set {
+        finalIndicesI32_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
     }
 
     /// <summary>Field number for the "final_info" field.</summary>
-    public const int FinalInfoFieldNumber = 6;
-    private static readonly pb::FieldCodec<global::ExternalCommunication.FinalStepInfoEntry> _repeated_finalInfo_codec
-        = pb::FieldCodec.ForMessage(50, global::ExternalCommunication.FinalStepInfoEntry.Parser);
-    private readonly pbc::RepeatedField<global::ExternalCommunication.FinalStepInfoEntry> finalInfo_ = new pbc::RepeatedField<global::ExternalCommunication.FinalStepInfoEntry>();
+    public const int FinalInfoFieldNumber = 8;
+    private global::ExternalCommunication.BatchedFinalInfo finalInfo_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::ExternalCommunication.FinalStepInfoEntry> FinalInfo {
+    public global::ExternalCommunication.BatchedFinalInfo FinalInfo {
       get { return finalInfo_; }
+      set {
+        finalInfo_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4337,8 +4289,10 @@ namespace ExternalCommunication {
       if (RewardsF32 != other.RewardsF32) return false;
       if (Dones != other.Dones) return false;
       if (Truncates != other.Truncates) return false;
-      if(!custom_.Equals(other.custom_)) return false;
-      if(!finalInfo_.Equals(other.finalInfo_)) return false;
+      if (CustomIndicesI32 != other.CustomIndicesI32) return false;
+      if (!object.Equals(Custom, other.Custom)) return false;
+      if (FinalIndicesI32 != other.FinalIndicesI32) return false;
+      if (!object.Equals(FinalInfo, other.FinalInfo)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -4350,8 +4304,10 @@ namespace ExternalCommunication {
       if (RewardsF32.Length != 0) hash ^= RewardsF32.GetHashCode();
       if (Dones.Length != 0) hash ^= Dones.GetHashCode();
       if (Truncates.Length != 0) hash ^= Truncates.GetHashCode();
-      hash ^= custom_.GetHashCode();
-      hash ^= finalInfo_.GetHashCode();
+      if (CustomIndicesI32.Length != 0) hash ^= CustomIndicesI32.GetHashCode();
+      if (custom_ != null) hash ^= Custom.GetHashCode();
+      if (FinalIndicesI32.Length != 0) hash ^= FinalIndicesI32.GetHashCode();
+      if (finalInfo_ != null) hash ^= FinalInfo.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -4386,8 +4342,22 @@ namespace ExternalCommunication {
         output.WriteRawTag(34);
         output.WriteBytes(Truncates);
       }
-      custom_.WriteTo(output, _repeated_custom_codec);
-      finalInfo_.WriteTo(output, _repeated_finalInfo_codec);
+      if (CustomIndicesI32.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteBytes(CustomIndicesI32);
+      }
+      if (custom_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(Custom);
+      }
+      if (FinalIndicesI32.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteBytes(FinalIndicesI32);
+      }
+      if (finalInfo_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(FinalInfo);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -4414,8 +4384,22 @@ namespace ExternalCommunication {
         output.WriteRawTag(34);
         output.WriteBytes(Truncates);
       }
-      custom_.WriteTo(ref output, _repeated_custom_codec);
-      finalInfo_.WriteTo(ref output, _repeated_finalInfo_codec);
+      if (CustomIndicesI32.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteBytes(CustomIndicesI32);
+      }
+      if (custom_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(Custom);
+      }
+      if (FinalIndicesI32.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteBytes(FinalIndicesI32);
+      }
+      if (finalInfo_ != null) {
+        output.WriteRawTag(66);
+        output.WriteMessage(FinalInfo);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -4438,8 +4422,18 @@ namespace ExternalCommunication {
       if (Truncates.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeBytesSize(Truncates);
       }
-      size += custom_.CalculateSize(_repeated_custom_codec);
-      size += finalInfo_.CalculateSize(_repeated_finalInfo_codec);
+      if (CustomIndicesI32.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(CustomIndicesI32);
+      }
+      if (custom_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Custom);
+      }
+      if (FinalIndicesI32.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(FinalIndicesI32);
+      }
+      if (finalInfo_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(FinalInfo);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -4467,8 +4461,24 @@ namespace ExternalCommunication {
       if (other.Truncates.Length != 0) {
         Truncates = other.Truncates;
       }
-      custom_.Add(other.custom_);
-      finalInfo_.Add(other.finalInfo_);
+      if (other.CustomIndicesI32.Length != 0) {
+        CustomIndicesI32 = other.CustomIndicesI32;
+      }
+      if (other.custom_ != null) {
+        if (custom_ == null) {
+          Custom = new global::ExternalCommunication.BatchedCustomInfo();
+        }
+        Custom.MergeFrom(other.Custom);
+      }
+      if (other.FinalIndicesI32.Length != 0) {
+        FinalIndicesI32 = other.FinalIndicesI32;
+      }
+      if (other.finalInfo_ != null) {
+        if (finalInfo_ == null) {
+          FinalInfo = new global::ExternalCommunication.BatchedFinalInfo();
+        }
+        FinalInfo.MergeFrom(other.FinalInfo);
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -4504,11 +4514,25 @@ namespace ExternalCommunication {
             break;
           }
           case 42: {
-            custom_.AddEntriesFrom(input, _repeated_custom_codec);
+            CustomIndicesI32 = input.ReadBytes();
             break;
           }
           case 50: {
-            finalInfo_.AddEntriesFrom(input, _repeated_finalInfo_codec);
+            if (custom_ == null) {
+              Custom = new global::ExternalCommunication.BatchedCustomInfo();
+            }
+            input.ReadMessage(Custom);
+            break;
+          }
+          case 58: {
+            FinalIndicesI32 = input.ReadBytes();
+            break;
+          }
+          case 66: {
+            if (finalInfo_ == null) {
+              FinalInfo = new global::ExternalCommunication.BatchedFinalInfo();
+            }
+            input.ReadMessage(FinalInfo);
             break;
           }
         }
@@ -4546,11 +4570,25 @@ namespace ExternalCommunication {
             break;
           }
           case 42: {
-            custom_.AddEntriesFrom(ref input, _repeated_custom_codec);
+            CustomIndicesI32 = input.ReadBytes();
             break;
           }
           case 50: {
-            finalInfo_.AddEntriesFrom(ref input, _repeated_finalInfo_codec);
+            if (custom_ == null) {
+              Custom = new global::ExternalCommunication.BatchedCustomInfo();
+            }
+            input.ReadMessage(Custom);
+            break;
+          }
+          case 58: {
+            FinalIndicesI32 = input.ReadBytes();
+            break;
+          }
+          case 66: {
+            if (finalInfo_ == null) {
+              FinalInfo = new global::ExternalCommunication.BatchedFinalInfo();
+            }
+            input.ReadMessage(FinalInfo);
             break;
           }
         }
@@ -4595,7 +4633,8 @@ namespace ExternalCommunication {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public BatchedResetResults(BatchedResetResults other) : this() {
       observation_ = other.observation_ != null ? other.observation_.Clone() : null;
-      custom_ = other.custom_.Clone();
+      customIndicesI32_ = other.customIndicesI32_;
+      custom_ = other.custom_ != null ? other.custom_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -4617,15 +4656,28 @@ namespace ExternalCommunication {
       }
     }
 
-    /// <summary>Field number for the "custom" field.</summary>
-    public const int CustomFieldNumber = 2;
-    private static readonly pb::FieldCodec<global::ExternalCommunication.CustomInfoEntry> _repeated_custom_codec
-        = pb::FieldCodec.ForMessage(18, global::ExternalCommunication.CustomInfoEntry.Parser);
-    private readonly pbc::RepeatedField<global::ExternalCommunication.CustomInfoEntry> custom_ = new pbc::RepeatedField<global::ExternalCommunication.CustomInfoEntry>();
+    /// <summary>Field number for the "custom_indices_i32" field.</summary>
+    public const int CustomIndicesI32FieldNumber = 2;
+    private pb::ByteString customIndicesI32_ = pb::ByteString.Empty;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::ExternalCommunication.CustomInfoEntry> Custom {
+    public pb::ByteString CustomIndicesI32 {
+      get { return customIndicesI32_; }
+      set {
+        customIndicesI32_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "custom" field.</summary>
+    public const int CustomFieldNumber = 3;
+    private global::ExternalCommunication.BatchedCustomInfo custom_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::ExternalCommunication.BatchedCustomInfo Custom {
       get { return custom_; }
+      set {
+        custom_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4644,7 +4696,8 @@ namespace ExternalCommunication {
         return true;
       }
       if (!object.Equals(Observation, other.Observation)) return false;
-      if(!custom_.Equals(other.custom_)) return false;
+      if (CustomIndicesI32 != other.CustomIndicesI32) return false;
+      if (!object.Equals(Custom, other.Custom)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -4653,7 +4706,8 @@ namespace ExternalCommunication {
     public override int GetHashCode() {
       int hash = 1;
       if (observation_ != null) hash ^= Observation.GetHashCode();
-      hash ^= custom_.GetHashCode();
+      if (CustomIndicesI32.Length != 0) hash ^= CustomIndicesI32.GetHashCode();
+      if (custom_ != null) hash ^= Custom.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -4676,7 +4730,14 @@ namespace ExternalCommunication {
         output.WriteRawTag(10);
         output.WriteMessage(Observation);
       }
-      custom_.WriteTo(output, _repeated_custom_codec);
+      if (CustomIndicesI32.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteBytes(CustomIndicesI32);
+      }
+      if (custom_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Custom);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -4691,7 +4752,14 @@ namespace ExternalCommunication {
         output.WriteRawTag(10);
         output.WriteMessage(Observation);
       }
-      custom_.WriteTo(ref output, _repeated_custom_codec);
+      if (CustomIndicesI32.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteBytes(CustomIndicesI32);
+      }
+      if (custom_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Custom);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -4705,7 +4773,12 @@ namespace ExternalCommunication {
       if (observation_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Observation);
       }
-      size += custom_.CalculateSize(_repeated_custom_codec);
+      if (CustomIndicesI32.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(CustomIndicesI32);
+      }
+      if (custom_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Custom);
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -4724,7 +4797,15 @@ namespace ExternalCommunication {
         }
         Observation.MergeFrom(other.Observation);
       }
-      custom_.Add(other.custom_);
+      if (other.CustomIndicesI32.Length != 0) {
+        CustomIndicesI32 = other.CustomIndicesI32;
+      }
+      if (other.custom_ != null) {
+        if (custom_ == null) {
+          Custom = new global::ExternalCommunication.BatchedCustomInfo();
+        }
+        Custom.MergeFrom(other.Custom);
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -4748,7 +4829,14 @@ namespace ExternalCommunication {
             break;
           }
           case 18: {
-            custom_.AddEntriesFrom(input, _repeated_custom_codec);
+            CustomIndicesI32 = input.ReadBytes();
+            break;
+          }
+          case 26: {
+            if (custom_ == null) {
+              Custom = new global::ExternalCommunication.BatchedCustomInfo();
+            }
+            input.ReadMessage(Custom);
             break;
           }
         }
@@ -4774,7 +4862,14 @@ namespace ExternalCommunication {
             break;
           }
           case 18: {
-            custom_.AddEntriesFrom(ref input, _repeated_custom_codec);
+            CustomIndicesI32 = input.ReadBytes();
+            break;
+          }
+          case 26: {
+            if (custom_ == null) {
+              Custom = new global::ExternalCommunication.BatchedCustomInfo();
+            }
+            input.ReadMessage(Custom);
             break;
           }
         }

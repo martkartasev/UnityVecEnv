@@ -152,63 +152,51 @@ class BatchedObservation(_message.Message):
     discrete_i32: bytes
     def __init__(self, num_envs: _Optional[int] = ..., continuous_size: _Optional[int] = ..., discrete_size: _Optional[int] = ..., continuous_f32: _Optional[bytes] = ..., discrete_i32: _Optional[bytes] = ...) -> None: ...
 
-class CustomInfoEntry(_message.Message):
-    __slots__ = ("index", "custom")
-    class CustomEntry(_message.Message):
-        __slots__ = ("key", "value")
-        KEY_FIELD_NUMBER: _ClassVar[int]
-        VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: str
-        value: float
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[float] = ...) -> None: ...
-    INDEX_FIELD_NUMBER: _ClassVar[int]
-    CUSTOM_FIELD_NUMBER: _ClassVar[int]
-    index: int
-    custom: _containers.ScalarMap[str, float]
-    def __init__(self, index: _Optional[int] = ..., custom: _Optional[_Mapping[str, float]] = ...) -> None: ...
+class BatchedCustomInfo(_message.Message):
+    __slots__ = ("keys", "values_f32", "present")
+    KEYS_FIELD_NUMBER: _ClassVar[int]
+    VALUES_F32_FIELD_NUMBER: _ClassVar[int]
+    PRESENT_FIELD_NUMBER: _ClassVar[int]
+    keys: _containers.RepeatedScalarFieldContainer[str]
+    values_f32: bytes
+    present: bytes
+    def __init__(self, keys: _Optional[_Iterable[str]] = ..., values_f32: _Optional[bytes] = ..., present: _Optional[bytes] = ...) -> None: ...
 
-class FinalStepInfoEntry(_message.Message):
-    __slots__ = ("index", "episode_info", "final_observation", "custom")
-    class CustomEntry(_message.Message):
-        __slots__ = ("key", "value")
-        KEY_FIELD_NUMBER: _ClassVar[int]
-        VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: str
-        value: float
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[float] = ...) -> None: ...
-    INDEX_FIELD_NUMBER: _ClassVar[int]
-    EPISODE_INFO_FIELD_NUMBER: _ClassVar[int]
+class BatchedFinalInfo(_message.Message):
+    __slots__ = ("final_observation",)
     FINAL_OBSERVATION_FIELD_NUMBER: _ClassVar[int]
-    CUSTOM_FIELD_NUMBER: _ClassVar[int]
-    index: int
-    episode_info: EpisodeInfo
-    final_observation: Observation
-    custom: _containers.ScalarMap[str, float]
-    def __init__(self, index: _Optional[int] = ..., episode_info: _Optional[_Union[EpisodeInfo, _Mapping]] = ..., final_observation: _Optional[_Union[Observation, _Mapping]] = ..., custom: _Optional[_Mapping[str, float]] = ...) -> None: ...
+    final_observation: BatchedObservation
+    def __init__(self, final_observation: _Optional[_Union[BatchedObservation, _Mapping]] = ...) -> None: ...
 
 class BatchedStepResults(_message.Message):
-    __slots__ = ("observation", "rewards_f32", "dones", "truncates", "custom", "final_info")
+    __slots__ = ("observation", "rewards_f32", "dones", "truncates", "custom_indices_i32", "custom", "final_indices_i32", "final_info")
     OBSERVATION_FIELD_NUMBER: _ClassVar[int]
     REWARDS_F32_FIELD_NUMBER: _ClassVar[int]
     DONES_FIELD_NUMBER: _ClassVar[int]
     TRUNCATES_FIELD_NUMBER: _ClassVar[int]
+    CUSTOM_INDICES_I32_FIELD_NUMBER: _ClassVar[int]
     CUSTOM_FIELD_NUMBER: _ClassVar[int]
+    FINAL_INDICES_I32_FIELD_NUMBER: _ClassVar[int]
     FINAL_INFO_FIELD_NUMBER: _ClassVar[int]
     observation: BatchedObservation
     rewards_f32: bytes
     dones: bytes
     truncates: bytes
-    custom: _containers.RepeatedCompositeFieldContainer[CustomInfoEntry]
-    final_info: _containers.RepeatedCompositeFieldContainer[FinalStepInfoEntry]
-    def __init__(self, observation: _Optional[_Union[BatchedObservation, _Mapping]] = ..., rewards_f32: _Optional[bytes] = ..., dones: _Optional[bytes] = ..., truncates: _Optional[bytes] = ..., custom: _Optional[_Iterable[_Union[CustomInfoEntry, _Mapping]]] = ..., final_info: _Optional[_Iterable[_Union[FinalStepInfoEntry, _Mapping]]] = ...) -> None: ...
+    custom_indices_i32: bytes
+    custom: BatchedCustomInfo
+    final_indices_i32: bytes
+    final_info: BatchedFinalInfo
+    def __init__(self, observation: _Optional[_Union[BatchedObservation, _Mapping]] = ..., rewards_f32: _Optional[bytes] = ..., dones: _Optional[bytes] = ..., truncates: _Optional[bytes] = ..., custom_indices_i32: _Optional[bytes] = ..., custom: _Optional[_Union[BatchedCustomInfo, _Mapping]] = ..., final_indices_i32: _Optional[bytes] = ..., final_info: _Optional[_Union[BatchedFinalInfo, _Mapping]] = ...) -> None: ...
 
 class BatchedResetResults(_message.Message):
-    __slots__ = ("observation", "custom")
+    __slots__ = ("observation", "custom_indices_i32", "custom")
     OBSERVATION_FIELD_NUMBER: _ClassVar[int]
+    CUSTOM_INDICES_I32_FIELD_NUMBER: _ClassVar[int]
     CUSTOM_FIELD_NUMBER: _ClassVar[int]
     observation: BatchedObservation
-    custom: _containers.RepeatedCompositeFieldContainer[CustomInfoEntry]
-    def __init__(self, observation: _Optional[_Union[BatchedObservation, _Mapping]] = ..., custom: _Optional[_Iterable[_Union[CustomInfoEntry, _Mapping]]] = ...) -> None: ...
+    custom_indices_i32: bytes
+    custom: BatchedCustomInfo
+    def __init__(self, observation: _Optional[_Union[BatchedObservation, _Mapping]] = ..., custom_indices_i32: _Optional[bytes] = ..., custom: _Optional[_Union[BatchedCustomInfo, _Mapping]] = ...) -> None: ...
 
 class Screenshot(_message.Message):
     __slots__ = ("camera",)
@@ -274,3 +262,5 @@ class Quaternion(_message.Message):
     z: float
     w: float
     def __init__(self, x: _Optional[float] = ..., y: _Optional[float] = ..., z: _Optional[float] = ..., w: _Optional[float] = ...) -> None: ...
+
+

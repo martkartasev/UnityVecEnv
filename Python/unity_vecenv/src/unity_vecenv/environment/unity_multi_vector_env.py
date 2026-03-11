@@ -137,6 +137,26 @@ def _concat_by_space(space: spaces.Space, parts: Sequence[Any]):
 
     raise TypeError(f"Unsupported space type: {type(space)}")
 
+def _concat_info_value(parts: Sequence[Any]):
+    sample = next((p for p in parts if p is not None), None)
+    if sample is None:
+        return None
+
+    if isinstance(sample, np.ndarray):
+        return np.concatenate([np.asarray(p) for p in parts if p is not None], axis=0)
+
+    if isinstance(sample, dict):
+        return {
+            key: _concat_info_value([p[key] if p is not None else None for p in parts])
+            for key in sample.keys()
+        }
+
+    if isinstance(sample, tuple):
+        return tuple(_concat_info_value([p[i] if p is not None else None for p in parts]) for i in range(len(sample)))
+
+    raise TypeError(f"Unsupported info value type: {type(sample)}")
+
+
 def _merge_infos(infos_per_env: Sequence[Dict[str, Any]], slices: Sequence[_Slice]) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     keys = set()
@@ -146,74 +166,26 @@ def _merge_infos(infos_per_env: Sequence[Dict[str, Any]], slices: Sequence[_Slic
     n_total = slices[-1].end if slices else 0
 
     for k in keys:
-        if k == "final_info":
-            merged = np.full((n_total,), None, dtype=object)
-            merged_mask = np.zeros((n_total,), dtype=np.bool_)
-            for info, slc in zip(infos_per_env, slices):
-                if "final_info" not in info:
-                    continue
-                fi = np.asarray(info["final_info"], dtype=object)
-                fi_mask = np.asarray(
-                    info.get("_final_info", [item is not None for item in fi]),
-                    dtype=np.bool_,
-                )
-                length = min(len(fi), slc.size)
-                merged[slc.start:slc.start + length] = fi[:length]
-                merged_mask[slc.start:slc.start + length] = fi_mask[:length]
-            if np.any(merged_mask):
-                out["final_info"] = merged
-                out["_final_info"] = merged_mask
-            continue
-
-        if k == "final_observation":
-            merged = np.full((n_total,), None, dtype=object)
-            merged_mask = np.zeros((n_total,), dtype=np.bool_)
-            for info, slc in zip(infos_per_env, slices):
-                if "final_observation" not in info:
-                    continue
-                fo = np.asarray(info["final_observation"], dtype=object)
-                fo_mask = np.asarray(
-                    info.get("_final_observation", [item is not None for item in fo]),
-                    dtype=np.bool_,
-                )
-                length = min(len(fo), slc.size)
-                merged[slc.start:slc.start + length] = fo[:length]
-                merged_mask[slc.start:slc.start + length] = fo_mask[:length]
-            if np.any(merged_mask):
-                out["final_observation"] = merged
-                out["_final_observation"] = merged_mask
-            continue
-
-        if k == "custom":
-            merged = np.full((n_total,), None, dtype=object)
-            merged_mask = np.zeros((n_total,), dtype=np.bool_)
-            for info, slc in zip(infos_per_env, slices):
-                if "custom" not in info:
-                    continue
-                custom = np.asarray(info["custom"], dtype=object)
-                custom_mask = np.asarray(
-                    info.get("_custom", [item is not None for item in custom]),
-                    dtype=np.bool_,
-                )
-                length = min(len(custom), slc.size)
-                merged[slc.start:slc.start + length] = custom[:length]
-                merged_mask[slc.start:slc.start + length] = custom_mask[:length]
-            if np.any(merged_mask):
-                out["custom"] = merged
-                out["_custom"] = merged_mask
-            continue
-
-        if k in {"_final_info", "_final_observation", "_custom"}:
-            continue
-
         vals_raw = [info.get(k, None) for info in infos_per_env]
-        if all(isinstance(v, np.ndarray) for v in vals_raw if v is not None):
-            vals = [v for v in vals_raw if v is not None]
-            try:
-                out[k] = np.concatenate(vals, axis=0)
-                continue
-            except Exception:
-                pass
+        sample = next((v for v in vals_raw if v is not None), None)
+        if sample is None:
+            continue
+
+        if isinstance(sample, np.ndarray):
+            sample_arr = np.asarray(sample)
+            merged = np.zeros((n_total,) + sample_arr.shape[1:], dtype=sample_arr.dtype)
+            for value, slc in zip(vals_raw, slices):
+                if value is None:
+                    continue
+                arr = np.asarray(value, dtype=sample_arr.dtype)
+                length = min(arr.shape[0], slc.size)
+                merged[slc.start:slc.start + length] = arr[:length]
+            out[k] = merged
+            continue
+
+        if isinstance(sample, dict) or isinstance(sample, tuple):
+            out[k] = _concat_info_value(vals_raw)
+            continue
 
         out[k] = vals_raw
 
@@ -429,3 +401,4 @@ class FlattenedVectorEnvThreaded(VectorEnv):
     def close(self):
         for w in self.workers:
             w.close()
+

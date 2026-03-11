@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -118,75 +119,32 @@ namespace Scripts.VecEnv.Networking
 
         public void StepCompleted(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info[] infos)
         {
+            var customIndices = BuildCustomIndices(infos);
+            var finalIndices = BuildFinalIndices(dones);
             var results = new BatchedStepResults
             {
                 Observation = BuildBatchedObservation(agentObservations),
                 RewardsF32 = FloatArrayToByteString(rewards),
                 Dones = StateArrayToByteString(dones, EnvironmentState.Done),
-                Truncates = StateArrayToByteString(dones, EnvironmentState.Truncated)
+                Truncates = StateArrayToByteString(dones, EnvironmentState.Truncated),
+                CustomIndicesI32 = IntArrayToByteString(customIndices),
+                Custom = BuildBatchedCustomInfo(infos, customIndices),
+                FinalIndicesI32 = IntArrayToByteString(finalIndices),
+                FinalInfo = BuildBatchedFinalInfo(agentObservations, infos, finalIndices)
             };
-
-            for (int i = 0; i < infos.Length; i++)
-            {
-                if (infos[i].custom != null && infos[i].custom.Count > 0)
-                {
-                    var customEntry = new CustomInfoEntry
-                    {
-                        Index = i
-                    };
-                    customEntry.Custom.Add(infos[i].custom);
-                    results.Custom.Add(customEntry);
-                }
-
-                if (dones[i] != EnvironmentState.Done && dones[i] != EnvironmentState.Truncated)
-                {
-                    continue;
-                }
-
-                var finalInfoEntry = new FinalStepInfoEntry
-                {
-                    Index = i,
-                    EpisodeInfo = new EpisodeInfo
-                    {
-                        AgentIndex = infos[i].AgentIndex,
-                        EpisodeReward = infos[i].EpisodeReward,
-                        EpisodeLength = infos[i].EpisodeLength
-                    },
-                    FinalObservation = Mapper.MapObservationToExternal(SelectFinalObservation(agentObservations[i], infos[i]))
-                };
-
-                if (infos[i].custom != null && infos[i].custom.Count > 0)
-                {
-                    finalInfoEntry.Custom.Add(infos[i].custom);
-                }
-
-                results.FinalInfo.Add(finalInfoEntry);
-            }
 
             _stepTcs?.TrySetResult(results);
         }
 
         public void ResetCompleted(AgentObservation[] agentObservations, Info[] infos)
         {
+            var customIndices = BuildCustomIndices(infos);
             var results = new BatchedResetResults
             {
-                Observation = BuildBatchedObservation(agentObservations)
+                Observation = BuildBatchedObservation(agentObservations),
+                CustomIndicesI32 = IntArrayToByteString(customIndices),
+                Custom = BuildBatchedCustomInfo(infos, customIndices)
             };
-
-            for (int i = 0; i < infos.Length; i++)
-            {
-                if (infos[i].custom == null || infos[i].custom.Count == 0)
-                {
-                    continue;
-                }
-
-                var customEntry = new CustomInfoEntry
-                {
-                    Index = i
-                };
-                customEntry.Custom.Add(infos[i].custom);
-                results.Custom.Add(customEntry);
-            }
 
             _resetTcs?.TrySetResult(results);
         }
@@ -205,6 +163,122 @@ namespace Scripts.VecEnv.Networking
             }
 
             return currentObservation;
+        }
+
+        private static int[] BuildCustomIndices(Info[] infos)
+        {
+            if (infos == null || infos.Length == 0)
+            {
+                return Array.Empty<int>();
+            }
+
+            var indices = new List<int>(infos.Length);
+            for (int i = 0; i < infos.Length; i++)
+            {
+                if (infos[i].custom != null && infos[i].custom.Count > 0)
+                {
+                    indices.Add(i);
+                }
+            }
+
+            return indices.ToArray();
+        }
+
+        private static int[] BuildFinalIndices(EnvironmentState[] dones)
+        {
+            if (dones == null || dones.Length == 0)
+            {
+                return Array.Empty<int>();
+            }
+
+            var indices = new List<int>(dones.Length);
+            for (int i = 0; i < dones.Length; i++)
+            {
+                if (dones[i] == EnvironmentState.Done || dones[i] == EnvironmentState.Truncated)
+                {
+                    indices.Add(i);
+                }
+            }
+
+            return indices.ToArray();
+        }
+
+        private static BatchedCustomInfo BuildBatchedCustomInfo(Info[] infos, int[] indices)
+        {
+            var batchedCustomInfo = new BatchedCustomInfo();
+            if (indices == null || indices.Length == 0)
+            {
+                return batchedCustomInfo;
+            }
+
+            var keyLookup = new Dictionary<string, int>(StringComparer.Ordinal);
+            var orderedKeys = new List<string>();
+            for (int row = 0; row < indices.Length; row++)
+            {
+                var custom = infos[indices[row]].custom;
+                if (custom == null)
+                {
+                    continue;
+                }
+
+                foreach (var entry in custom)
+                {
+                    if (keyLookup.ContainsKey(entry.Key))
+                    {
+                        continue;
+                    }
+
+                    keyLookup[entry.Key] = orderedKeys.Count;
+                    orderedKeys.Add(entry.Key);
+                }
+            }
+
+            if (orderedKeys.Count == 0)
+            {
+                return batchedCustomInfo;
+            }
+
+            var values = new float[indices.Length * orderedKeys.Count];
+            var present = new byte[values.Length];
+            for (int row = 0; row < indices.Length; row++)
+            {
+                var custom = infos[indices[row]].custom;
+                if (custom == null)
+                {
+                    continue;
+                }
+
+                foreach (var entry in custom)
+                {
+                    var offset = row * orderedKeys.Count + keyLookup[entry.Key];
+                    values[offset] = entry.Value;
+                    present[offset] = 1;
+                }
+            }
+
+            batchedCustomInfo.Keys.Add(orderedKeys);
+            batchedCustomInfo.ValuesF32 = FloatArrayToByteString(values);
+            batchedCustomInfo.Present = ByteString.CopyFrom(present);
+            return batchedCustomInfo;
+        }
+
+        private static BatchedFinalInfo BuildBatchedFinalInfo(AgentObservation[] agentObservations, Info[] infos, int[] indices)
+        {
+            var batchedFinalInfo = new BatchedFinalInfo();
+            if (indices == null || indices.Length == 0)
+            {
+                return batchedFinalInfo;
+            }
+
+            var finalObservations = new AgentObservation[indices.Length];
+            for (int row = 0; row < indices.Length; row++)
+            {
+                var index = indices[row];
+                finalObservations[row] = SelectFinalObservation(agentObservations[index], infos[index]);
+            }
+
+            batchedFinalInfo.FinalObservation = BuildBatchedObservation(finalObservations);
+            return batchedFinalInfo;
         }
 
         private static BatchedObservation BuildBatchedObservation(AgentObservation[] agentObservations)
@@ -552,3 +626,5 @@ namespace Scripts.VecEnv.Networking
         }
     }
 }
+
+

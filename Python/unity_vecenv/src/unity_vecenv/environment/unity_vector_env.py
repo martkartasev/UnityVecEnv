@@ -127,12 +127,6 @@ class UnityVectorEnv(VectorEnv):
         params.continuous.extend(initialization)
         return params
 
-    def _decode_custom_map(self, custom_map) -> Optional[Dict[str, float]]:
-        if custom_map is None or len(custom_map) == 0:
-            return None
-
-        return {str(key): float(value) for key, value in custom_map.items()}
-
     def _decode_float_buffer(self, payload: bytes, expected_size: int, field_name: str) -> np.ndarray:
         arr = np.frombuffer(payload, dtype=_FLOAT32_LE)
         if arr.size != expected_size:
@@ -150,6 +144,66 @@ class UnityVectorEnv(VectorEnv):
         if arr.size != expected_size:
             raise RuntimeError(f"{field_name} has {arr.size} boolean values, expected {expected_size}.")
         return arr.copy()
+
+    def _decode_sparse_indices(self, payload: bytes, nr_agents: int, field_name: str) -> np.ndarray:
+        if len(payload) % _INT32_LE.itemsize != 0:
+            raise RuntimeError(f"{field_name} payload length {len(payload)} is not divisible by {_INT32_LE.itemsize}.")
+
+        indices = self._decode_int_buffer(
+            payload,
+            len(payload) // _INT32_LE.itemsize,
+            field_name,
+        ).copy()
+        if np.any(indices < 0) or np.any(indices >= nr_agents):
+            raise RuntimeError(f"{field_name} contains indices outside [0, {nr_agents}).")
+        if indices.size != np.unique(indices).size:
+            raise RuntimeError(f"{field_name} contains duplicate indices.")
+        return indices
+
+    def _decode_columnar_custom(self, custom_payload, indices: np.ndarray, nr_agents: int, field_name: str):
+        keys = np.asarray(custom_payload.keys, dtype=object)
+        num_rows = int(indices.size)
+        num_keys = int(keys.size)
+
+        full_values = np.zeros((nr_agents, num_keys), dtype=np.float32)
+        full_present = np.zeros((nr_agents, num_keys), dtype=np.bool_)
+        full_mask = np.zeros((nr_agents,), dtype=np.bool_)
+
+        if num_rows == 0:
+            if num_keys != 0 or len(custom_payload.values_f32) != 0 or len(custom_payload.present) != 0:
+                raise RuntimeError(f"{field_name} has payload data but no indices.")
+            return keys, full_values, full_present, full_mask
+
+        if num_keys == 0:
+            raise RuntimeError(f"{field_name} has {num_rows} rows but no keys.")
+
+        values = self._decode_float_buffer(
+            custom_payload.values_f32,
+            num_rows * num_keys,
+            f"{field_name}.values_f32",
+        ).reshape((num_rows, num_keys)).copy()
+        present = self._decode_bool_buffer(
+            custom_payload.present,
+            num_rows * num_keys,
+            f"{field_name}.present",
+        ).reshape((num_rows, num_keys))
+
+        full_values[indices] = values
+        full_present[indices] = present
+        full_mask[indices] = np.any(present, axis=1)
+        return keys, full_values, full_present, full_mask
+
+    def _populate_custom_info(self, info: Dict[str, Any], custom_keys, custom_values, custom_present):
+        for column, raw_key in enumerate(custom_keys.tolist()):
+            key = str(raw_key)
+            mask_key = f"_{key}"
+            if key.startswith("_"):
+                raise RuntimeError(f"Custom info key '{key}' cannot start with '_' because that prefix is reserved for masks.")
+            if key in info or mask_key in info:
+                raise RuntimeError(f"Custom info key '{key}' collides with an existing info field.")
+
+            info[key] = custom_values[:, column].copy()
+            info[mask_key] = custom_present[:, column].copy()
 
     def _observation_to_numpy(self, observation):
         continuous = np.asarray(observation.continuous, dtype=np.float32)
@@ -242,30 +296,37 @@ class UnityVectorEnv(VectorEnv):
 
         raise TypeError(f"Unsupported single_observation_space: {type(sos)}")
 
-    def _select_single_observation(self, obs, index):
+    def _zeros_like_observation(self, obs):
         if isinstance(obs, dict):
-            return {key: np.copy(value[index]) for key, value in obs.items()}
-        return np.copy(obs[index])
+            return {key: np.zeros_like(value) for key, value in obs.items()}
+        return np.zeros_like(obs)
+
+    def _scatter_batched_observation(self, sparse_obs, indices: np.ndarray, obs_template):
+        full_obs = self._zeros_like_observation(obs_template)
+        if indices.size == 0:
+            return full_obs
+
+        if isinstance(full_obs, dict):
+            for key in full_obs.keys():
+                full_obs[key][indices] = sparse_obs[key]
+            return full_obs
+
+        full_obs[indices] = sparse_obs
+        return full_obs
 
     def reset_result_to_numpy(self, results: BatchedResetResults, nr_agents):
         obs = self._batched_observation_to_numpy(results.observation, nr_agents)
         info: Dict[str, Any] = {}
-        custom = np.full((nr_agents,), None, dtype=object)
-        custom_mask = np.zeros((nr_agents,), dtype=np.bool_)
 
-        for entry in results.custom:
-            index = int(entry.index)
-            if index < 0 or index >= nr_agents:
-                raise RuntimeError(f"Reset custom info index {index} out of range for {nr_agents} envs.")
-
-            custom_info = self._decode_custom_map(entry.custom)
-            if custom_info:
-                custom[index] = custom_info
-                custom_mask[index] = True
-
-        if np.any(custom_mask):
-            info["custom"] = custom
-            info["_custom"] = custom_mask
+        custom_indices = self._decode_sparse_indices(results.custom_indices_i32, nr_agents, "custom_indices_i32")
+        custom_keys, custom_values, custom_present, custom_mask = self._decode_columnar_custom(
+            results.custom,
+            custom_indices,
+            nr_agents,
+            "custom",
+        )
+        if custom_keys.size > 0:
+            self._populate_custom_info(info, custom_keys, custom_values, custom_present)
 
         return obs, info
 
@@ -275,56 +336,35 @@ class UnityVectorEnv(VectorEnv):
         dones = self._decode_bool_buffer(results.dones, self.num_envs, "dones")
         truncates = self._decode_bool_buffer(results.truncates, self.num_envs, "truncates")
         info: Dict[str, Any] = {}
-        custom = np.full((self.num_envs,), None, dtype=object)
-        custom_mask = np.zeros((self.num_envs,), dtype=np.bool_)
-        final_info = np.full((self.num_envs,), None, dtype=object)
-        final_info_mask = np.zeros((self.num_envs,), dtype=np.bool_)
-        final_observation = np.full((self.num_envs,), None, dtype=object)
-        final_observation_mask = np.zeros((self.num_envs,), dtype=np.bool_)
 
-        for entry in results.custom:
-            index = int(entry.index)
-            if index < 0 or index >= self.num_envs:
-                raise RuntimeError(f"Step custom info index {index} out of range for {self.num_envs} envs.")
+        custom_indices = self._decode_sparse_indices(results.custom_indices_i32, self.num_envs, "custom_indices_i32")
+        custom_keys, custom_values, custom_present, custom_mask = self._decode_columnar_custom(
+            results.custom,
+            custom_indices,
+            self.num_envs,
+            "custom",
+        )
+        if custom_keys.size > 0:
+            self._populate_custom_info(info, custom_keys, custom_values, custom_present)
 
-            custom_info = self._decode_custom_map(entry.custom)
-            if custom_info:
-                custom[index] = custom_info
-                custom_mask[index] = True
+        final_mask = np.zeros((self.num_envs,), dtype=np.bool_)
+        final_observation = self._zeros_like_observation(obs)
 
-        for entry in results.final_info:
-            index = int(entry.index)
-            if index < 0 or index >= self.num_envs:
-                raise RuntimeError(f"Final info index {index} out of range for {self.num_envs} envs.")
+        final_indices = self._decode_sparse_indices(results.final_indices_i32, self.num_envs, "final_indices_i32")
+        if final_indices.size == 0:
+            if int(results.final_info.final_observation.num_envs) != 0:
+                raise RuntimeError("final_info has payload data but no indices.")
+        else:
+            final_observation_sparse = self._batched_observation_to_numpy(
+                results.final_info.final_observation,
+                final_indices.size,
+            )
 
-            custom_info = self._decode_custom_map(entry.custom)
-            final_info_entry = {}
-            if entry.HasField("episode_info"):
-                final_info_entry["episode"] = {
-                    "r": float(entry.episode_info.episode_reward),
-                    "l": float(entry.episode_info.episode_length),
-                }
-            if custom_info:
-                final_info_entry["custom"] = custom_info
-            if final_info_entry:
-                final_info[index] = final_info_entry
-                final_info_mask[index] = True
+            final_mask[final_indices] = True
+            final_observation = self._scatter_batched_observation(final_observation_sparse, final_indices, obs)
 
-            if entry.HasField("final_observation"):
-                final_observation[index] = self._observation_to_numpy(entry.final_observation)
-            else:
-                final_observation[index] = self._select_single_observation(obs, index)
-            final_observation_mask[index] = True
-
-        if np.any(custom_mask):
-            info["custom"] = custom
-            info["_custom"] = custom_mask
-        if np.any(final_info_mask):
-            info["final_info"] = final_info
-            info["_final_info"] = final_info_mask
-        if np.any(final_observation_mask):
-            info["final_observation"] = final_observation
-            info["_final_observation"] = final_observation_mask
+        info["final_observation"] = final_observation
+        info["_final_observation"] = final_mask.copy()
 
         return obs, dones, truncates, rewards, info
 
@@ -377,4 +417,8 @@ class UnityVectorEnv(VectorEnv):
             raise TypeError(f"Unsupported single_action_space: {type(sas)}")
 
         return step
+
+
+
+
 

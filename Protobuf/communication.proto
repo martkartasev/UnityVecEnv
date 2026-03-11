@@ -94,16 +94,14 @@ message BatchedObservation {
   bytes discrete_i32 = 5;
 }
 
-message CustomInfoEntry {
-  int32 index = 1;
-  map<string, float> custom = 2;
+message BatchedCustomInfo {
+  repeated string keys = 1;
+  bytes values_f32 = 2;
+  bytes present = 3;
 }
 
-message FinalStepInfoEntry {
-  int32 index = 1;
-  EpisodeInfo episode_info = 2;
-  Observation final_observation = 3;
-  map<string, float> custom = 4;
+message BatchedFinalInfo {
+  BatchedObservation final_observation = 1;
 }
 
 message BatchedStepResults {
@@ -111,13 +109,16 @@ message BatchedStepResults {
   bytes rewards_f32 = 2;
   bytes dones = 3;
   bytes truncates = 4;
-  repeated CustomInfoEntry custom = 5;
-  repeated FinalStepInfoEntry final_info = 6;
+  bytes custom_indices_i32 = 5;
+  BatchedCustomInfo custom = 6;
+  bytes final_indices_i32 = 7;
+  BatchedFinalInfo final_info = 8;
 }
 
 message BatchedResetResults {
   BatchedObservation observation = 1;
-  repeated CustomInfoEntry custom = 2;
+  bytes custom_indices_i32 = 2;
+  BatchedCustomInfo custom = 3;
 }
 
 message Screenshot {
