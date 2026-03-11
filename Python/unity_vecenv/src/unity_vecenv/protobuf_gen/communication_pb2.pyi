@@ -104,40 +104,6 @@ class Observation(_message.Message):
     discrete: _containers.RepeatedScalarFieldContainer[int]
     def __init__(self, index: _Optional[int] = ..., continuous: _Optional[_Iterable[float]] = ..., discrete: _Optional[_Iterable[int]] = ...) -> None: ...
 
-class StepResult(_message.Message):
-    __slots__ = ("observation", "reward", "done", "truncated", "info")
-    OBSERVATION_FIELD_NUMBER: _ClassVar[int]
-    REWARD_FIELD_NUMBER: _ClassVar[int]
-    DONE_FIELD_NUMBER: _ClassVar[int]
-    TRUNCATED_FIELD_NUMBER: _ClassVar[int]
-    INFO_FIELD_NUMBER: _ClassVar[int]
-    observation: Observation
-    reward: float
-    done: bool
-    truncated: bool
-    info: Info
-    def __init__(self, observation: _Optional[_Union[Observation, _Mapping]] = ..., reward: _Optional[float] = ..., done: bool = ..., truncated: bool = ..., info: _Optional[_Union[Info, _Mapping]] = ...) -> None: ...
-
-class ResetResult(_message.Message):
-    __slots__ = ("observation", "info")
-    OBSERVATION_FIELD_NUMBER: _ClassVar[int]
-    INFO_FIELD_NUMBER: _ClassVar[int]
-    observation: Observation
-    info: Info
-    def __init__(self, observation: _Optional[_Union[Observation, _Mapping]] = ..., info: _Optional[_Union[Info, _Mapping]] = ...) -> None: ...
-
-class StepResults(_message.Message):
-    __slots__ = ("stepResults",)
-    STEPRESULTS_FIELD_NUMBER: _ClassVar[int]
-    stepResults: _containers.RepeatedCompositeFieldContainer[StepResult]
-    def __init__(self, stepResults: _Optional[_Iterable[_Union[StepResult, _Mapping]]] = ...) -> None: ...
-
-class ResetResults(_message.Message):
-    __slots__ = ("resetResults",)
-    RESETRESULTS_FIELD_NUMBER: _ClassVar[int]
-    resetResults: _containers.RepeatedCompositeFieldContainer[ResetResult]
-    def __init__(self, resetResults: _Optional[_Iterable[_Union[ResetResult, _Mapping]]] = ...) -> None: ...
-
 class BatchedObservation(_message.Message):
     __slots__ = ("num_envs", "continuous_size", "discrete_size", "continuous_f32", "discrete_i32")
     NUM_ENVS_FIELD_NUMBER: _ClassVar[int]
@@ -204,33 +170,6 @@ class Screenshot(_message.Message):
     camera: Transform
     def __init__(self, camera: _Optional[_Union[Transform, _Mapping]] = ...) -> None: ...
 
-class Info(_message.Message):
-    __slots__ = ("episode_info", "final_observation", "custom")
-    class CustomEntry(_message.Message):
-        __slots__ = ("key", "value")
-        KEY_FIELD_NUMBER: _ClassVar[int]
-        VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: str
-        value: float
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[float] = ...) -> None: ...
-    EPISODE_INFO_FIELD_NUMBER: _ClassVar[int]
-    FINAL_OBSERVATION_FIELD_NUMBER: _ClassVar[int]
-    CUSTOM_FIELD_NUMBER: _ClassVar[int]
-    episode_info: EpisodeInfo
-    final_observation: Observation
-    custom: _containers.ScalarMap[str, float]
-    def __init__(self, episode_info: _Optional[_Union[EpisodeInfo, _Mapping]] = ..., final_observation: _Optional[_Union[Observation, _Mapping]] = ..., custom: _Optional[_Mapping[str, float]] = ...) -> None: ...
-
-class EpisodeInfo(_message.Message):
-    __slots__ = ("agentIndex", "episode_reward", "episode_length")
-    AGENTINDEX_FIELD_NUMBER: _ClassVar[int]
-    EPISODE_REWARD_FIELD_NUMBER: _ClassVar[int]
-    EPISODE_LENGTH_FIELD_NUMBER: _ClassVar[int]
-    agentIndex: int
-    episode_reward: float
-    episode_length: float
-    def __init__(self, agentIndex: _Optional[int] = ..., episode_reward: _Optional[float] = ..., episode_length: _Optional[float] = ...) -> None: ...
-
 class Transform(_message.Message):
     __slots__ = ("position", "euler", "orientation")
     POSITION_FIELD_NUMBER: _ClassVar[int]
@@ -262,5 +201,3 @@ class Quaternion(_message.Message):
     z: float
     w: float
     def __init__(self, x: _Optional[float] = ..., y: _Optional[float] = ..., z: _Optional[float] = ..., w: _Optional[float] = ...) -> None: ...
-
-

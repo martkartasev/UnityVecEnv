@@ -15,7 +15,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13\x63ommunication.proto\x12\x15\x45xternalCommunication\"t\n\x16InitializeEnvironments\x12;\n\rautoResetMode\x18\x01 \x01(\x0e\x32$.ExternalCommunication.AutoResetMode\x12\x1d\n\x15requestedNumberOfEnvs\x18\x02 \x01(\x05\"\xa9\x01\n\x16\x45nvironmentDescription\x12<\n\x16singleObservationSpace\x18\x01 \x03(\x0b\x32\x1c.ExternalCommunication.Space\x12\x37\n\x11singleActionSpace\x18\x02 \x03(\x0b\x32\x1c.ExternalCommunication.Space\x12\x18\n\x10trueNumberOfEnvs\x18\x03 \x01(\x05\"{\n\x05Space\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x16\n\x0e\x63ontinuousSize\x18\x02 \x01(\x05\x12\x36\n\x0f\x63ontinuousRange\x18\x03 \x03(\x0b\x32\x1d.ExternalCommunication.MinMax\x12\x14\n\x0c\x64iscreteSize\x18\x04 \x03(\x05\";\n\x06MinMax\x12\r\n\x05index\x18\x01 \x01(\x05\x12\x10\n\x08minValue\x18\x02 \x01(\x02\x12\x10\n\x08maxValue\x18\x03 \x01(\x02\"Y\n\x05Reset\x12;\n\x0b\x65nvsToReset\x18\x01 \x03(\x0b\x32&.ExternalCommunication.ResetParameters\x12\x13\n\x0breloadScene\x18\x02 \x01(\x08\"4\n\x0fResetParameters\x12\r\n\x05index\x18\x01 \x01(\x05\x12\x12\n\ncontinuous\x18\x02 \x03(\x02\"\xa7\x01\n\x04Step\x12.\n\x07\x61\x63tions\x18\x01 \x03(\x0b\x32\x1d.ExternalCommunication.Action\x12\x16\n\tstepCount\x18\x02 \x01(\x05H\x00\x88\x01\x01\x12\x16\n\ttimeScale\x18\x03 \x01(\x02H\x01\x88\x01\x01\x12#\n\x1b\x61pplyActionEveryPhysicsStep\x18\x04 \x01(\x08\x42\x0c\n\n_stepCountB\x0c\n\n_timeScale\"B\n\x06\x41\x63tion\x12\x12\n\nagentIndex\x18\x01 \x01(\x05\x12\x12\n\ncontinuous\x18\x02 \x03(\x02\x12\x10\n\x08\x64iscrete\x18\x03 \x03(\x05\"B\n\x0bObservation\x12\r\n\x05index\x18\x01 \x01(\x05\x12\x12\n\ncontinuous\x18\x02 \x03(\x02\x12\x10\n\x08\x64iscrete\x18\x03 \x03(\x05\"\xa1\x01\n\nStepResult\x12\x37\n\x0bobservation\x18\x01 \x01(\x0b\x32\".ExternalCommunication.Observation\x12\x0e\n\x06reward\x18\x02 \x01(\x02\x12\x0c\n\x04\x64one\x18\x03 \x01(\x08\x12\x11\n\ttruncated\x18\x04 \x01(\x08\x12)\n\x04info\x18\x05 \x01(\x0b\x32\x1b.ExternalCommunication.Info\"q\n\x0bResetResult\x12\x37\n\x0bobservation\x18\x01 \x01(\x0b\x32\".ExternalCommunication.Observation\x12)\n\x04info\x18\x02 \x01(\x0b\x32\x1b.ExternalCommunication.Info\"E\n\x0bStepResults\x12\x36\n\x0bstepResults\x18\x01 \x03(\x0b\x32!.ExternalCommunication.StepResult\"H\n\x0cResetResults\x12\x38\n\x0cresetResults\x18\x01 \x03(\x0b\x32\".ExternalCommunication.ResetResult\"\x84\x01\n\x12\x42\x61tchedObservation\x12\x10\n\x08num_envs\x18\x01 \x01(\x05\x12\x17\n\x0f\x63ontinuous_size\x18\x02 \x01(\x05\x12\x15\n\rdiscrete_size\x18\x03 \x01(\x05\x12\x16\n\x0e\x63ontinuous_f32\x18\x04 \x01(\x0c\x12\x14\n\x0c\x64iscrete_i32\x18\x05 \x01(\x0c\"F\n\x11\x42\x61tchedCustomInfo\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x12\n\nvalues_f32\x18\x02 \x01(\x0c\x12\x0f\n\x07present\x18\x03 \x01(\x0c\"X\n\x10\x42\x61tchedFinalInfo\x12\x44\n\x11\x66inal_observation\x18\x01 \x01(\x0b\x32).ExternalCommunication.BatchedObservation\"\xb9\x02\n\x12\x42\x61tchedStepResults\x12>\n\x0bobservation\x18\x01 \x01(\x0b\x32).ExternalCommunication.BatchedObservation\x12\x13\n\x0brewards_f32\x18\x02 \x01(\x0c\x12\r\n\x05\x64ones\x18\x03 \x01(\x0c\x12\x11\n\ttruncates\x18\x04 \x01(\x0c\x12\x1a\n\x12\x63ustom_indices_i32\x18\x05 \x01(\x0c\x12\x38\n\x06\x63ustom\x18\x06 \x01(\x0b\x32(.ExternalCommunication.BatchedCustomInfo\x12\x19\n\x11\x66inal_indices_i32\x18\x07 \x01(\x0c\x12;\n\nfinal_info\x18\x08 \x01(\x0b\x32\'.ExternalCommunication.BatchedFinalInfo\"\xab\x01\n\x13\x42\x61tchedResetResults\x12>\n\x0bobservation\x18\x01 \x01(\x0b\x32).ExternalCommunication.BatchedObservation\x12\x1a\n\x12\x63ustom_indices_i32\x18\x02 \x01(\x0c\x12\x38\n\x06\x63ustom\x18\x03 \x01(\x0b\x32(.ExternalCommunication.BatchedCustomInfo\">\n\nScreenshot\x12\x30\n\x06\x63\x61mera\x18\x01 \x01(\x0b\x32 .ExternalCommunication.Transform\"\xe7\x01\n\x04Info\x12\x38\n\x0c\x65pisode_info\x18\x01 \x01(\x0b\x32\".ExternalCommunication.EpisodeInfo\x12=\n\x11\x66inal_observation\x18\x02 \x01(\x0b\x32\".ExternalCommunication.Observation\x12\x37\n\x06\x63ustom\x18\n \x03(\x0b\x32\'.ExternalCommunication.Info.CustomEntry\x1a-\n\x0b\x43ustomEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x02:\x02\x38\x01\"Q\n\x0b\x45pisodeInfo\x12\x12\n\nagentIndex\x18\x01 \x01(\x05\x12\x16\n\x0e\x65pisode_reward\x18\x02 \x01(\x02\x12\x16\n\x0e\x65pisode_length\x18\x03 \x01(\x02\"\xc8\x01\n\tTransform\x12\x30\n\x08position\x18\x01 \x01(\x0b\x32\x1e.ExternalCommunication.Vector3\x12\x32\n\x05\x65uler\x18\x02 \x01(\x0b\x32\x1e.ExternalCommunication.Vector3H\x00\x88\x01\x01\x12;\n\x0borientation\x18\x03 \x01(\x0b\x32!.ExternalCommunication.QuaternionH\x01\x88\x01\x01\x42\x08\n\x06_eulerB\x0e\n\x0c_orientation\"*\n\x07Vector3\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\x12\t\n\x01z\x18\x03 \x01(\x02\"8\n\nQuaternion\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\x12\t\n\x01z\x18\x03 \x01(\x02\x12\t\n\x01w\x18\x04 \x01(\x02*9\n\rAutoResetMode\x12\x0c\n\x08NextStep\x10\x00\x12\x0c\n\x08SameStep\x10\x01\x12\x0c\n\x08\x44isabled\x10\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13\x63ommunication.proto\x12\x15\x45xternalCommunication\"t\n\x16InitializeEnvironments\x12;\n\rautoResetMode\x18\x01 \x01(\x0e\x32$.ExternalCommunication.AutoResetMode\x12\x1d\n\x15requestedNumberOfEnvs\x18\x02 \x01(\x05\"\xa9\x01\n\x16\x45nvironmentDescription\x12<\n\x16singleObservationSpace\x18\x01 \x03(\x0b\x32\x1c.ExternalCommunication.Space\x12\x37\n\x11singleActionSpace\x18\x02 \x03(\x0b\x32\x1c.ExternalCommunication.Space\x12\x18\n\x10trueNumberOfEnvs\x18\x03 \x01(\x05\"{\n\x05Space\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x16\n\x0e\x63ontinuousSize\x18\x02 \x01(\x05\x12\x36\n\x0f\x63ontinuousRange\x18\x03 \x03(\x0b\x32\x1d.ExternalCommunication.MinMax\x12\x14\n\x0c\x64iscreteSize\x18\x04 \x03(\x05\";\n\x06MinMax\x12\r\n\x05index\x18\x01 \x01(\x05\x12\x10\n\x08minValue\x18\x02 \x01(\x02\x12\x10\n\x08maxValue\x18\x03 \x01(\x02\"Y\n\x05Reset\x12;\n\x0b\x65nvsToReset\x18\x01 \x03(\x0b\x32&.ExternalCommunication.ResetParameters\x12\x13\n\x0breloadScene\x18\x02 \x01(\x08\"4\n\x0fResetParameters\x12\r\n\x05index\x18\x01 \x01(\x05\x12\x12\n\ncontinuous\x18\x02 \x03(\x02\"\xa7\x01\n\x04Step\x12.\n\x07\x61\x63tions\x18\x01 \x03(\x0b\x32\x1d.ExternalCommunication.Action\x12\x16\n\tstepCount\x18\x02 \x01(\x05H\x00\x88\x01\x01\x12\x16\n\ttimeScale\x18\x03 \x01(\x02H\x01\x88\x01\x01\x12#\n\x1b\x61pplyActionEveryPhysicsStep\x18\x04 \x01(\x08\x42\x0c\n\n_stepCountB\x0c\n\n_timeScale\"B\n\x06\x41\x63tion\x12\x12\n\nagentIndex\x18\x01 \x01(\x05\x12\x12\n\ncontinuous\x18\x02 \x03(\x02\x12\x10\n\x08\x64iscrete\x18\x03 \x03(\x05\"B\n\x0bObservation\x12\r\n\x05index\x18\x01 \x01(\x05\x12\x12\n\ncontinuous\x18\x02 \x03(\x02\x12\x10\n\x08\x64iscrete\x18\x03 \x03(\x05\"\x84\x01\n\x12\x42\x61tchedObservation\x12\x10\n\x08num_envs\x18\x01 \x01(\x05\x12\x17\n\x0f\x63ontinuous_size\x18\x02 \x01(\x05\x12\x15\n\rdiscrete_size\x18\x03 \x01(\x05\x12\x16\n\x0e\x63ontinuous_f32\x18\x04 \x01(\x0c\x12\x14\n\x0c\x64iscrete_i32\x18\x05 \x01(\x0c\"F\n\x11\x42\x61tchedCustomInfo\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\x12\n\nvalues_f32\x18\x02 \x01(\x0c\x12\x0f\n\x07present\x18\x03 \x01(\x0c\"X\n\x10\x42\x61tchedFinalInfo\x12\x44\n\x11\x66inal_observation\x18\x01 \x01(\x0b\x32).ExternalCommunication.BatchedObservation\"\xb9\x02\n\x12\x42\x61tchedStepResults\x12>\n\x0bobservation\x18\x01 \x01(\x0b\x32).ExternalCommunication.BatchedObservation\x12\x13\n\x0brewards_f32\x18\x02 \x01(\x0c\x12\r\n\x05\x64ones\x18\x03 \x01(\x0c\x12\x11\n\ttruncates\x18\x04 \x01(\x0c\x12\x1a\n\x12\x63ustom_indices_i32\x18\x05 \x01(\x0c\x12\x38\n\x06\x63ustom\x18\x06 \x01(\x0b\x32(.ExternalCommunication.BatchedCustomInfo\x12\x19\n\x11\x66inal_indices_i32\x18\x07 \x01(\x0c\x12;\n\nfinal_info\x18\x08 \x01(\x0b\x32\'.ExternalCommunication.BatchedFinalInfo\"\xab\x01\n\x13\x42\x61tchedResetResults\x12>\n\x0bobservation\x18\x01 \x01(\x0b\x32).ExternalCommunication.BatchedObservation\x12\x1a\n\x12\x63ustom_indices_i32\x18\x02 \x01(\x0c\x12\x38\n\x06\x63ustom\x18\x03 \x01(\x0b\x32(.ExternalCommunication.BatchedCustomInfo\">\n\nScreenshot\x12\x30\n\x06\x63\x61mera\x18\x01 \x01(\x0b\x32 .ExternalCommunication.Transform\"\xc8\x01\n\tTransform\x12\x30\n\x08position\x18\x01 \x01(\x0b\x32\x1e.ExternalCommunication.Vector3\x12\x32\n\x05\x65uler\x18\x02 \x01(\x0b\x32\x1e.ExternalCommunication.Vector3H\x00\x88\x01\x01\x12;\n\x0borientation\x18\x03 \x01(\x0b\x32!.ExternalCommunication.QuaternionH\x01\x88\x01\x01\x42\x08\n\x06_eulerB\x0e\n\x0c_orientation\"*\n\x07Vector3\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\x12\t\n\x01z\x18\x03 \x01(\x02\"8\n\nQuaternion\x12\t\n\x01x\x18\x01 \x01(\x02\x12\t\n\x01y\x18\x02 \x01(\x02\x12\t\n\x01z\x18\x03 \x01(\x02\x12\t\n\x01w\x18\x04 \x01(\x02*9\n\rAutoResetMode\x12\x0c\n\x08NextStep\x10\x00\x12\x0c\n\x08SameStep\x10\x01\x12\x0c\n\x08\x44isabled\x10\x02\x62\x06proto3')
 
 _AUTORESETMODE = DESCRIPTOR.enum_types_by_name['AutoResetMode']
 AutoResetMode = enum_type_wrapper.EnumTypeWrapper(_AUTORESETMODE)
@@ -33,19 +33,12 @@ _RESETPARAMETERS = DESCRIPTOR.message_types_by_name['ResetParameters']
 _STEP = DESCRIPTOR.message_types_by_name['Step']
 _ACTION = DESCRIPTOR.message_types_by_name['Action']
 _OBSERVATION = DESCRIPTOR.message_types_by_name['Observation']
-_STEPRESULT = DESCRIPTOR.message_types_by_name['StepResult']
-_RESETRESULT = DESCRIPTOR.message_types_by_name['ResetResult']
-_STEPRESULTS = DESCRIPTOR.message_types_by_name['StepResults']
-_RESETRESULTS = DESCRIPTOR.message_types_by_name['ResetResults']
 _BATCHEDOBSERVATION = DESCRIPTOR.message_types_by_name['BatchedObservation']
 _BATCHEDCUSTOMINFO = DESCRIPTOR.message_types_by_name['BatchedCustomInfo']
 _BATCHEDFINALINFO = DESCRIPTOR.message_types_by_name['BatchedFinalInfo']
 _BATCHEDSTEPRESULTS = DESCRIPTOR.message_types_by_name['BatchedStepResults']
 _BATCHEDRESETRESULTS = DESCRIPTOR.message_types_by_name['BatchedResetResults']
 _SCREENSHOT = DESCRIPTOR.message_types_by_name['Screenshot']
-_INFO = DESCRIPTOR.message_types_by_name['Info']
-_INFO_CUSTOMENTRY = _INFO.nested_types_by_name['CustomEntry']
-_EPISODEINFO = DESCRIPTOR.message_types_by_name['EpisodeInfo']
 _TRANSFORM = DESCRIPTOR.message_types_by_name['Transform']
 _VECTOR3 = DESCRIPTOR.message_types_by_name['Vector3']
 _QUATERNION = DESCRIPTOR.message_types_by_name['Quaternion']
@@ -112,34 +105,6 @@ Observation = _reflection.GeneratedProtocolMessageType('Observation', (_message.
   })
 _sym_db.RegisterMessage(Observation)
 
-StepResult = _reflection.GeneratedProtocolMessageType('StepResult', (_message.Message,), {
-  'DESCRIPTOR' : _STEPRESULT,
-  '__module__' : 'communication_pb2'
-  # @@protoc_insertion_point(class_scope:ExternalCommunication.StepResult)
-  })
-_sym_db.RegisterMessage(StepResult)
-
-ResetResult = _reflection.GeneratedProtocolMessageType('ResetResult', (_message.Message,), {
-  'DESCRIPTOR' : _RESETRESULT,
-  '__module__' : 'communication_pb2'
-  # @@protoc_insertion_point(class_scope:ExternalCommunication.ResetResult)
-  })
-_sym_db.RegisterMessage(ResetResult)
-
-StepResults = _reflection.GeneratedProtocolMessageType('StepResults', (_message.Message,), {
-  'DESCRIPTOR' : _STEPRESULTS,
-  '__module__' : 'communication_pb2'
-  # @@protoc_insertion_point(class_scope:ExternalCommunication.StepResults)
-  })
-_sym_db.RegisterMessage(StepResults)
-
-ResetResults = _reflection.GeneratedProtocolMessageType('ResetResults', (_message.Message,), {
-  'DESCRIPTOR' : _RESETRESULTS,
-  '__module__' : 'communication_pb2'
-  # @@protoc_insertion_point(class_scope:ExternalCommunication.ResetResults)
-  })
-_sym_db.RegisterMessage(ResetResults)
-
 BatchedObservation = _reflection.GeneratedProtocolMessageType('BatchedObservation', (_message.Message,), {
   'DESCRIPTOR' : _BATCHEDOBSERVATION,
   '__module__' : 'communication_pb2'
@@ -182,28 +147,6 @@ Screenshot = _reflection.GeneratedProtocolMessageType('Screenshot', (_message.Me
   })
 _sym_db.RegisterMessage(Screenshot)
 
-Info = _reflection.GeneratedProtocolMessageType('Info', (_message.Message,), {
-
-  'CustomEntry' : _reflection.GeneratedProtocolMessageType('CustomEntry', (_message.Message,), {
-    'DESCRIPTOR' : _INFO_CUSTOMENTRY,
-    '__module__' : 'communication_pb2'
-    # @@protoc_insertion_point(class_scope:ExternalCommunication.Info.CustomEntry)
-    })
-  ,
-  'DESCRIPTOR' : _INFO,
-  '__module__' : 'communication_pb2'
-  # @@protoc_insertion_point(class_scope:ExternalCommunication.Info)
-  })
-_sym_db.RegisterMessage(Info)
-_sym_db.RegisterMessage(Info.CustomEntry)
-
-EpisodeInfo = _reflection.GeneratedProtocolMessageType('EpisodeInfo', (_message.Message,), {
-  'DESCRIPTOR' : _EPISODEINFO,
-  '__module__' : 'communication_pb2'
-  # @@protoc_insertion_point(class_scope:ExternalCommunication.EpisodeInfo)
-  })
-_sym_db.RegisterMessage(EpisodeInfo)
-
 Transform = _reflection.GeneratedProtocolMessageType('Transform', (_message.Message,), {
   'DESCRIPTOR' : _TRANSFORM,
   '__module__' : 'communication_pb2'
@@ -228,10 +171,8 @@ _sym_db.RegisterMessage(Quaternion)
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _INFO_CUSTOMENTRY._options = None
-  _INFO_CUSTOMENTRY._serialized_options = b'8\001'
-  _AUTORESETMODE._serialized_start=2870
-  _AUTORESETMODE._serialized_end=2927
+  _AUTORESETMODE._serialized_start=2129
+  _AUTORESETMODE._serialized_end=2186
   _INITIALIZEENVIRONMENTS._serialized_start=46
   _INITIALIZEENVIRONMENTS._serialized_end=162
   _ENVIRONMENTDESCRIPTION._serialized_start=165
@@ -250,36 +191,22 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _ACTION._serialized_end=903
   _OBSERVATION._serialized_start=905
   _OBSERVATION._serialized_end=971
-  _STEPRESULT._serialized_start=974
-  _STEPRESULT._serialized_end=1135
-  _RESETRESULT._serialized_start=1137
-  _RESETRESULT._serialized_end=1250
-  _STEPRESULTS._serialized_start=1252
-  _STEPRESULTS._serialized_end=1321
-  _RESETRESULTS._serialized_start=1323
-  _RESETRESULTS._serialized_end=1395
-  _BATCHEDOBSERVATION._serialized_start=1398
-  _BATCHEDOBSERVATION._serialized_end=1530
-  _BATCHEDCUSTOMINFO._serialized_start=1532
-  _BATCHEDCUSTOMINFO._serialized_end=1602
-  _BATCHEDFINALINFO._serialized_start=1604
-  _BATCHEDFINALINFO._serialized_end=1692
-  _BATCHEDSTEPRESULTS._serialized_start=1695
-  _BATCHEDSTEPRESULTS._serialized_end=2008
-  _BATCHEDRESETRESULTS._serialized_start=2011
-  _BATCHEDRESETRESULTS._serialized_end=2182
-  _SCREENSHOT._serialized_start=2184
-  _SCREENSHOT._serialized_end=2246
-  _INFO._serialized_start=2249
-  _INFO._serialized_end=2480
-  _INFO_CUSTOMENTRY._serialized_start=2435
-  _INFO_CUSTOMENTRY._serialized_end=2480
-  _EPISODEINFO._serialized_start=2482
-  _EPISODEINFO._serialized_end=2563
-  _TRANSFORM._serialized_start=2566
-  _TRANSFORM._serialized_end=2766
-  _VECTOR3._serialized_start=2768
-  _VECTOR3._serialized_end=2810
-  _QUATERNION._serialized_start=2812
-  _QUATERNION._serialized_end=2868
+  _BATCHEDOBSERVATION._serialized_start=974
+  _BATCHEDOBSERVATION._serialized_end=1106
+  _BATCHEDCUSTOMINFO._serialized_start=1108
+  _BATCHEDCUSTOMINFO._serialized_end=1178
+  _BATCHEDFINALINFO._serialized_start=1180
+  _BATCHEDFINALINFO._serialized_end=1268
+  _BATCHEDSTEPRESULTS._serialized_start=1271
+  _BATCHEDSTEPRESULTS._serialized_end=1584
+  _BATCHEDRESETRESULTS._serialized_start=1587
+  _BATCHEDRESETRESULTS._serialized_end=1758
+  _SCREENSHOT._serialized_start=1760
+  _SCREENSHOT._serialized_end=1822
+  _TRANSFORM._serialized_start=1825
+  _TRANSFORM._serialized_end=2025
+  _VECTOR3._serialized_start=2027
+  _VECTOR3._serialized_end=2069
+  _QUATERNION._serialized_start=2071
+  _QUATERNION._serialized_end=2127
 # @@protoc_insertion_point(module_scope)

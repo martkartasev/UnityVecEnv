@@ -402,3 +402,5 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         for w in self.workers:
             w.close()
 
+
+

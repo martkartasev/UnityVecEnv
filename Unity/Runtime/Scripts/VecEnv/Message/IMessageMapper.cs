@@ -1,4 +1,4 @@
-﻿using ExternalCommunication;
+using ExternalCommunication;
 
 namespace Scripts.VecEnv.Message
 {
@@ -8,7 +8,6 @@ namespace Scripts.VecEnv.Message
         AgentAction MapAction(ExternalCommunication.Action msg);
         Step MapStep(ExternalCommunication.Step step);
         InitializeEnvironment MapInitialize(InitializeEnvironments initialize);
-        ExternalCommunication.Info MapInfo(Info info);
         ExternalCommunication.Observation MapObservationToExternal(AgentObservation agentObservation);
         ExternalCommunication.EnvironmentDescription MapEnvironmentDescription(EnvironmentDescription description);
     }

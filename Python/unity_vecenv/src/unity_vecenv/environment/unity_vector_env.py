@@ -202,8 +202,9 @@ class UnityVectorEnv(VectorEnv):
             if key in info or mask_key in info:
                 raise RuntimeError(f"Custom info key '{key}' collides with an existing info field.")
 
+            present = custom_present[:, column].copy()
             info[key] = custom_values[:, column].copy()
-            info[mask_key] = custom_present[:, column].copy()
+            info[mask_key] = present
 
     def _observation_to_numpy(self, observation):
         continuous = np.asarray(observation.continuous, dtype=np.float32)
@@ -417,6 +418,8 @@ class UnityVectorEnv(VectorEnv):
             raise TypeError(f"Unsupported single_action_space: {type(sas)}")
 
         return step
+
+
 
 
 

@@ -65,27 +65,6 @@ message Observation {
   repeated int32 discrete = 3;
 }
 
-message StepResult {
-  Observation observation = 1;
-  float reward = 2;
-  bool done = 3;
-  bool truncated = 4;
-  Info info = 5;
-}
-
-message ResetResult {
-  Observation observation = 1;
-  Info info = 2;
-}
-
-message StepResults {
-  repeated StepResult stepResults = 1;
-}
-
-message ResetResults {
-  repeated ResetResult resetResults = 1;
-}
-
 message BatchedObservation {
   int32 num_envs = 1;
   int32 continuous_size = 2;
@@ -123,18 +102,6 @@ message BatchedResetResults {
 
 message Screenshot {
   Transform camera = 1;
-}
-
-message Info {
-  EpisodeInfo episode_info = 1;
-  Observation final_observation = 2;
-  map<string, float> custom = 10;
-}
-
-message EpisodeInfo {
-  int32 agentIndex = 1;
-  float episode_reward = 2;
-  float episode_length = 3;
 }
 
 message Transform {

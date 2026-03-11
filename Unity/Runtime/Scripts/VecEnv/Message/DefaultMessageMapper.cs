@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using ExternalCommunication;
 
 namespace Scripts.VecEnv.Message
@@ -75,23 +75,6 @@ namespace Scripts.VecEnv.Message
             var initializeEnvironment = new InitializeEnvironment();
             initializeEnvironment.AgentCount = initialize.RequestedNumberOfEnvs;
             return initializeEnvironment;
-        }
-
-        public ExternalCommunication.Info MapInfo(Info info)
-        {
-            var mapInfo = new ExternalCommunication.Info();
-
-            if (info.EpisodeLength > 0)
-            {
-                mapInfo.EpisodeInfo = new EpisodeInfo();
-                mapInfo.FinalObservation = MapObservationToExternal(info.FinalObservation);
-                mapInfo.EpisodeInfo.AgentIndex = info.AgentIndex;
-                mapInfo.EpisodeInfo.EpisodeReward = info.EpisodeReward;
-                mapInfo.EpisodeInfo.EpisodeLength = info.EpisodeLength;
-            }
-
-            mapInfo.Custom.Add(info.custom);
-            return mapInfo;
         }
     }
 }
