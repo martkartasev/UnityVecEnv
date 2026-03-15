@@ -1,61 +1,134 @@
-# Installation
+# UnityVecEnv
 
-## Installing the Unity package
+A framework for running Unity environments as [Gymnasium](https://gymnasium.farama.org/)-compatible vectorized environments for reinforcement learning. Multiple agents train in parallel inside Unity while Python drives the training loop.
 
-Install `./Unity/package.json` from Unity Package Manager using "Install from Disk", or set a relative path in your project's package manifest.
+## Overview
 
-## Using the Python library
+UnityVecEnv bridges Unity and Python over a local HTTP connection using Protocol Buffers. Unity runs an embedded HTTP server; Python acts as the client. Observations and actions are binary-serialized in batches for minimal overhead.
 
-```bash
-pip install -e ./python/unity_vecenv
+```
+Python training loop
+      │  HTTP + Protobuf
+      ▼
+UnityVectorEnv  ──────────►  Unity (CommunicatorHttpServer)
+  • sends actions                 • runs physics steps
+  • receives obs/rewards          • collects observations
+  • Gymnasium VectorEnv API       • serializes batched results
 ```
 
-Optional CUDA convenience installs:
+## Repository Structure
 
-```bash
-pip install -e UnityVecEnv/python/unity_vecenv/[cuda118] --extra-index-url https://download.pytorch.org/whl/cu118
-pip install -e UnityVecEnv/python/unity_vecenv/[cuda121] --extra-index-url https://download.pytorch.org/whl/cu121
+```
+UnityVecEnv/
+├── Protobuf/                  # Shared message schema
+│   ├── communication.proto
+│   └── generate_protos.sh
+├── Python/                    # Python package
+│   └── unity_vecenv/
+│       └── src/unity_vecenv/
+│           ├── environment/   # VectorEnv implementations & client
+│           ├── onnx_utilities/
+│           └── protobuf_gen/  # Generated bindings
+├── Unity/                     # Unity package
+│   └── Runtime/Scripts/VecEnv/
+│       ├── Core/              # Manager, agent base class
+│       ├── Networking/        # HTTP server + serialization
+│       ├── Message/           # Internal message structs
+│       └── Inference/         # ONNX inference helper
+└── docs/
+    ├── python-usage.md        # Python API guide
+    └── unity-usage.md         # Unity implementation guide
 ```
 
-## CLI
+## Installation
 
-After installation, a CLI entrypoint is available:
+### Unity Package
 
-```bash
-unity-vecenv onnx-rename input.onnx output.onnx --unity-defaults
+Install `./Unity/package.json` via **Package Manager → Install package from disk**, or add a relative path to your project's `manifest.json`:
+
+```json
+{
+  "dependencies": {
+    "com.unityvecenv": "file:../../UnityVecEnv/Unity"
+  }
+}
 ```
 
-# Managing Protobuf
+### Python Package
 
-To change the API, regenerate both Python and C# files after editing `Protobuf/communication.proto`.
+```bash
+pip install -e ./Python/unity_vecenv
+```
 
-## One-command generation
+Optional GPU convenience installs:
 
-From repo root:
+```bash
+# CUDA 11.8
+pip install -e ./Python/unity_vecenv[cuda118] --extra-index-url https://download.pytorch.org/whl/cu118
+
+# CUDA 12.1
+pip install -e ./Python/unity_vecenv[cuda121] --extra-index-url https://download.pytorch.org/whl/cu121
+```
+
+## Quick Start
+
+```python
+from unity_vecenv import UnityVectorEnv
+
+env = UnityVectorEnv(
+    executable_path="path/to/MyGame.exe",
+    num_envs=16,
+    no_graphics=True,
+    time_scale=10,
+)
+
+obs, info = env.reset()
+
+for _ in range(1000):
+    actions = env.action_space.sample()
+    obs, rewards, dones, truncates, info = env.step(actions)
+
+env.close()
+```
+
+See [docs/python-usage.md](docs/python-usage.md) for the full Python API reference and [docs/unity-usage.md](docs/unity-usage.md) for implementing agents in Unity.
+
+## Managing Protobuf
+
+Edit `Protobuf/communication.proto`, then regenerate both Python and C# bindings.
+
+### One-command generation (from repo root)
 
 ```bash
 bash ./Protobuf/generate_protos.sh
 ```
 
-## Manual Python generation
-
-Install `grpcio-tools` first:
+### Manual — Python
 
 ```bash
-python -m pip install grpcio-tools
+pip install grpcio-tools
+
+python -m grpc_tools.protoc \
+  -I ./Protobuf \
+  --python_out=./Python/unity_vecenv/src/unity_vecenv/protobuf_gen \
+  --pyi_out=./Python/unity_vecenv/src/unity_vecenv/protobuf_gen \
+  ./Protobuf/communication.proto
 ```
 
-Then in `./Protobuf`:
+### Manual — C#
+
+Install [`protoc`](https://github.com/protocolbuffers/protobuf/releases) or [Grpc.Tools](https://www.nuget.org/packages/Grpc.Tools), then:
 
 ```bash
-python -m grpc_tools.protoc -I ./ --python_out=../Python/unity_vecenv/src/unity_vecenv/protobuf_gen --pyi_out=../Python/unity_vecenv/src/unity_vecenv/protobuf_gen ./communication.proto
+protoc -I ./Protobuf \
+  --csharp_out=./Unity/Runtime/Scripts/ProtobufGenerated \
+  ./Protobuf/communication.proto
 ```
 
-## Manual C# generation
+## CLI
 
-Install `protoc` (for example via [Grpc.Tools](https://www.nuget.org/packages/Grpc.Tools)), then in `./Protobuf` run:
+After installing the Python package, an ONNX utility command is available:
 
 ```bash
-protoc -I ./ --csharp_out=../Unity/Runtime/Scripts/ProtobufGenerated ./communication.proto
+unity-vecenv onnx-rename input.onnx output.onnx --unity-defaults
 ```
-

@@ -1,4 +1,7 @@
-﻿using UnityEngine;
+using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 // Source; https://gist.github.com/FreyaHolmer/650ecd551562352120445513efa1d952
 // with some mods.
@@ -40,7 +43,7 @@ public class FlyCamera : MonoBehaviour
         // Input
         if (Focused)
             UpdateInput();
-        else if (cam.enabled && Input.GetMouseButtonDown(1))
+        else if (cam.enabled && GetMouseButtonDown(1))
             Focused = true;
 
         // Physics
@@ -54,14 +57,14 @@ public class FlyCamera : MonoBehaviour
         velocity += GetAccelerationVector() * Time.deltaTime;
 
         // Rotation
-        Vector2 mouseDelta = lookSensitivity * new Vector2(Input.GetAxis("Mouse X"), -Input.GetAxis("Mouse Y"));
+        Vector2 mouseDelta = lookSensitivity * new Vector2(GetMouseAxis("Mouse X"), -GetMouseAxis("Mouse Y"));
         Quaternion rotation = transform.rotation;
         Quaternion horiz = Quaternion.AngleAxis(mouseDelta.x, Vector3.up);
         Quaternion vert = Quaternion.AngleAxis(mouseDelta.y, Vector3.right);
         transform.rotation = horiz * rotation * vert;
 
         // Leave cursor lock
-        if (Input.GetMouseButtonUp(1))
+        if (GetMouseButtonUp(1))
             Focused = false;
     }
 
@@ -71,7 +74,7 @@ public class FlyCamera : MonoBehaviour
 
         void AddMovement(KeyCode key, Vector3 dir)
         {
-            if (Input.GetKey(key))
+            if (GetKey(key))
                 moveInput += dir;
         }
 
@@ -89,8 +92,84 @@ public class FlyCamera : MonoBehaviour
         AddMovement(KeyCode.KeypadMinus, Vector3.down);
         Vector3 direction = transform.TransformVector(moveInput.normalized);
 
-        if (Input.GetKey(KeyCode.LeftShift))
+        if (GetKey(KeyCode.LeftShift))
             return direction * (acceleration * accSprintMultiplier); // "sprinting"
         return direction * acceleration; // "walking"
     }
+
+    // Input abstraction helpers
+
+    static bool GetKey(KeyCode key)
+    {
+#if ENABLE_INPUT_SYSTEM
+        return KeyCodeToKey(key)?.isPressed ?? false;
+#else
+        return Input.GetKey(key);
+#endif
+    }
+
+    static bool GetMouseButtonDown(int button)
+    {
+#if ENABLE_INPUT_SYSTEM
+        return button switch
+        {
+            0 => Mouse.current.leftButton.wasPressedThisFrame,
+            1 => Mouse.current.rightButton.wasPressedThisFrame,
+            2 => Mouse.current.middleButton.wasPressedThisFrame,
+            _ => false
+        };
+#else
+        return Input.GetMouseButtonDown(button);
+#endif
+    }
+
+    static bool GetMouseButtonUp(int button)
+    {
+#if ENABLE_INPUT_SYSTEM
+        return button switch
+        {
+            0 => Mouse.current.leftButton.wasReleasedThisFrame,
+            1 => Mouse.current.rightButton.wasReleasedThisFrame,
+            2 => Mouse.current.middleButton.wasReleasedThisFrame,
+            _ => false
+        };
+#else
+        return Input.GetMouseButtonUp(button);
+#endif
+    }
+
+    static float GetMouseAxis(string axisName)
+    {
+#if ENABLE_INPUT_SYSTEM
+        Vector2 delta = Mouse.current.delta.ReadValue();
+        return axisName == "Mouse X" ? delta.x : delta.y;
+#else
+        return Input.GetAxis(axisName);
+#endif
+    }
+
+#if ENABLE_INPUT_SYSTEM
+    static UnityEngine.InputSystem.Controls.KeyControl KeyCodeToKey(KeyCode key)
+    {
+        var kb = Keyboard.current;
+        if (kb == null) return null;
+        return key switch
+        {
+            KeyCode.W           => kb.wKey,
+            KeyCode.A           => kb.aKey,
+            KeyCode.S           => kb.sKey,
+            KeyCode.D           => kb.dKey,
+            KeyCode.E           => kb.eKey,
+            KeyCode.Q           => kb.qKey,
+            KeyCode.UpArrow     => kb.upArrowKey,
+            KeyCode.DownArrow   => kb.downArrowKey,
+            KeyCode.LeftArrow   => kb.leftArrowKey,
+            KeyCode.RightArrow  => kb.rightArrowKey,
+            KeyCode.LeftShift   => kb.leftShiftKey,
+            KeyCode.KeypadPlus  => kb.numpadPlusKey,
+            KeyCode.KeypadMinus => kb.numpadMinusKey,
+            _                   => null
+        };
+    }
+#endif
 }
