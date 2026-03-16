@@ -18,7 +18,7 @@ Install `./Unity/package.json` via **Window → Package Manager → + → Instal
 
 ### Required components
 
-Your scene needs **At least one agent** — a GameObject with your `GymAgent` subclass attached. The manager will clone it to reach the requested `agentCount`.
+Your scene needs **At least one agent** — a GameObject with your `GymAgent` subclass attached. The manager will clone it to reach the requested `agentCount`, based on what was configured on the Python end.
 
 A `GymVecEnvManager` singleton is created automatically at runtime; you do not add it to the scene yourself.
 
