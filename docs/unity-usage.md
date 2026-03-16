@@ -18,26 +18,9 @@ Install `./Unity/package.json` via **Window → Package Manager → + → Instal
 
 ### Required components
 
-Your scene needs two GameObjects:
+Your scene needs **At least one agent** — a GameObject with your `GymAgent` subclass attached. The manager will clone it to reach the requested `agentCount`.
 
-1. **GymAgentManager** — place this on any persistent GameObject. Set the `agentCount` field to the number of agents you want at startup.
-2. **At least one agent** — a GameObject with your `GymAgent` subclass attached. The manager will clone it to reach the requested `agentCount`.
-
-The `GymVecEnvManager` singleton is created automatically at runtime; you do not add it to the scene yourself.
-
-### Execution order
-
-The framework sets fixed execution orders internally:
-
-| Component | Order |
-|---|---|
-| `GymAgentManager` | −501 |
-| `GymVecEnvManager` | −500 |
-| `GymAgent` subclasses | −50 |
-
-Do not change these unless you have a specific reason to.
-
----
+A `GymVecEnvManager` singleton is created automatically at runtime; you do not add it to the scene yourself.
 
 ## Implementing GymAgent
 
@@ -151,6 +134,7 @@ protected override void GymReset()
 
 ---
 
+
 ## GymVecEnvManager
 
 The singleton manager is created automatically and persists across scene loads. You can access it via `GymVecEnvManager.Instance` from anywhere.
@@ -162,6 +146,20 @@ The singleton manager is created automatically and persists across scene loads. 
 | `physicsStepsPerGymStep` | `10` | Fallback physics steps per action if Python doesn't specify one. |
 | `timeoutMilliseconds` | `3000` | How long to wait for a step message from Python before quitting. |
 | `SpawnMode` | `Gym` | `Gym`: manager spawns/removes agents to match `num_envs`. `Disabled`: use agents already in scene. |
+
+### Execution order
+
+The framework sets fixed execution orders internally:
+
+| Component | Order |
+|---|---|
+| `GymAgentManager` | −501 |
+| `GymVecEnvManager` | −500 |
+| `GymAgent` subclasses | −50 |
+
+Do not change these unless you have a specific reason to.
+
+---
 
 ### Lifecycle events
 
