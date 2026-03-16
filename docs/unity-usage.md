@@ -64,6 +64,18 @@ public class MyAgent : GymAgent
     }
 }
 ```
+There are also optional methods you can implement if desired, see below how to use them.
+
+```csharp
+    protected virtual AgentAction ProduceDummyAction(AgentAction dummyAgentAction)
+    {
+        return dummyAgentAction;
+    }
+    protected virtual void CollectInfo(Dictionary<string, float> metadata)
+    {
+
+    }
+```
 
 ### Inspector configuration
 
