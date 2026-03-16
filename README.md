@@ -16,28 +16,25 @@ UnityVectorEnv  ──────────►  Unity (CommunicatorHttpServer
   • Gymnasium VectorEnv API       • serializes batched results
 ```
 
-## Repository Structure
+## Quick Start
 
-```
-UnityVecEnv/
-├── Protobuf/                  # Shared message schema
-│   ├── communication.proto
-│   └── generate_protos.sh
-├── Python/                    # Python package
-│   └── unity_vecenv/
-│       └── src/unity_vecenv/
-│           ├── environment/   # VectorEnv implementations & client
-│           ├── onnx_utilities/
-│           └── protobuf_gen/  # Generated bindings
-├── Unity/                     # Unity package
-│   └── Runtime/Scripts/VecEnv/
-│       ├── Core/              # Manager, agent base class
-│       ├── Networking/        # HTTP server + serialization
-│       ├── Message/           # Internal message structs
-│       └── Inference/         # ONNX inference helper
-└── docs/
-    ├── python-usage.md        # Python API guide
-    └── unity-usage.md         # Unity implementation guide
+```python
+from unity_vecenv import UnityVectorEnv
+
+env = UnityVectorEnv(
+    executable_path="path/to/MyGame.exe",
+    num_envs=16,
+    no_graphics=True,
+    time_scale=10,
+)
+
+obs, info = env.reset()
+
+for _ in range(1000):
+    actions = env.action_space.sample()
+    obs, rewards, dones, truncates, info = env.step(actions)
+
+env.close()
 ```
 
 ## Installation
@@ -70,32 +67,12 @@ pip install -e ./Python/unity_vecenv[cuda118] --extra-index-url https://download
 pip install -e ./Python/unity_vecenv[cuda121] --extra-index-url https://download.pytorch.org/whl/cu121
 ```
 
-## Quick Start
-
-```python
-from unity_vecenv import UnityVectorEnv
-
-env = UnityVectorEnv(
-    executable_path="path/to/MyGame.exe",
-    num_envs=16,
-    no_graphics=True,
-    time_scale=10,
-)
-
-obs, info = env.reset()
-
-for _ in range(1000):
-    actions = env.action_space.sample()
-    obs, rewards, dones, truncates, info = env.step(actions)
-
-env.close()
-```
 
 See [docs/python-usage.md](docs/python-usage.md) for the full Python API reference and [docs/unity-usage.md](docs/unity-usage.md) for implementing agents in Unity.
 
 ## Managing Protobuf
 
-Edit `Protobuf/communication.proto`, then regenerate both Python and C# bindings.
+If for some reason, you need have the need to change the API definition, edit `Protobuf/communication.proto`, then regenerate both Python and C# bindings.
 
 ### One-command generation (from repo root)
 
@@ -123,12 +100,4 @@ Install [`protoc`](https://github.com/protocolbuffers/protobuf/releases) or [Grp
 protoc -I ./Protobuf \
   --csharp_out=./Unity/Runtime/Scripts/ProtobufGenerated \
   ./Protobuf/communication.proto
-```
-
-## CLI
-
-After installing the Python package, an ONNX utility command is available:
-
-```bash
-unity-vecenv onnx-rename input.onnx output.onnx --unity-defaults
 ```
