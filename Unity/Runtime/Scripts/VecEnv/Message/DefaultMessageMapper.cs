@@ -55,13 +55,13 @@ namespace Scripts.VecEnv.Message
             {
                 ContinuousSize = description.ContinuousActions,
             };
-            actionSpace.DiscreteSize.AddRange(description.DiscreteActions);
+            actionSpace.DiscreteSize.AddRange(description.DiscreteActions ?? System.Array.Empty<int>());
 
             var observationSpace = new Space
             {
                 ContinuousSize = description.ContinuousObservations
             };
-            //observationSpace.DiscreteSize.AddRange(description.);
+            observationSpace.DiscreteSize.AddRange(description.DiscreteObservations ?? System.Array.Empty<int>());
 
             mapEnvironmentDescription.SingleActionSpace.Add(actionSpace);
             mapEnvironmentDescription.SingleObservationSpace.Add(observationSpace);

@@ -25,6 +25,7 @@ namespace Scripts.VecEnv.Message
         public int ContinuousObservations;
 
         public int[] DiscreteActions;
+        public int[] DiscreteObservations;
         
         public int AgentCount;
     }

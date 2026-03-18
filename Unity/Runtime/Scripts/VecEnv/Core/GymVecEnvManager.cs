@@ -84,6 +84,7 @@ namespace Scripts.VecEnv.Core
             _environmentDescription = new EnvironmentDescription
             {
                 ContinuousObservations = agentTemplate.continuousObservations,
+                DiscreteObservations = agentTemplate.discreteObservations.ToArray(),
                 ContinuousActions = agentTemplate.continuousActions,
                 DiscreteActions = agentTemplate.discreteActions.ToArray(),
             };
