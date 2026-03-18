@@ -37,6 +37,8 @@ for _ in range(1000):
 env.close()
 ```
 
+For more detailed information, see both the [Python side](./docs/python-usage.md) and and [Unity side](./docs/unity-usage.md) documentation.
+
 ## Installation
 
 ### Unity Package
