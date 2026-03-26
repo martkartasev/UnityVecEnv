@@ -136,15 +136,27 @@ namespace Scripts.VecEnv.Core
         {
             if (inferencePolicy != null)
             {
-                if (_model == null || _model.PolicyAsset != inferencePolicy) _model = new InferenceHelper(inferencePolicy);
+                if (_model == null || _model.PolicyAsset != inferencePolicy)
+                {
+                    DisposeInferenceHelper();
+                    _model = new InferenceHelper(inferencePolicy);
+                }
+
                 InferenceEnabled = true;
                 DoSetAction(_model.DoInference(_latestObservation));
             }
             else
             {
+                DisposeInferenceHelper();
                 InferenceEnabled = false;
                 DoSetAction(ProduceDummyAction(new AgentAction(continuousActions, discreteActions.Count)));
             }
+        }
+
+        private void DisposeInferenceHelper()
+        {
+            _model?.Dispose();
+            _model = null;
         }
 
         public EnvironmentState IsDone()
@@ -164,6 +176,8 @@ namespace Scripts.VecEnv.Core
 
         private void OnDestroy()
         {
+            DisposeInferenceHelper();
+
             if (GymVecEnvManager.IsInitialized)
             {
                 GymVecEnvManager.Instance.UnregisterAgent(this);

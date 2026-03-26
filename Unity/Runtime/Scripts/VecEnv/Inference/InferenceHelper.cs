@@ -4,9 +4,10 @@ using Unity.InferenceEngine;
 
 namespace Scripts.VecEnv.Inference
 {
-    public class InferenceHelper //TODO: Add warnings to editor when dimensions dont match
+    public class InferenceHelper : IDisposable //TODO: Add warnings to editor when dimensions dont match
     {
         private Worker _worker;
+        private bool _disposed;
         public readonly ModelAsset PolicyAsset;
         private readonly Model _model;
         private readonly Model.Output _actionContinuous;
@@ -28,14 +29,31 @@ namespace Scripts.VecEnv.Inference
 
         public AgentAction DoInference(AgentObservation observation)
         {
-            var inputTensor = HandleInput(observation);
+            if (_disposed)
+            {
+                throw new ObjectDisposedException(nameof(InferenceHelper));
+            }
 
-            _worker.Schedule(inputTensor);
-            Tensor outputTensor = _worker.PeekOutput();
+            Tensor inputTensor = null;
+            Tensor outputTensor = null;
+            Tensor result = null;
 
-            var action = HandleOutput(outputTensor);
-            inputTensor.Dispose();
-            return action;
+            try
+            {
+                inputTensor = HandleInput(observation);
+
+                _worker.Schedule(inputTensor);
+                outputTensor = _worker.PeekOutput();
+                result = outputTensor?.ReadbackAndClone();
+
+                return HandleOutput(result);
+            }
+            finally
+            {
+                result?.Dispose();
+                outputTensor?.Dispose();
+                inputTensor?.Dispose();
+            }
         }
 
         private Tensor HandleInput(AgentObservation observation)
@@ -58,10 +76,9 @@ namespace Scripts.VecEnv.Inference
         }
 
 
-        private AgentAction HandleOutput(Tensor outputTensor)
+        private AgentAction HandleOutput(Tensor result)
         {
             var agentAction = new AgentAction();
-            var result = outputTensor?.ReadbackAndClone();
 
             if (_actionDiscrete.name != null)
             {
@@ -74,10 +91,20 @@ namespace Scripts.VecEnv.Inference
                 var array = (result as Tensor<float>)?.DownloadToArray();
                 agentAction.Continuous = array;
             }
-            
-            outputTensor?.Dispose();
-            result?.Dispose();
+
             return agentAction;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _worker?.Dispose();
+            _worker = null;
+            _disposed = true;
         }
     }
 }
