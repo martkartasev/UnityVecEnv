@@ -14,21 +14,24 @@ namespace Scripts.VecEnv.Core
         public static string SceneToLoad = null;
         public static GymAgentManager GymAgentManager { get; set; }
         private static Dictionary<string, string> _args;
+        private static bool _sceneCallbacksRegistered;
+        private static int? _configuredTimeoutMilliseconds;
+        private static int? _configuredPhysicsStepsPerGymStep;
+        private static int? _configuredAgentCount;
 
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void BeforeSceneLoad()
         {
-            GymAgentManager = CreateOrFetchSpawner();
+            EnsureSceneCallbacksRegistered();
 
-            if (Application.isEditor) //TODO: Find a cleaner way to set it up
+            if (Application.isEditor)
             {
-                GymVecEnvManager.Instance.AgentManager = GymAgentManager;
+                LoadingDone = true;
                 return;
             }
 
             ParseCommandLine();
-            GymVecEnvManager.Instance.AgentManager = GymAgentManager;
 
             if (SceneToLoad != null && SceneManager.GetSceneByBuildIndex(0).name != SceneToLoad && !LoadingDone)
             {
@@ -39,6 +42,18 @@ namespace Scripts.VecEnv.Core
             {
                 LoadingDone = true;
             }
+        }
+
+        public static void EnsureVecEnvInitialized()
+        {
+            EnsureSceneCallbacksRegistered();
+
+            GymAgentManager = CreateOrFetchSpawner();
+            ApplyConfiguredValues(GymAgentManager);
+
+            var manager = GymVecEnvManager.Instance;
+            manager.AgentManager = GymAgentManager;
+            ApplyConfiguredValues(manager);
         }
 
         private static void ParseCommandLine()
@@ -55,9 +70,11 @@ namespace Scripts.VecEnv.Core
 
             if (_args.TryGetValue("-timeout", out var timeout))
             {
-                int.TryParse(timeout, out var timeoutValue);
-                GymVecEnvManager.Instance.timeoutMilliseconds = timeoutValue;
-                Debug.Log($"Timeout value: {timeoutValue}");
+                if (int.TryParse(timeout, out var timeoutValue))
+                {
+                    _configuredTimeoutMilliseconds = timeoutValue;
+                    Debug.Log($"Timeout value: {timeoutValue}");
+                }
             }
 
             if (_args.TryGetValue("-timescale", out var timeScale))
@@ -69,16 +86,20 @@ namespace Scripts.VecEnv.Core
 
             if (_args.TryGetValue("-agentcount", out var agents))
             {
-                int.TryParse(agents, out var agentsValue);
-                GymAgentManager.agentCount = agentsValue;
-                Debug.Log($"Agents value: {agentsValue}");
+                if (int.TryParse(agents, out var agentsValue))
+                {
+                    _configuredAgentCount = agentsValue;
+                    Debug.Log($"Agents value: {agentsValue}");
+                }
             }
 
             if (_args.TryGetValue("-decisionperiod", out var requestPeriod))
             {
-                int.TryParse(requestPeriod, out var requestPeriodValue);
-                GymVecEnvManager.Instance.physicsStepsPerGymStep = requestPeriodValue;
-                Debug.Log($"Request period value: {requestPeriodValue}");
+                if (int.TryParse(requestPeriod, out var requestPeriodValue))
+                {
+                    _configuredPhysicsStepsPerGymStep = requestPeriodValue;
+                    Debug.Log($"Request period value: {requestPeriodValue}");
+                }
             }
 
             if (_args.TryGetValue("-scene", out var scene))
@@ -86,6 +107,15 @@ namespace Scripts.VecEnv.Core
                 SceneToLoad = scene;
                 Debug.Log($"Scene value: {scene}");
             }
+        }
+
+        private static void EnsureSceneCallbacksRegistered()
+        {
+            if (_sceneCallbacksRegistered) return;
+
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
+            _sceneCallbacksRegistered = true;
         }
 
         private static GymAgentManager CreateOrFetchSpawner()
@@ -99,20 +129,54 @@ namespace Scripts.VecEnv.Core
             var component = spawnerObject.AddComponent<GymAgentManager>();
             UnityEngine.Object.DontDestroyOnLoad(spawnerObject);
 
-            SceneManager.sceneLoaded += OnSceneLoaded;
-            SceneManager.sceneUnloaded += OnSceneUnloaded;
-
             return component;
+        }
+
+        private static void ApplyConfiguredValues(GymAgentManager gymAgentManager)
+        {
+            if (_configuredAgentCount.HasValue)
+            {
+                gymAgentManager.agentCount = _configuredAgentCount.Value;
+            }
+        }
+
+        private static void ApplyConfiguredValues(GymVecEnvManager manager)
+        {
+            if (_configuredTimeoutMilliseconds.HasValue)
+            {
+                manager.timeoutMilliseconds = _configuredTimeoutMilliseconds.Value;
+            }
+
+            if (_configuredPhysicsStepsPerGymStep.HasValue)
+            {
+                manager.physicsStepsPerGymStep = _configuredPhysicsStepsPerGymStep.Value;
+            }
+        }
+
+        private static bool SceneContainsGymContent(Scene scene)
+        {
+            return scene.IsValid() &&
+                   (UnityEngine.Object.FindObjectsByType<GymEnvironmentTemplate>(FindObjectsSortMode.None).Length > 0 ||
+                    UnityEngine.Object.FindObjectsByType<GymAgent>(FindObjectsSortMode.None).Length > 0);
         }
 
         private static void OnSceneUnloaded(Scene arg0)
         {
-            GymVecEnvManager.Instance.ClearAgents();
+            if (GymVecEnvManager.IsInitialized)
+            {
+                GymVecEnvManager.Instance.ClearAgents();
+            }
         }
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             LoadingDone = SceneToLoad == null || SceneManager.GetActiveScene().name == SceneToLoad;
+            if (!SceneContainsGymContent(scene))
+            {
+                return;
+            }
+
+            EnsureVecEnvInitialized();
             GymAgentManager.HandleSceneLoad();
         }
 

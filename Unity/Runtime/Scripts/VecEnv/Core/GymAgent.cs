@@ -34,7 +34,12 @@ namespace Scripts.VecEnv.Core
 
         public int GetGymAgentIndex()
         {
-            if (_gymAgentIndex == -1) GymVecEnvManager.Instance.RegisterAgent(this);
+            if (_gymAgentIndex == -1)
+            {
+                Bootstrap.EnsureVecEnvInitialized();
+                GymVecEnvManager.Instance.RegisterAgent(this);
+            }
+
             return _gymAgentIndex;
         }
 
@@ -159,7 +164,10 @@ namespace Scripts.VecEnv.Core
 
         private void OnDestroy()
         {
-            GymVecEnvManager.Instance.UnregisterAgent(this);
+            if (GymVecEnvManager.IsInitialized)
+            {
+                GymVecEnvManager.Instance.UnregisterAgent(this);
+            }
         }
     }
 }

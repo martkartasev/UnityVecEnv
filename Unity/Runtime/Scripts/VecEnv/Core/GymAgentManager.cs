@@ -12,12 +12,18 @@ namespace Scripts.VecEnv.Core
 
         public void HandleSceneLoad()
         {
+            if (!TryFindEnvironmentTemplate(out _) && FindObjectsByType<GymAgent>(FindObjectsSortMode.None).Length == 0)
+            {
+                _agentTemplate = null;
+                return;
+            }
+
             var agentsInScene = SpawnAgents(agentCount);
             if (agentsInScene > 0)
             {
                 InitializeEnvAndRegisterAgents();
             }
-            else
+            else if (GymVecEnvManager.IsInitialized)
             {
                 GymVecEnvManager.Instance.SpawnMode = SpawnMode.Disabled;
             }
@@ -56,10 +62,12 @@ namespace Scripts.VecEnv.Core
 
         public void InitializeEnvAndRegisterAgents()
         {
-            var manager = GymVecEnvManager.Instance;
             var externalAgents = FindObjectsByType<GymAgent>(FindObjectsSortMode.None);
             var descriptionAgent = ResolveDescriptionAgent(externalAgents);
             if (descriptionAgent == null) return;
+
+            Bootstrap.EnsureVecEnvInitialized();
+            var manager = GymVecEnvManager.Instance;
 
             foreach (var externalAgent in externalAgents)
             {
@@ -74,7 +82,11 @@ namespace Scripts.VecEnv.Core
         {
             for (int i = 0; i < length; i++)
             {
-                GymVecEnvManager.Instance.UnregisterAgent(agentsInScene[agentsInScene.Length - 1 - i]);
+                if (GymVecEnvManager.IsInitialized)
+                {
+                    GymVecEnvManager.Instance.UnregisterAgent(agentsInScene[agentsInScene.Length - 1 - i]);
+                }
+
                 Destroy(agentsInScene[agentsInScene.Length - 1 - i].gameObject);
             }
         }
@@ -131,7 +143,10 @@ namespace Scripts.VecEnv.Core
                 var agentsInEnvironment = environmentRoot.GetComponentsInChildren<GymAgent>(true);
                 foreach (var agent in agentsInEnvironment)
                 {
-                    GymVecEnvManager.Instance.UnregisterAgent(agent);
+                    if (GymVecEnvManager.IsInitialized)
+                    {
+                        GymVecEnvManager.Instance.UnregisterAgent(agent);
+                    }
                 }
 
                 Destroy(environmentRoot);
