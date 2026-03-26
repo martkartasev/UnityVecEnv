@@ -23,6 +23,8 @@ namespace Scripts.VecEnv.Core
     [DefaultExecutionOrder(-500)]
     public class GymVecEnvManager : MonoBehaviour
     {
+        private const int MaxAgentRegistrationFrames = 8;
+
         // Lazy initializer pattern, see https://csharpindepth.com/articles/singleton#lazy
         private static Lazy<GymVecEnvManager> _sLazy = new(CreateGymVecEnvManager);
         public static bool IsInitialized => _sLazy.IsValueCreated;
@@ -190,16 +192,16 @@ namespace Scripts.VecEnv.Core
             while (!Bootstrap.LoadingDone) yield return new WaitForFixedUpdate();
             PreInitialize?.Invoke();
 
-            if (SpawnMode == SpawnMode.Gym && _agents.Count != initializeEnvironments.AgentCount)
+            var expectedAgentCount = _agents.Count;
+            if (SpawnMode == SpawnMode.Gym)
             {
-                AgentManager.SpawnAgents(initializeEnvironments.AgentCount);
+                expectedAgentCount = AgentManager.SpawnAgents(initializeEnvironments.AgentCount);
             }
 
             _gymStepOngoing = false;
             _firstResetComplete = false;
 
-            yield return new WaitForFixedUpdate();
-            AgentManager.InitializeEnvAndRegisterAgents();
+            yield return StartCoroutine(RegisterAgentsForInitialization(expectedAgentCount));
             _agents.ForEach(agent => agent.DoInitialize());
             PostInitialize?.Invoke();
 
@@ -324,6 +326,28 @@ namespace Scripts.VecEnv.Core
         public void ClearAgents()
         {
             _agents.Clear();
+        }
+
+        private IEnumerator RegisterAgentsForInitialization(int expectedAgentCount)
+        {
+            for (int i = 0; i < MaxAgentRegistrationFrames; i++)
+            {
+                AgentManager.InitializeEnvAndRegisterAgents();
+                if (expectedAgentCount <= 0 || _agents.Count >= expectedAgentCount)
+                {
+                    yield break;
+                }
+
+                // Give newly duplicated environment roots a frame to run Start/Awake-driven agent spawning.
+                yield return null;
+            }
+
+            AgentManager.InitializeEnvAndRegisterAgents();
+            if (expectedAgentCount > 0 && _agents.Count < expectedAgentCount)
+            {
+                Debug.LogWarning($"Expected {expectedAgentCount} agents during initialization, but only found {_agents.Count}. " +
+                                 "If your environments spawn GymAgents asynchronously, ensure they are created within the first few frames.");
+            }
         }
     }
 }

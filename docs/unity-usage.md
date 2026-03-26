@@ -2,7 +2,7 @@
 
 ## Package Installation
 
-Install `./Unity/package.json` via **Window → Package Manager → + → Install package from disk**, or add a relative path directly to your project's `Packages/manifest.json`:
+Install `./Unity/package.json` via **Window -> Package Manager -> + -> Install package from disk**, or add a relative path directly to your project's `Packages/manifest.json`:
 
 ```json
 {
@@ -18,12 +18,33 @@ Install `./Unity/package.json` via **Window → Package Manager → + → Instal
 
 ### Required components
 
-Your scene needs **At least one agent** — a GameObject with your `GymAgent` subclass attached. 
+Your scene needs **at least one agent**: a GameObject with your `GymAgent` subclass attached.
 
-The manager will clone it to reach the requested `agentCount`, based on what was configured on the Python end. Alternatively, you can have any number of `GymAgent`s pre configured in the scene and opt not to send the agent counts from python side.
-In that case, the python side env will be informed of the corresponding agent count during initialization. 
+By default, the manager clones that agent to reach the requested `agentCount`, based on what was configured on the Python end. Alternatively, you can have any number of `GymAgent`s preconfigured in the scene and opt not to send the agent count from the Python side. In that case, the Python environment will be informed of the corresponding count during initialization.
 
 A `GymVecEnvManager` singleton is created automatically at runtime; you do not add it to the scene yourself.
+
+### Environment prefab duplication
+
+If you want to duplicate a full environment prefab instead of cloning a single `GymAgent`, add `GymEnvironmentTemplate` to the environment object you want the bootstrapper to pick up.
+
+When a `GymEnvironmentTemplate` is present in the scene:
+
+- `GymAgentManager` duplicates the tagged environment object instead of spawning agent copies.
+- The requested count from the API is used when one is provided.
+- If no explicit count is provided during initialization, `defaultEnvCount` on the template is used.
+- After duplication, the normal initialization path discovers and registers the `GymAgent`s already present inside those duplicated environments.
+
+`GymEnvironmentTemplate` fields:
+
+| Field | Description |
+|---|---|
+| `cloneRoot` | Optional parent/root object to duplicate. Leave it empty when the component is already on the object that should be cloned. |
+| `descriptionAgent` | Optional agent used to define the observation/action spaces. If omitted, the first `GymAgent` found under the cloned environment is used. |
+| `cloneOffset` | Local-space offset applied between duplicated environment instances. Useful for laying out copies side by side. |
+| `defaultEnvCount` | Number of environment copies to keep when no explicit count is requested during initialization. |
+
+This setup is useful when one logical Gym environment includes more than just the agent itself, for example terrain, props, reset helpers, or a controller that spawns the agent.
 
 ## Implementing GymAgent
 
@@ -67,17 +88,18 @@ public class MyAgent : GymAgent
     }
 }
 ```
-There are also optional methods you can implement if desired, see below how to use them.
+
+There are also optional methods you can implement if desired:
 
 ```csharp
-    protected virtual AgentAction ProduceDummyAction(AgentAction dummyAgentAction)
-    {
-        return dummyAgentAction;
-    }
-    protected virtual void CollectInfo(Dictionary<string, float> metadata)
-    {
+protected virtual AgentAction ProduceDummyAction(AgentAction dummyAgentAction)
+{
+    return dummyAgentAction;
+}
 
-    }
+protected virtual void CollectInfo(Dictionary<string, float> metadata)
+{
+}
 ```
 
 ### Inspector configuration
@@ -110,11 +132,11 @@ Returning `Done` or `Truncated` from `GymStep` causes `GymVecEnvManager` to auto
 ```csharp
 protected override void CollectObservation(ref AgentObservation obs)
 {
-    obs.AppendContinuous(transform.position);        // Vector3 → 3 floats
-    obs.AppendContinuous(transform.rotation);        // Quaternion → 4 floats
-    obs.AppendContinuous(someFloat);                 // single float
+    obs.AppendContinuous(transform.position);         // Vector3 -> 3 floats
+    obs.AppendContinuous(transform.rotation);         // Quaternion -> 4 floats
+    obs.AppendContinuous(someFloat);                  // single float
     obs.AppendContinuous(someFloatArray);             // float[]
-    obs.AppendDiscrete(someInt);                     // single int
+    obs.AppendDiscrete(someInt);                      // single int
 }
 ```
 
@@ -122,7 +144,7 @@ The total number of appended values must match `continuousObservations` and `dis
 
 ### Custom info
 
-Override `CollectInfo` to send per-agent scalar metadata to Python alongside each step result. This is useful for logging episode statistics (e.g., distance travelled, collisions).
+Override `CollectInfo` to send per-agent scalar metadata to Python alongside each step result. This is useful for logging episode statistics such as distance travelled or collisions.
 
 ```csharp
 protected override void CollectInfo(Dictionary<string, float> metadata)
@@ -149,7 +171,6 @@ protected override void GymReset()
 
 ---
 
-
 ## GymVecEnvManager
 
 The singleton manager is created automatically and persists across scene loads. You can access it via `GymVecEnvManager.Instance` from anywhere.
@@ -160,7 +181,7 @@ The singleton manager is created automatically and persists across scene loads. 
 |---|---|---|
 | `physicsStepsPerGymStep` | `10` | Fallback physics steps per action if Python doesn't specify one. |
 | `timeoutMilliseconds` | `3000` | How long to wait for a step message from Python before quitting. |
-| `SpawnMode` | `Gym` | `Gym`: manager spawns/removes agents to match `num_envs`. `Disabled`: use agents already in scene. |
+| `SpawnMode` | `Gym` | `Gym`: manager matches the requested count by duplicating `GymEnvironmentTemplate` instances when present, otherwise by spawning/removing agents. `Disabled`: use agents already in scene. |
 
 ### Execution order
 
@@ -168,9 +189,9 @@ The framework sets fixed execution orders internally:
 
 | Component | Order |
 |---|---|
-| `GymAgentManager` | −501 |
-| `GymVecEnvManager` | −500 |
-| `GymAgent` subclasses | −50 |
+| `GymAgentManager` | `-501` |
+| `GymVecEnvManager` | `-500` |
+| `GymAgent` subclasses | `-50` |
 
 Do not change these unless you have a specific reason to.
 
@@ -178,12 +199,12 @@ Do not change these unless you have a specific reason to.
 
 ### Lifecycle events
 
-Hook into these events for cross-cutting concerns (e.g., randomizing the environment layout on each reset):
+Hook into these events for cross-cutting concerns, for example randomizing the environment layout on each reset:
 
 ```csharp
 void OnEnable()
 {
-    GymVecEnvManager.Instance.PreInitialize  += OnPreInitialize;
+    GymVecEnvManager.Instance.PreInitialize += OnPreInitialize;
     GymVecEnvManager.Instance.PostInitialize += OnPostInitialize;
     GymVecEnvManager.Instance.PreObservation += OnPreObservation;
     GymVecEnvManager.Instance.EarlyObservation += OnEarlyObservation;
@@ -195,13 +216,13 @@ void OnEnable()
 | `PreInitialize` | Before agents are spawned during initialization. |
 | `PostInitialize` | After all agents are initialized and `Initialize()` has been called. |
 | `PreObservation` | Immediately before `CollectObservation` is called on all agents. |
-| `EarlyObservation` | Halfway through the physics steps (useful for mid-step state capture). |
+| `EarlyObservation` | Halfway through the physics steps, useful for mid-step state capture. |
 
 ---
 
 ## Disconnected mode (Editor)
 
-When running in the Unity Editor **without** a Python connection, `GymVecEnvManager` falls back to a disconnected stepping loop. Agents will use their `inferencePolicy` ONNX model (if set) or the value returned by `ProduceDummyAction`. This lets you iterate on agent behaviour and visuals without running a Python training script.
+When running in the Unity Editor **without** a Python connection, `GymVecEnvManager` falls back to a disconnected stepping loop. Agents will use their `inferencePolicy` ONNX model, if set, or the value returned by `ProduceDummyAction`. This lets you iterate on agent behaviour and visuals without running a Python training script.
 
 ```csharp
 // Provide a no-op or heuristic action when running without Python:
@@ -216,7 +237,7 @@ protected override AgentAction ProduceDummyAction(AgentAction dummy)
 
 ## Local ONNX Inference
 
-Assign a trained ONNX model as a `ModelAsset` to the `inferencePolicy` field on your agent. The Unity Inference Engine runs the model locally — no Python process needed.
+Assign a trained ONNX model as a `ModelAsset` to the `inferencePolicy` field on your agent. The Unity Inference Engine runs the model locally; no Python process is needed.
 
 Use the CLI tool to rename ONNX inputs if the model was exported from a framework that uses different input names than Unity expects:
 
@@ -228,7 +249,7 @@ unity-vecenv onnx-rename model.onnx model_unity.onnx --unity-defaults
 
 ## Build configuration
 
-When building for training (not Editor play mode):
+When building for training, not Editor play mode:
 
 - Set **Scripting Backend** to IL2CPP for best runtime performance.
 - Use **Server Build** (headless) if you pass `no_graphics=True` from Python.
@@ -239,7 +260,7 @@ Command-line arguments accepted by the Unity build:
 | Argument | Description |
 |---|---|
 | `--port <n>` | HTTP server port |
-| `--num-agents <n>` | Number of agents (overrides scene default) |
+| `--num-agents <n>` | Number of agents or environments to request, depending on scene setup |
 | `--scene <name>` | Scene to load |
 | `--timescale <n>` | Initial `Time.timeScale` |
 | `--logfile <path>` | Player log path |
