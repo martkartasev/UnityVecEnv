@@ -324,7 +324,66 @@ namespace Scripts.VecEnv.Networking
             batchedObservation.DiscreteSize = discreteSize;
             batchedObservation.ContinuousF32 = FloatArrayToByteString(continuousValues);
             batchedObservation.DiscreteI32 = IntArrayToByteString(discreteValues);
+            foreach (var visualObservation in BuildBatchedVisualObservations(agentObservations))
+            {
+                batchedObservation.Visual.Add(visualObservation);
+            }
+
             return batchedObservation;
+        }
+
+        private static BatchedVisualObservation[] BuildBatchedVisualObservations(AgentObservation[] agentObservations)
+        {
+            var firstVisuals = agentObservations[0].VisualObservations ?? Array.Empty<AgentVisualObservation>();
+            if (firstVisuals.Length == 0)
+            {
+                return Array.Empty<BatchedVisualObservation>();
+            }
+
+            var batchedVisuals = new BatchedVisualObservation[firstVisuals.Length];
+            for (int visualIndex = 0; visualIndex < firstVisuals.Length; visualIndex++)
+            {
+                var firstVisual = firstVisuals[visualIndex];
+                var name = firstVisual.Name ?? string.Empty;
+                var frameSize = firstVisual.Data?.Length ?? 0;
+                var batchedData = new byte[agentObservations.Length * frameSize];
+
+                for (int envIndex = 0; envIndex < agentObservations.Length; envIndex++)
+                {
+                    var visuals = agentObservations[envIndex].VisualObservations ?? Array.Empty<AgentVisualObservation>();
+                    if (visuals.Length != firstVisuals.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"Observation {envIndex} has {visuals.Length} visual observations, expected {firstVisuals.Length}.");
+                    }
+
+                    if (!string.Equals(visuals[visualIndex].Name ?? string.Empty, name, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"Observation {envIndex} visual observation {visualIndex} is named '{visuals[visualIndex].Name}', expected '{name}'.");
+                    }
+
+                    var data = visuals[visualIndex].Data ?? Array.Empty<byte>();
+                    if (data.Length != frameSize)
+                    {
+                        throw new InvalidOperationException(
+                            $"Observation {envIndex} visual observation '{name}' has {data.Length} bytes, expected {frameSize}.");
+                    }
+
+                    if (frameSize > 0)
+                    {
+                        Buffer.BlockCopy(data, 0, batchedData, envIndex * frameSize, frameSize);
+                    }
+                }
+
+                batchedVisuals[visualIndex] = new BatchedVisualObservation
+                {
+                    Name = name,
+                    Data = ByteArrayToByteString(batchedData)
+                };
+            }
+
+            return batchedVisuals;
         }
 
         private static ByteString FloatArrayToByteString(float[] values)
@@ -336,7 +395,7 @@ namespace Scripts.VecEnv.Networking
 
             var bytes = new byte[values.Length * sizeof(float)];
             Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length);
-            return ByteString.CopyFrom(bytes);
+            return ByteArrayToByteString(bytes);
         }
 
         private static ByteString IntArrayToByteString(int[] values)
@@ -348,7 +407,7 @@ namespace Scripts.VecEnv.Networking
 
             var bytes = new byte[values.Length * sizeof(int)];
             Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length);
-            return ByteString.CopyFrom(bytes);
+            return ByteArrayToByteString(bytes);
         }
 
         private static ByteString StateArrayToByteString(EnvironmentState[] states, EnvironmentState activeState)
@@ -364,7 +423,17 @@ namespace Scripts.VecEnv.Networking
                 bytes[i] = states[i] == activeState ? (byte)1 : (byte)0;
             }
 
-            return ByteString.CopyFrom(bytes);
+            return ByteArrayToByteString(bytes);
+        }
+
+        private static ByteString ByteArrayToByteString(byte[] bytes)
+        {
+            if (bytes == null || bytes.Length == 0)
+            {
+                return ByteString.Empty;
+            }
+
+            return UnsafeByteOperations.UnsafeWrap(new ReadOnlyMemory<byte>(bytes));
         }
 
         private HttpListener ListenerSetup()
@@ -509,7 +578,7 @@ namespace Scripts.VecEnv.Networking
                 return;
             }
 
-            await WriteBytesToOutputStream(context, description.ToByteArray());
+            await WriteMessageToOutputStream(context, description);
         }
 
         private async Task HandleResetAsync(HttpListenerContext context)
@@ -537,7 +606,7 @@ namespace Scripts.VecEnv.Networking
                 return;
             }
 
-            await WriteBytesToOutputStream(context, obs.ToByteArray());
+            await WriteMessageToOutputStream(context, obs);
         }
 
         private async Task HandleStepAsync(HttpListenerContext context)
@@ -568,7 +637,7 @@ namespace Scripts.VecEnv.Networking
                     return;
                 }
 
-                await WriteBytesToOutputStream(context, sr.ToByteArray());
+                await WriteMessageToOutputStream(context, sr);
             }
             finally
             {
@@ -589,14 +658,14 @@ namespace Scripts.VecEnv.Networking
         }
 
 
-        private static async Task WriteBytesToOutputStream(HttpListenerContext context, byte[] bytes)
+        private static async Task WriteMessageToOutputStream(HttpListenerContext context, IMessage message)
         {
-            context.Response.ContentLength64 = bytes.Length;
+            context.Response.ContentLength64 = message.CalculateSize();
             context.Response.ContentType = "application/x-protobuf";
             context.Response.StatusCode = 200;
 
             var output = context.Response.OutputStream;
-            await output.WriteAsync(bytes, 0, bytes.Length);
+            message.WriteTo(output);
             await context.Response.OutputStream.FlushAsync();
         }
 

@@ -26,6 +26,7 @@ namespace Scripts.VecEnv.Message
 
         public int[] DiscreteActions;
         public int[] DiscreteObservations;
+        public VisualObservationDescription[] VisualObservations;
         
         public int AgentCount;
     }
@@ -47,10 +48,32 @@ namespace Scripts.VecEnv.Message
         public Dictionary<String, float> custom;
     }
 
+    public enum VisualObservationDataType
+    {
+        UInt8,
+        Float32
+    }
+
+    public struct VisualObservationDescription
+    {
+        public string Name;
+        public int[] Shape;
+        public VisualObservationDataType DataType;
+        public float Low;
+        public float High;
+    }
+
+    public struct AgentVisualObservation
+    {
+        public string Name;
+        public byte[] Data;
+    }
+
     public struct AgentObservation
     {
         public readonly float[] Continuous;
         public readonly int[] Discrete;
+        public AgentVisualObservation[] VisualObservations;
 
         private int _continuousIndex;
         private int _discreteIndex;
@@ -59,6 +82,7 @@ namespace Scripts.VecEnv.Message
         {
             Continuous = new float[continuousSize];
             Discrete = new int[discreteSize];
+            VisualObservations = Array.Empty<AgentVisualObservation>();
 
             _continuousIndex = 0;
             _discreteIndex = 0;

@@ -30,9 +30,9 @@ namespace Scripts.VecEnv.Message
             };
         }
 
-        public Observation MapObservationToExternal(AgentObservation agentObservation)
+        public ExternalCommunication.Observation MapObservationToExternal(AgentObservation agentObservation)
         {
-            var mapObservationToExternal = new Observation();
+            var mapObservationToExternal = new ExternalCommunication.Observation();
             mapObservationToExternal.Continuous.AddRange(agentObservation.Continuous);
             mapObservationToExternal.Discrete.AddRange(agentObservation.Discrete);
             return mapObservationToExternal;
@@ -61,10 +61,32 @@ namespace Scripts.VecEnv.Message
             {
                 ContinuousSize = description.ContinuousObservations
             };
+            if ((description.VisualObservations?.Length ?? 0) > 0)
+            {
+                observationSpace.Name = "state";
+            }
             observationSpace.DiscreteSize.AddRange(description.DiscreteObservations ?? System.Array.Empty<int>());
 
             mapEnvironmentDescription.SingleActionSpace.Add(actionSpace);
             mapEnvironmentDescription.SingleObservationSpace.Add(observationSpace);
+
+            if (description.VisualObservations != null)
+            {
+                foreach (var visualObservation in description.VisualObservations)
+                {
+                    var visualSpace = new VisualObservationSpace
+                    {
+                        Name = visualObservation.Name ?? string.Empty,
+                        DataType = visualObservation.DataType == VisualObservationDataType.Float32
+                            ? ExternalCommunication.VisualObservationDataType.Float32
+                            : ExternalCommunication.VisualObservationDataType.Uint8,
+                        Low = visualObservation.Low,
+                        High = visualObservation.High
+                    };
+                    visualSpace.Shape.Add(visualObservation.Shape ?? System.Array.Empty<int>());
+                    mapEnvironmentDescription.SingleVisualObservationSpace.Add(visualSpace);
+                }
+            }
 
             mapEnvironmentDescription.TrueNumberOfEnvs = description.AgentCount;
             return mapEnvironmentDescription;

@@ -87,6 +87,7 @@ namespace Scripts.VecEnv.Core
             {
                 ContinuousObservations = agentTemplate.continuousObservations,
                 DiscreteObservations = agentTemplate.discreteObservations.ToArray(),
+                VisualObservations = agentTemplate.GetVisualObservationDescriptions(),
                 ContinuousActions = agentTemplate.continuousActions,
                 DiscreteActions = agentTemplate.discreteActions.ToArray(),
             };
@@ -253,6 +254,7 @@ namespace Scripts.VecEnv.Core
                 if (i == step.PhysicsStepCount / 2)
                 {
                     EarlyObservation?.Invoke();
+                    _agents.ForEach(agent => agent.BeginVisualObservationCapture());
                 }
 
                 yield return new WaitForFixedUpdate();
@@ -295,6 +297,7 @@ namespace Scripts.VecEnv.Core
                     if (i == physicsStepsPerGymStep / 2)
                     {
                         EarlyObservation?.Invoke();
+                        enabledAgents.ForEach(agent => agent.BeginVisualObservationCapture());
                     }
 
                     yield return new WaitForFixedUpdate();

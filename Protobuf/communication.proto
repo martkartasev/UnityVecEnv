@@ -16,6 +16,7 @@ message EnvironmentDescription {
   repeated Space singleObservationSpace = 1;
   repeated Space singleActionSpace = 2;
   int32 trueNumberOfEnvs = 3;
+  repeated VisualObservationSpace singleVisualObservationSpace = 4;
 }
 
 message Space {
@@ -65,12 +66,31 @@ message Observation {
   repeated int32 discrete = 3;
 }
 
+enum VisualObservationDataType {
+  UInt8 = 0;
+  Float32 = 1;
+}
+
+message VisualObservationSpace {
+  string name = 1;
+  repeated int32 shape = 2;
+  VisualObservationDataType dataType = 3;
+  float low = 4;
+  float high = 5;
+}
+
+message BatchedVisualObservation {
+  string name = 1;
+  bytes data = 2;
+}
+
 message BatchedObservation {
   int32 num_envs = 1;
   int32 continuous_size = 2;
   int32 discrete_size = 3;
   bytes continuous_f32 = 4;
   bytes discrete_i32 = 5;
+  repeated BatchedVisualObservation visual = 6;
 }
 
 message BatchedCustomInfo {

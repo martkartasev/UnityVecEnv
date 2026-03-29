@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 from typing import Literal, Optional, Sequence
 
 import torch
@@ -6,6 +7,15 @@ import torch.nn as nn
 import torch.onnx
 
 ActionSpaceType = Literal["continuous", "discrete"]
+
+
+@dataclass(frozen=True)
+class UnityModelInputSpec:
+    name: str
+    shape: tuple[int, ...]
+    observation_key: str | None = None
+    normalize_uint8: bool = False
+    dtype: torch.dtype = torch.float32
 
 
 def _infer_obs_dim(agent: nn.Module) -> int:
@@ -30,11 +40,42 @@ def _build_dummy_obs(
     agent: nn.Module,
     device: torch.device,
     obs_shape: Optional[Sequence[int]] = None,
-) -> torch.Tensor:
+) -> tuple[UnityModelInputSpec, ...]:
+    get_specs = getattr(agent, "get_unity_export_input_specs", None)
+    if callable(get_specs):
+        specs = get_specs(tuple(obs_shape) if obs_shape is not None else None)
+        return tuple(
+            UnityModelInputSpec(
+                name=spec.input_name,
+                shape=tuple(spec.shape),
+                observation_key=spec.observation_key,
+                normalize_uint8=spec.normalize_uint8,
+                dtype=spec.dtype,
+            )
+            for spec in specs
+        )
+
     if obs_shape is None:
         obs_dim = _infer_obs_dim(agent)
-        return torch.zeros(1, obs_dim, device=device, dtype=torch.float32)
-    return torch.zeros((1,) + tuple(obs_shape), device=device, dtype=torch.float32)
+        obs_shape = (obs_dim,)
+
+    return (
+        UnityModelInputSpec(
+            name="obs_continuous",
+            shape=tuple(obs_shape),
+            dtype=torch.float32,
+        ),
+    )
+
+
+def _build_dummy_inputs(
+    input_specs: Sequence[UnityModelInputSpec],
+    device: torch.device,
+) -> tuple[torch.Tensor, ...]:
+    return tuple(
+        torch.zeros((1,) + tuple(spec.shape), device=device, dtype=spec.dtype)
+        for spec in input_specs
+    )
 
 
 def _infer_action_space_type(agent: nn.Module) -> ActionSpaceType:
@@ -60,12 +101,14 @@ class UnityInferenceExportPolicy(nn.Module):
         self,
         agent: nn.Module,
         action_space_type: ActionSpaceType,
+        input_specs: Sequence[UnityModelInputSpec],
         export_value: bool = True,
         clamp_actions: bool = True,
     ):
         super().__init__()
         self.agent = agent
         self.action_space_type = action_space_type
+        self.input_specs = tuple(input_specs)
         self.export_value = export_value
         self.clamp_actions = clamp_actions
 
@@ -75,19 +118,46 @@ class UnityInferenceExportPolicy(nn.Module):
             return apply_obs_mask(obs)
         return obs
 
-    def forward(self, obs: torch.Tensor):
-        obs = self._apply_obs_mask_if_present(obs)
+    def _build_observation(self, inputs: tuple[torch.Tensor, ...]):
+        if len(inputs) != len(self.input_specs):
+            raise ValueError(f"Expected {len(self.input_specs)} inputs, received {len(inputs)}.")
 
-        if self.action_space_type == "continuous":
+        if len(self.input_specs) == 1 and self.input_specs[0].observation_key is None:
+            return self._apply_obs_mask_if_present(inputs[0])
+
+        observation = {}
+        for spec, tensor in zip(self.input_specs, inputs):
+            if spec.normalize_uint8:
+                tensor = tensor / 255.0
+            observation[spec.observation_key or spec.name] = tensor
+        return observation
+
+    def _compute_action(self, obs):
+        forward_actor = getattr(self.agent, "forward_actor_for_unity", None)
+        if callable(forward_actor):
+            action = forward_actor(obs)
+        elif self.action_space_type == "continuous":
             action = self.agent.actor_mean(obs)
-            if self.clamp_actions:
-                action = torch.clamp(action, -1.0, 1.0)
         else:
             logits = self.agent.actor(obs)
             action = torch.argmax(logits, dim=-1)
 
+        if self.action_space_type == "continuous" and self.clamp_actions:
+            action = torch.clamp(action, -1.0, 1.0)
+        return action
+
+    def _compute_value(self, obs):
+        forward_value = getattr(self.agent, "forward_value_for_unity", None)
+        if callable(forward_value):
+            return forward_value(obs)
+        return self.agent.critic(obs)
+
+    def forward(self, *inputs: torch.Tensor):
+        obs = self._build_observation(inputs)
+        action = self._compute_action(obs)
+
         if self.export_value:
-            value = self.agent.critic(obs)
+            value = self._compute_value(obs)
             return action, value
         return action
 
@@ -111,21 +181,23 @@ def export_unity_onnx(
     was_training = agent.training
     agent.to(device).eval()
 
+    input_specs = _build_dummy_obs(agent=agent, device=device, obs_shape=obs_shape)
+
     wrapper = UnityInferenceExportPolicy(
         agent=agent,
         action_space_type=action_space_type,
+        input_specs=input_specs,
         export_value=export_value,
         clamp_actions=clamp_actions,
     ).to(device).eval()
 
-    dummy_obs = _build_dummy_obs(agent=agent, device=device, obs_shape=obs_shape)
+    dummy_inputs = _build_dummy_inputs(input_specs=input_specs, device=device)
 
     action_name = "action_continuous" if action_space_type == "continuous" else "action_discrete"
     output_names = [action_name]
-    dynamic_axes = {
-        "obs_continuous": {0: "batch"},
-        action_name: {0: "batch"},
-    }
+    input_names = [spec.name for spec in input_specs]
+    dynamic_axes = {name: {0: "batch"} for name in input_names}
+    dynamic_axes[action_name] = {0: "batch"}
 
     if export_value:
         output_names.append("value")
@@ -133,10 +205,10 @@ def export_unity_onnx(
 
     torch.onnx.export(
         wrapper,
-        (dummy_obs,),
+        dummy_inputs,
         onnx_path,
         opset_version=opset,
-        input_names=["obs_continuous"],
+        input_names=input_names,
         output_names=output_names,
         dynamic_axes=dynamic_axes,
         do_constant_folding=True,

@@ -25,14 +25,16 @@ class InitializeEnvironments(_message.Message):
     def __init__(self, autoResetMode: _Optional[_Union[AutoResetMode, str]] = ..., requestedNumberOfEnvs: _Optional[int] = ...) -> None: ...
 
 class EnvironmentDescription(_message.Message):
-    __slots__ = ("singleObservationSpace", "singleActionSpace", "trueNumberOfEnvs")
+    __slots__ = ("singleObservationSpace", "singleActionSpace", "trueNumberOfEnvs", "singleVisualObservationSpace")
     SINGLEOBSERVATIONSPACE_FIELD_NUMBER: _ClassVar[int]
     SINGLEACTIONSPACE_FIELD_NUMBER: _ClassVar[int]
     TRUENUMBEROFENVS_FIELD_NUMBER: _ClassVar[int]
+    SINGLEVISUALOBSERVATIONSPACE_FIELD_NUMBER: _ClassVar[int]
     singleObservationSpace: _containers.RepeatedCompositeFieldContainer[Space]
     singleActionSpace: _containers.RepeatedCompositeFieldContainer[Space]
     trueNumberOfEnvs: int
-    def __init__(self, singleObservationSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., singleActionSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., trueNumberOfEnvs: _Optional[int] = ...) -> None: ...
+    singleVisualObservationSpace: _containers.RepeatedCompositeFieldContainer[VisualObservationSpace]
+    def __init__(self, singleObservationSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., singleActionSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., trueNumberOfEnvs: _Optional[int] = ..., singleVisualObservationSpace: _Optional[_Iterable[_Union[VisualObservationSpace, _Mapping]]] = ...) -> None: ...
 
 class Space(_message.Message):
     __slots__ = ("name", "continuousSize", "continuousRange", "discreteSize")
@@ -104,19 +106,50 @@ class Observation(_message.Message):
     discrete: _containers.RepeatedScalarFieldContainer[int]
     def __init__(self, index: _Optional[int] = ..., continuous: _Optional[_Iterable[float]] = ..., discrete: _Optional[_Iterable[int]] = ...) -> None: ...
 
+class VisualObservationDataType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    UInt8: _ClassVar[VisualObservationDataType]
+    Float32: _ClassVar[VisualObservationDataType]
+UInt8: VisualObservationDataType
+Float32: VisualObservationDataType
+
+class VisualObservationSpace(_message.Message):
+    __slots__ = ("name", "shape", "dataType", "low", "high")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SHAPE_FIELD_NUMBER: _ClassVar[int]
+    DATATYPE_FIELD_NUMBER: _ClassVar[int]
+    LOW_FIELD_NUMBER: _ClassVar[int]
+    HIGH_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    shape: _containers.RepeatedScalarFieldContainer[int]
+    dataType: VisualObservationDataType
+    low: float
+    high: float
+    def __init__(self, name: _Optional[str] = ..., shape: _Optional[_Iterable[int]] = ..., dataType: _Optional[_Union[VisualObservationDataType, str]] = ..., low: _Optional[float] = ..., high: _Optional[float] = ...) -> None: ...
+
+class BatchedVisualObservation(_message.Message):
+    __slots__ = ("name", "data")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    DATA_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    data: bytes
+    def __init__(self, name: _Optional[str] = ..., data: _Optional[bytes] = ...) -> None: ...
+
 class BatchedObservation(_message.Message):
-    __slots__ = ("num_envs", "continuous_size", "discrete_size", "continuous_f32", "discrete_i32")
+    __slots__ = ("num_envs", "continuous_size", "discrete_size", "continuous_f32", "discrete_i32", "visual")
     NUM_ENVS_FIELD_NUMBER: _ClassVar[int]
     CONTINUOUS_SIZE_FIELD_NUMBER: _ClassVar[int]
     DISCRETE_SIZE_FIELD_NUMBER: _ClassVar[int]
     CONTINUOUS_F32_FIELD_NUMBER: _ClassVar[int]
     DISCRETE_I32_FIELD_NUMBER: _ClassVar[int]
+    VISUAL_FIELD_NUMBER: _ClassVar[int]
     num_envs: int
     continuous_size: int
     discrete_size: int
     continuous_f32: bytes
     discrete_i32: bytes
-    def __init__(self, num_envs: _Optional[int] = ..., continuous_size: _Optional[int] = ..., discrete_size: _Optional[int] = ..., continuous_f32: _Optional[bytes] = ..., discrete_i32: _Optional[bytes] = ...) -> None: ...
+    visual: _containers.RepeatedCompositeFieldContainer[BatchedVisualObservation]
+    def __init__(self, num_envs: _Optional[int] = ..., continuous_size: _Optional[int] = ..., discrete_size: _Optional[int] = ..., continuous_f32: _Optional[bytes] = ..., discrete_i32: _Optional[bytes] = ..., visual: _Optional[_Iterable[_Union[BatchedVisualObservation, _Mapping]]] = ...) -> None: ...
 
 class BatchedCustomInfo(_message.Message):
     __slots__ = ("keys", "values_f32", "present")

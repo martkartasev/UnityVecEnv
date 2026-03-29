@@ -62,7 +62,7 @@ def space_from_proto(space_proto, *, dtype=np.float32,
     if disc is not None:
         return disc
 
-    # Nothing specified — choose a sensible "empty" placeholder.
+    # Nothing specified - choose a sensible "empty" placeholder.
     return spaces.Box(
         low=np.array([], dtype=dtype),
         high=np.array([], dtype=dtype),
@@ -96,6 +96,52 @@ def space_from_repeated(space_list, *, prefix: str,
         out[key] = space_from_proto(sp, dtype=dtype, default_low=default_low, default_high=default_high)
 
     return spaces.Dict(out)
+
+
+def _visual_dtype_from_proto(space_proto):
+    dtype_code = int(getattr(space_proto, "dataType", 0) or 0)
+    if dtype_code == 1:
+        return np.float32, 0.0, 1.0
+
+    return np.uint8, 0, 255
+
+
+def visual_space_from_proto(space_proto) -> spaces.Space | None:
+    shape = tuple(int(s) for s in (getattr(space_proto, "shape", []) or []))
+    if len(shape) == 0:
+        return None
+
+    dtype, default_low, default_high = _visual_dtype_from_proto(space_proto)
+    low_value = getattr(space_proto, "low", default_low)
+    high_value = getattr(space_proto, "high", default_high)
+
+    low = np.full(shape, low_value, dtype=dtype)
+    high = np.full(shape, high_value, dtype=dtype)
+    return spaces.Box(low=low, high=high, shape=shape, dtype=dtype)
+
+
+def visual_spaces_from_repeated(space_list, *, prefix: str = "visual") -> dict[str, spaces.Space]:
+    out = {}
+    used = set()
+    for i, sp in enumerate(space_list):
+        key = _safe_key(getattr(sp, "name", None), prefix, i)
+        base = key
+        suffix = 1
+        while key in used:
+            key = f"{base}_{suffix}"
+            suffix += 1
+        used.add(key)
+
+        visual_space = visual_space_from_proto(sp)
+        if visual_space is None:
+            continue
+        out[key] = visual_space
+
+    return out
+
+
+def is_empty_placeholder_space(space: spaces.Space | None) -> bool:
+    return isinstance(space, spaces.Box) and space.shape == (0,)
 
 
 def batch_space(single: spaces.Space, num_envs: int) -> spaces.Space:

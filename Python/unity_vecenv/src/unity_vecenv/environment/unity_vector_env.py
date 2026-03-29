@@ -5,7 +5,13 @@ import numpy as np
 from gymnasium import spaces
 from gymnasium.vector import VectorEnv, AutoresetMode
 
-from unity_vecenv.environment.spaces import space_from_repeated, batch_space
+from unity_vecenv.environment.spaces import (
+    _safe_key,
+    batch_space,
+    is_empty_placeholder_space,
+    space_from_repeated,
+    visual_spaces_from_repeated,
+)
 from unity_vecenv.environment.network_utils import is_port_in_use
 from unity_vecenv.environment.unity_client import start_client
 from unity_vecenv.environment.unity_process import start_unity_process
@@ -74,6 +80,18 @@ class UnityVectorEnv(VectorEnv):
             dtype=np.float32,
             default_low=-1.0,
             default_high=1.0
+        )
+        self._state_observation_space = self.single_observation_space
+        self._visual_observation_specs = self._build_visual_spec_lookup(
+            environment_description.singleVisualObservationSpace
+        )
+        self._visual_observation_spaces = visual_spaces_from_repeated(
+            environment_description.singleVisualObservationSpace,
+            prefix="visual",
+        )
+        self.single_observation_space = self._combine_observation_space(
+            self._state_observation_space,
+            self._visual_observation_spaces,
         )
 
         self.action_space = batch_space(self.single_action_space, self.num_envs)
@@ -206,6 +224,34 @@ class UnityVectorEnv(VectorEnv):
             info[key] = custom_values[:, column].copy()
             info[mask_key] = present
 
+    def _build_visual_spec_lookup(self, visual_space_protos):
+        lookup = {}
+        used = set()
+        for i, sp in enumerate(visual_space_protos):
+            key = _safe_key(getattr(sp, "name", None), "visual", i)
+            base = key
+            suffix = 1
+            while key in used:
+                key = f"{base}_{suffix}"
+                suffix += 1
+            used.add(key)
+            lookup[key] = sp
+        return lookup
+
+    def _combine_observation_space(self, state_space, visual_spaces):
+        if not visual_spaces:
+            return state_space
+
+        combined = {}
+        if state_space is not None and not is_empty_placeholder_space(state_space):
+            combined["state"] = state_space
+        combined.update(visual_spaces)
+
+        if len(combined) == 1:
+            return next(iter(combined.values()))
+
+        return spaces.Dict(combined)
+
     def _observation_to_numpy(self, observation):
         continuous = np.asarray(observation.continuous, dtype=np.float32)
         discrete = np.asarray(observation.discrete, dtype=np.int32)
@@ -238,7 +284,7 @@ class UnityVectorEnv(VectorEnv):
 
         return continuous
 
-    def _batched_observation_to_numpy(self, observation, nr_agents):
+    def _batched_scalar_observation_to_numpy(self, observation, nr_agents, scalar_space):
         num_envs = int(observation.num_envs or nr_agents)
         if num_envs != nr_agents:
             raise RuntimeError(f"Batched observation reports {num_envs} envs, expected {nr_agents}.")
@@ -259,7 +305,7 @@ class UnityVectorEnv(VectorEnv):
                 "observation.discrete_i32",
             ).reshape((nr_agents, int(observation.discrete_size))).copy()
 
-        sos = self.single_observation_space
+        sos = scalar_space
         if isinstance(sos, spaces.Box):
             if continuous is None:
                 return np.empty((nr_agents, 0), dtype=sos.dtype)
@@ -297,9 +343,82 @@ class UnityVectorEnv(VectorEnv):
 
         raise TypeError(f"Unsupported single_observation_space: {type(sos)}")
 
+    def _decode_visual_observations_to_numpy(self, observation, nr_agents):
+        if not self._visual_observation_specs:
+            if len(observation.visual) != 0:
+                raise RuntimeError("Received visual observations but no visual observation spaces were negotiated.")
+            return {}
+
+        payload_lookup = {}
+        for visual in observation.visual:
+            key = str(visual.name)
+            if key in payload_lookup:
+                raise RuntimeError(f"Duplicate visual observation payload for '{key}'.")
+            payload_lookup[key] = visual
+
+        decoded = {}
+        for key, spec in self._visual_observation_specs.items():
+            if key not in payload_lookup:
+                raise RuntimeError(f"Missing visual observation payload for '{key}'.")
+
+            dtype = np.float32 if int(spec.dataType) == 1 else np.uint8
+            shape = tuple(int(s) for s in spec.shape)
+            expected = int(np.prod(shape, dtype=np.int64)) * nr_agents
+            arr = np.frombuffer(payload_lookup[key].data, dtype=dtype)
+            if arr.size != expected:
+                raise RuntimeError(
+                    f"Visual observation '{key}' has {arr.size} values, expected {expected}."
+                )
+            decoded[key] = arr.reshape((nr_agents,) + shape).copy()
+
+        extra = set(payload_lookup.keys()) - set(self._visual_observation_specs.keys())
+        if extra:
+            raise RuntimeError(f"Received unknown visual observation payloads: {sorted(extra)}")
+
+        return decoded
+
+    def _batched_observation_to_numpy(self, observation, nr_agents):
+        state_present = self._state_observation_space is not None and not is_empty_placeholder_space(
+            self._state_observation_space
+        )
+        visual_present = len(self._visual_observation_specs) > 0
+
+        if not visual_present:
+            return self._batched_scalar_observation_to_numpy(
+                observation,
+                nr_agents,
+                self._state_observation_space,
+            )
+
+        visual_obs = self._decode_visual_observations_to_numpy(observation, nr_agents)
+        state_obs = None
+        if state_present:
+            state_obs = self._batched_scalar_observation_to_numpy(
+                observation,
+                nr_agents,
+                self._state_observation_space,
+            )
+
+        if isinstance(self.single_observation_space, spaces.Dict):
+            out = {}
+            if state_present:
+                out["state"] = state_obs
+            out.update(visual_obs)
+            return out
+
+        if state_present:
+            return {"state": state_obs, **visual_obs}
+
+        if len(visual_obs) != 1:
+            raise RuntimeError("Structured visual observations require a Dict observation space.")
+
+        return next(iter(visual_obs.values()))
+
     def _zeros_like_observation(self, obs):
         if isinstance(obs, dict):
-            return {key: np.zeros_like(value) for key, value in obs.items()}
+            return {key: self._zeros_like_observation(value) for key, value in obs.items()}
+        if isinstance(obs, tuple):
+            return tuple(self._zeros_like_observation(value) for value in obs)
         return np.zeros_like(obs)
 
     def _scatter_batched_observation(self, sparse_obs, indices: np.ndarray, obs_template):
@@ -309,8 +428,18 @@ class UnityVectorEnv(VectorEnv):
 
         if isinstance(full_obs, dict):
             for key in full_obs.keys():
-                full_obs[key][indices] = sparse_obs[key]
+                full_obs[key] = self._scatter_batched_observation(
+                    sparse_obs[key],
+                    indices,
+                    full_obs[key],
+                )
             return full_obs
+
+        if isinstance(full_obs, tuple):
+            return tuple(
+                self._scatter_batched_observation(sparse_obs[i], indices, full_obs[i])
+                for i in range(len(full_obs))
+            )
 
         full_obs[indices] = sparse_obs
         return full_obs

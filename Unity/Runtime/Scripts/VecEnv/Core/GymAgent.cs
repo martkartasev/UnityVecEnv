@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Scripts.VecEnv.Inference;
 using Scripts.VecEnv.Message;
+using Scripts.VecEnv.Observation;
 using Unity.InferenceEngine;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -13,6 +14,7 @@ namespace Scripts.VecEnv.Core
     {
         [Header("Observation Specification")] public int continuousObservations = 0;
         public List<int> discreteObservations = new();
+        [SerializeField] private List<AgentVisualObservationSource> visualObservationSources = new();
 
         [Header("Action Specification")] public int continuousActions = 0;
         public List<int> discreteActions = new();
@@ -22,6 +24,9 @@ namespace Scripts.VecEnv.Core
         private InferenceHelper _model;
         private AgentObservation _latestObservation;
         private AgentAction _latestAction;
+        private AgentVisualObservationSource[] _visualObservationSources = Array.Empty<AgentVisualObservationSource>();
+        private VisualObservationDescription[] _visualObservationDescriptions = Array.Empty<VisualObservationDescription>();
+        private bool _visualObservationSourcesInitialized;
 
         [Header("Agent")] public int gymSteps;
 
@@ -65,6 +70,7 @@ namespace Scripts.VecEnv.Core
 
         protected internal void DoInitialize()
         {
+            EnsureVisualObservationSourcesInitialized();
             Initialize();
         }
 
@@ -92,6 +98,7 @@ namespace Scripts.VecEnv.Core
         {
             var produceObservation = new AgentObservation(continuousObservations, discreteObservations.Count);
             CollectObservation(ref produceObservation);
+            produceObservation.VisualObservations = BuildVisualObservations(forceSynchronousIfMissing: true);
             _latestObservation = produceObservation;
             return produceObservation;
         }
@@ -132,6 +139,21 @@ namespace Scripts.VecEnv.Core
             _gymAgentIndex = index;
         }
 
+        protected internal VisualObservationDescription[] GetVisualObservationDescriptions()
+        {
+            EnsureVisualObservationSourcesInitialized();
+            return _visualObservationDescriptions;
+        }
+
+        protected internal void BeginVisualObservationCapture()
+        {
+            EnsureVisualObservationSourcesInitialized();
+            foreach (var source in _visualObservationSources)
+            {
+                source.BeginAsyncCapture();
+            }
+        }
+
         protected internal void DoInternalAction()
         {
             if (inferencePolicy != null)
@@ -143,7 +165,7 @@ namespace Scripts.VecEnv.Core
                 }
 
                 InferenceEnabled = true;
-                DoSetAction(_model.DoInference(_latestObservation));
+                DoSetAction(_model.DoInference(_latestObservation, _visualObservationDescriptions));
             }
             else
             {
@@ -157,6 +179,67 @@ namespace Scripts.VecEnv.Core
         {
             _model?.Dispose();
             _model = null;
+        }
+
+        private void EnsureVisualObservationSourcesInitialized()
+        {
+            if (_visualObservationSourcesInitialized)
+            {
+                return;
+            }
+
+            _visualObservationSources = (visualObservationSources ?? new List<AgentVisualObservationSource>()).ToArray();
+            _visualObservationDescriptions = new VisualObservationDescription[_visualObservationSources.Length];
+            var usedNames = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = 0; i < _visualObservationSources.Length; i++)
+            {
+                var source = _visualObservationSources[i];
+                if (source == null)
+                {
+                    throw new InvalidOperationException(
+                        $"GymAgent '{name}' has a missing visual observation source reference at index {i}. " +
+                        "Remove null entries or assign a valid AgentVisualObservationSource in the Observation Specification.");
+                }
+
+                if (source.transform != transform && !source.transform.IsChildOf(transform))
+                {
+                    throw new InvalidOperationException(
+                        $"GymAgent '{name}' references visual observation source '{source.name}' that is not part of the agent hierarchy. " +
+                        "Assign only AgentVisualObservationSource components on this agent or its children.");
+                }
+
+                source.InitializeSource(this, i);
+                var description = source.GetDescription();
+                if (!usedNames.Add(description.Name))
+                {
+                    throw new InvalidOperationException(
+                        $"GymAgent '{name}' has duplicate visual observation name '{description.Name}'. " +
+                        "Visual observation source names must be unique per agent.");
+                }
+
+                _visualObservationDescriptions[i] = description;
+            }
+
+            _visualObservationSourcesInitialized = true;
+        }
+
+        private AgentVisualObservation[] BuildVisualObservations(bool forceSynchronousIfMissing)
+        {
+            EnsureVisualObservationSourcesInitialized();
+            if (_visualObservationSources.Length == 0)
+            {
+                return Array.Empty<AgentVisualObservation>();
+            }
+
+            var visualObservations = new AgentVisualObservation[_visualObservationSources.Length];
+            for (int i = 0; i < _visualObservationSources.Length; i++)
+            {
+                _visualObservationSources[i].EnsureLatestObservation(forceSynchronousIfMissing);
+                visualObservations[i] = _visualObservationSources[i].BuildObservation();
+            }
+
+            return visualObservations;
         }
 
         public EnvironmentState IsDone()
@@ -177,6 +260,14 @@ namespace Scripts.VecEnv.Core
         private void OnDestroy()
         {
             DisposeInferenceHelper();
+
+            if (_visualObservationSourcesInitialized)
+            {
+                foreach (var source in _visualObservationSources)
+                {
+                    source.ShutdownSource();
+                }
+            }
 
             if (GymVecEnvManager.IsInitialized)
             {
