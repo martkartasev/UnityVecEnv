@@ -1,6 +1,7 @@
 using System.Reflection;
 using Scripts.VecEnv.Core;
 using Scripts.VecEnv.Message;
+using Scripts.VecEnv.Observation;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,7 +12,10 @@ namespace Editor.Scripts
     {
         private bool _showStats = true;
         private const float RowH = 18f;
+        private const float MaxPreviewWidth = 180f;
         private double _next;
+        private static readonly FieldInfo VisualObservationSourcesField =
+            typeof(GymAgent).GetField("visualObservationSources", BindingFlags.Instance | BindingFlags.NonPublic);
 
         private void OnEnable()
         {
@@ -105,7 +109,62 @@ namespace Editor.Scripts
                             }
                         }
                     }
+
+                    DrawVisualObservationPreviews(agent);
                 }
+            }
+        }
+
+        private void DrawVisualObservationPreviews(GymAgent agent)
+        {
+            if (VisualObservationSourcesField?.GetValue(agent) is not System.Collections.IEnumerable rawSources)
+            {
+                return;
+            }
+
+            var hasAnySource = false;
+            foreach (var rawSource in rawSources)
+            {
+                if (rawSource is not AgentVisualObservationSource source)
+                {
+                    continue;
+                }
+
+                if (!hasAnySource)
+                {
+                    EditorGUILayout.Space(8);
+                    DrawHeaderRow("Visual Observations", "");
+                    hasAnySource = true;
+                }
+
+                DrawVisualObservationPreview(source);
+            }
+        }
+
+        private void DrawVisualObservationPreview(AgentVisualObservationSource source)
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField(source.DebugDisplayName, EditorStyles.boldLabel);
+
+                if (!string.IsNullOrWhiteSpace(source.DebugPreviewDetails))
+                {
+                    EditorGUILayout.LabelField(source.DebugPreviewDetails, EditorStyles.miniLabel);
+                }
+
+                var previewTexture = source.DebugPreviewTexture;
+                if (previewTexture == null)
+                {
+                    EditorGUILayout.LabelField("No preview available yet.", EditorStyles.miniLabel);
+                    return;
+                }
+
+                var width = Mathf.Max(1, previewTexture.width);
+                var height = Mathf.Max(1, previewTexture.height);
+                var previewWidth = Mathf.Min(MaxPreviewWidth, EditorGUIUtility.currentViewWidth - 64f);
+                var previewHeight = previewWidth * (height / (float)width);
+                var rect = GUILayoutUtility.GetRect(previewWidth, previewHeight, GUILayout.ExpandWidth(false));
+                EditorGUI.DrawPreviewTexture(rect, previewTexture, null, ScaleMode.ScaleToFit);
             }
         }
 

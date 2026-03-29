@@ -11,6 +11,11 @@ namespace Scripts.VecEnv.Observation
 
         protected GymAgent Agent { get; private set; }
         public string ObservationName { get; private set; }
+        public string DebugDisplayName => string.IsNullOrWhiteSpace(ObservationName)
+            ? (string.IsNullOrWhiteSpace(observationName) ? GetType().Name : observationName.Trim())
+            : ObservationName;
+        public virtual Texture DebugPreviewTexture => null;
+        public virtual string DebugPreviewDetails => null;
 
         internal void InitializeSource(GymAgent agent, int index)
         {

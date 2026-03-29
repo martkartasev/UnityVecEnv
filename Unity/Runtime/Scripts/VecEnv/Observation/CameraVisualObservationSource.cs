@@ -50,6 +50,10 @@ namespace Scripts.VecEnv.Observation
 
         private GraphicsFormat PreferredRenderTextureFormat =>
             AsyncGpuReadbackSupport.SelectPreferredReadbackFormat();
+        public override Texture DebugPreviewTexture => _renderTexture != null ? _renderTexture : _readbackTexture;
+        public override string DebugPreviewDetails =>
+            $"{width}x{height} | {colorMode} | {dataType}" +
+            (_asyncReadbackDisabled ? " | ReadPixels fallback" : " | RenderTexture");
 
         protected override VisualObservationDescription CreateDescription()
         {
