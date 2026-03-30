@@ -9,6 +9,8 @@ namespace Scripts.VecEnv.Core
         [SerializeField] private GymAgent descriptionAgent;
         public Vector3 cloneOffset;
         public int defaultEnvCount = 1;
+        public int rowlength = 20;
+        public Vector3 rowOffset = new Vector3(0, 0, 120);
 
         public GameObject ClonePrefab => cloneRoot != null && transform.IsChildOf(cloneRoot)
             ? cloneRoot.gameObject

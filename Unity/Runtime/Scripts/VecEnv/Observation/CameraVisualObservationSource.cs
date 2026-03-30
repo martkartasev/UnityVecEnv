@@ -13,6 +13,12 @@ namespace Scripts.VecEnv.Observation
         Color
     }
 
+    public enum VisualObservationCaptureMode
+    {
+        EarlyAsync,
+        OnDemandBlocking
+    }
+
     public class CameraVisualObservationSource : AgentVisualObservationSource
     {
         [Header("Camera")] public Camera sourceCamera;
@@ -31,6 +37,8 @@ namespace Scripts.VecEnv.Observation
         public int height = 84;
         public VisualObservationColorMode colorMode = VisualObservationColorMode.Grayscale;
         public VisualObservationDataType dataType = VisualObservationDataType.UInt8;
+
+        [Header("Capture")] public VisualObservationCaptureMode captureMode = VisualObservationCaptureMode.EarlyAsync;
 
         private const TextureFormat ReadbackFormat = TextureFormat.RGBA32;
         private const int ReadbackChannels = 4;
@@ -52,7 +60,7 @@ namespace Scripts.VecEnv.Observation
             AsyncGpuReadbackSupport.SelectPreferredReadbackFormat();
         public override Texture DebugPreviewTexture => _renderTexture != null ? _renderTexture : _readbackTexture;
         public override string DebugPreviewDetails =>
-            $"{width}x{height} | {colorMode} | {dataType}" +
+            $"{width}x{height} | {colorMode} | {dataType} | {captureMode}" +
             (_asyncReadbackDisabled ? " | ReadPixels fallback" : " | RenderTexture");
 
         protected override VisualObservationDescription CreateDescription()
@@ -120,6 +128,12 @@ namespace Scripts.VecEnv.Observation
 
         protected override void OnBeginAsyncCapture()
         {
+            if (captureMode == VisualObservationCaptureMode.OnDemandBlocking)
+            {
+                _hasLatestObservation = false;
+                return;
+            }
+
             UpdateCapture();
             if (_capturePending)
             {
@@ -192,6 +206,13 @@ namespace Scripts.VecEnv.Observation
                 {
                     return;
                 }
+            }
+
+            if (captureMode == VisualObservationCaptureMode.OnDemandBlocking)
+            {
+                CaptureToRenderTarget();
+                CaptureWithReadPixels();
+                return;
             }
 
             CaptureToRenderTarget();

@@ -161,7 +161,7 @@ namespace Scripts.VecEnv.Core
             for (int i = 0; i < nr; i++)
             {
                 var cloneIndex = existingCount + i;
-                var localPosition = templateTransform.localPosition + environmentTemplate.cloneOffset * cloneIndex;
+                var localPosition = templateTransform.localPosition + environmentTemplate.cloneOffset * (cloneIndex % environmentTemplate.rowlength) + environmentTemplate.rowOffset * (int)(cloneIndex / environmentTemplate.rowlength);
                 var worldPosition = parent != null
                     ? parent.TransformPoint(localPosition)
                     : localPosition;
