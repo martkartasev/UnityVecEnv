@@ -37,8 +37,14 @@ namespace Scripts.VecEnv.Core
 
         public event Action PreInitialize;
         public event Action PreObservation;
+        public event Action PostObservation;
         public event Action EarlyObservation;
         public event Action PostInitialize;
+        public event Action PreStep;
+        public event Action PostStep;
+
+        public event Action PreStepReset;
+        public event Action PostStepReset;
 
         private IExternalCommunication _communicator;
         private List<GymAgent> _agents = new();
@@ -224,7 +230,8 @@ namespace Scripts.VecEnv.Core
 
             PreObservation?.Invoke();
             callback.Invoke(_agents.Select(agent => agent.ProduceObservation()).ToArray(), _agents.Select(agent => agent.ProduceInfo()).ToArray());
-
+            PostObservation?.Invoke();
+            
             _firstResetComplete = true;
         }
 
@@ -246,6 +253,7 @@ namespace Scripts.VecEnv.Core
 
         private IEnumerator ManageStep(Step step, Action<AgentObservation[], EnvironmentState[], float[], Info[]> completedCallback)
         {
+            PreStep?.Invoke();
             for (int i = 0; i < step.PhysicsStepCount; i++)
             {
                 if (!_gymStepOngoing) yield break;
@@ -267,11 +275,15 @@ namespace Scripts.VecEnv.Core
             //TODO: Implement autoreset_mode, currently default to next.
             var agentObservations = _agents.Select(agent => agent.ProduceObservation()).ToArray();
             var infos = _agents.Select(agent => agent.ProduceInfo()).ToArray();
+            PostObservation?.Invoke();
             
             completedCallback.Invoke(agentObservations, dones, rewards, infos);
+            PreStepReset?.Invoke();
             doneAgents.ForEach(agent => agent.DoReset());
-
+            PostStepReset?.Invoke();
+            
             _gymStepOngoing = false;
+            PostStep?.Invoke();
         }
 
         private IEnumerator DisconnectedActionStepper()
@@ -284,6 +296,7 @@ namespace Scripts.VecEnv.Core
 
             while (!_gymStepOngoing && !_firstResetComplete && !_connectionInitialized)
             {
+                PreStep?.Invoke();
                 for (int i = 0; i < physicsStepsPerGymStep; i++)
                 {
                     if (_gymStepOngoing || _firstResetComplete || _connectionInitialized)
@@ -305,7 +318,11 @@ namespace Scripts.VecEnv.Core
                 enabledAgents.ForEach(agent => agent.DoGymStep());
                 PreObservation?.Invoke();
                 enabledAgents.ForEach(agent => agent.ProduceObservation());
+                PostObservation?.Invoke();
+                PreStepReset?.Invoke();
                 enabledAgents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ForEach(agent => { agent.DoReset(); });
+                PostStepReset?.Invoke();
+                PostStep?.Invoke();
                 enabledAgents.ForEach(agent => agent.DoInternalAction());
             }
 
