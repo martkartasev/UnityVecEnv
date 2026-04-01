@@ -111,11 +111,13 @@ public class FlyCamera : MonoBehaviour
     static bool GetMouseButtonDown(int button)
     {
 #if ENABLE_INPUT_SYSTEM
+        var mouse = Mouse.current;
+        if (mouse == null) return false;
         return button switch
         {
-            0 => Mouse.current.leftButton.wasPressedThisFrame,
-            1 => Mouse.current.rightButton.wasPressedThisFrame,
-            2 => Mouse.current.middleButton.wasPressedThisFrame,
+            0 => mouse.leftButton.wasPressedThisFrame,
+            1 => mouse.rightButton.wasPressedThisFrame,
+            2 => mouse.middleButton.wasPressedThisFrame,
             _ => false
         };
 #else
@@ -126,11 +128,13 @@ public class FlyCamera : MonoBehaviour
     static bool GetMouseButtonUp(int button)
     {
 #if ENABLE_INPUT_SYSTEM
+        var mouse = Mouse.current;
+        if (mouse == null) return false;
         return button switch
         {
-            0 => Mouse.current.leftButton.wasReleasedThisFrame,
-            1 => Mouse.current.rightButton.wasReleasedThisFrame,
-            2 => Mouse.current.middleButton.wasReleasedThisFrame,
+            0 => mouse.leftButton.wasReleasedThisFrame,
+            1 => mouse.rightButton.wasReleasedThisFrame,
+            2 => mouse.middleButton.wasReleasedThisFrame,
             _ => false
         };
 #else
@@ -141,7 +145,9 @@ public class FlyCamera : MonoBehaviour
     static float GetMouseAxis(string axisName)
     {
 #if ENABLE_INPUT_SYSTEM
-        Vector2 delta = Mouse.current.delta.ReadValue();
+        var mouse = Mouse.current;
+        if (mouse == null) return 0f;
+        Vector2 delta = mouse.delta.ReadValue();
         return axisName == "Mouse X" ? delta.x : delta.y;
 #else
         return Input.GetAxis(axisName);

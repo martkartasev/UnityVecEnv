@@ -51,17 +51,17 @@ Shader "Hidden/VecEnv/HdrpDepthRender"
                 out SurfaceData surfaceData,
                 out BuiltinData builtinData)
             {
-                ZERO_BUILTIN_INITIALIZE(builtinData);
+                ZERO_INITIALIZE(SurfaceData, surfaceData);
+                ZERO_INITIALIZE(BuiltinData, builtinData);
                 builtinData.opacity = 1;
                 builtinData.emissiveColor = 0;
 
-                float eyeDepth = LinearEyeDepth(fragInputs.positionSS.z, _ZBufferParams);
+                float eyeDepth = posInput.linearDepth;
                 float depthRange = max(0.0001, _DepthMetersMax - _DepthMetersMin);
                 // Emit higher values for nearby pixels and fade toward 0 as depth approaches the max range.
                 float depth01 = 1.0 - saturate((eyeDepth - _DepthMetersMin) / depthRange);
 
                 surfaceData.color = depth01.xxx;
-                surfaceData.normalWS = 0.0;
             }
 
             #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPassForwardUnlit.hlsl"

@@ -17,13 +17,15 @@ Shader "Hidden/VecEnv/DepthObservation"
 
             #include "UnityCG.cginc"
 
-            UNITY_DECLARE_DEPTH_TEXTURE(_LastCameraDepthTexture);
+            // Sample the active observation camera's depth texture.
+            // _LastCameraDepthTexture can point to another camera's depth buffer, which leaves our capture empty.
+            UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
             float _DepthMetersMin;
             float _DepthMetersMax;
 
             fixed4 frag(v2f_img i) : SV_Target
             {
-                const float rawDepth = SAMPLE_DEPTH_TEXTURE(_LastCameraDepthTexture, i.uv);
+                const float rawDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv);
                 const float eyeDepth = LinearEyeDepth(rawDepth);
                 const float depthRange = max(0.0001, _DepthMetersMax - _DepthMetersMin);
                 // Emit higher values for nearby pixels and fade toward 0 as depth approaches the max range.

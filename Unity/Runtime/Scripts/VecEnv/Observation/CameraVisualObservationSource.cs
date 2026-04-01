@@ -60,6 +60,7 @@ namespace Scripts.VecEnv.Observation
         private const TextureFormat ReadbackFormat = TextureFormat.RGBA32;
         private const int ReadbackChannels = 4;
         private const string DepthEncodeShaderName = "Hidden/VecEnv/DepthObservation";
+        private const string DepthEncodeShaderResourcePath = "VecEnv/VecEnvDepthObservation";
 
         private Camera _runtimeCamera;
         private GameObject _runtimeCameraObject;
@@ -78,6 +79,11 @@ namespace Scripts.VecEnv.Observation
         private Material _depthEncodeMaterial;
         private Material _demoMaterial;
         private Color32[] _debugPreviewPixels;
+        private int _debugCaptureSummaryCount;
+        private bool _debugLoggedNonZeroCapture;
+        private string _lastReadbackMode = "None";
+        private bool _hdrpCustomPassRuntimeSupported = true;
+        private bool _loggedHdrpCustomPassFallback;
         private Component _hdrpDepthCustomPassBridgeComponent;
         private IHdrpDepthCaptureBridge _hdrpDepthCustomPassBridge;
         private static readonly Type HdRenderPipelineAssetType =
@@ -97,7 +103,8 @@ namespace Scripts.VecEnv.Observation
             IsDepthMode &&
             hdrpDepthCaptureMode == HdrpDepthCaptureMode.CustomPassDepth &&
             IsHdrpActive &&
-            HdrpDepthCustomPassBridgeType != null;
+            HdrpDepthCustomPassBridgeType != null &&
+            _hdrpCustomPassRuntimeSupported;
 
         public override Texture DebugPreviewTexture =>
             _debugPreviewTexture != null ? _debugPreviewTexture : (_renderTexture != null ? _renderTexture : _readbackTexture);
@@ -127,6 +134,8 @@ namespace Scripts.VecEnv.Observation
             height = Mathf.Max(1, height);
             _asyncReadbackDisabled = false;
             _loggedAsyncReadbackFallback = false;
+            _hdrpCustomPassRuntimeSupported = true;
+            _loggedHdrpCustomPassFallback = false;
 
             EnsureCamera();
             EnsureRenderTarget();
@@ -266,6 +275,7 @@ namespace Scripts.VecEnv.Observation
                 return;
             }
 
+            _lastReadbackMode = "AsyncGPUReadback";
             ConvertReadbackBuffer();
         }
 
@@ -329,6 +339,7 @@ namespace Scripts.VecEnv.Observation
         private void CaptureWithReadPixels()
         {
             EnsureBuffers();
+            _lastReadbackMode = "ReadPixels";
             var previous = RenderTexture.active;
             RenderTexture.active = _renderTexture;
             var texture = EnsureReadbackTexture();
@@ -388,7 +399,6 @@ namespace Scripts.VecEnv.Observation
                 EnsureDepthResources();
                 _runtimeCamera.targetTexture = _captureRenderTexture;
                 _runtimeCamera.Render();
-
                 if (UseHdrpCustomPassDepth)
                 {
                     return;
@@ -518,12 +528,14 @@ namespace Scripts.VecEnv.Observation
             if (dataType == VisualObservationDataType.UInt8)
             {
                 ConvertToUInt8(pixelCount);
+                LogCaptureSummary();
                 UpdateDebugPreviewTexture(pixelCount);
                 _hasLatestObservation = true;
                 return;
             }
 
             ConvertToFloat32(pixelCount);
+            LogCaptureSummary();
             UpdateDebugPreviewTexture(pixelCount);
             _hasLatestObservation = true;
         }
@@ -708,6 +720,91 @@ namespace Scripts.VecEnv.Observation
             Buffer.BlockCopy(_floatScratch, 0, _latestObservationBytes, 0, _latestObservationBytes.Length);
         }
 
+        private void LogCaptureSummary()
+        {
+            var rawSummary = SummarizeReadbackBuffer();
+            var observationSummary = SummarizeByteArray(_latestObservationBytes);
+            var shouldLog = _debugCaptureSummaryCount < 6 || (!_debugLoggedNonZeroCapture && observationSummary.max > 0);
+            if (!shouldLog)
+            {
+                return;
+            }
+
+            Debug.Log(
+                $"Visual observation '{ObservationName}' capture frame={Time.frameCount} mode={contentMode}/{dataType} " +
+                $"path={(IsDepthMode ? (UseHdrpCustomPassDepth ? "HdrpCustomPass" : "CameraDepthTexture") : "Color")} " +
+                $"readback={_lastReadbackMode} " +
+                $"raw(len={rawSummary.length} min={rawSummary.min} max={rawSummary.max} sample=[{rawSummary.sample}]) " +
+                $"obs(len={observationSummary.length} min={observationSummary.min} max={observationSummary.max} sample=[{observationSummary.sample}])");
+
+            _debugCaptureSummaryCount++;
+            if (observationSummary.max > 0)
+            {
+                _debugLoggedNonZeroCapture = true;
+            }
+        }
+
+        private (int length, byte min, byte max, string sample) SummarizeReadbackBuffer()
+        {
+            if (!_readbackBuffer.IsCreated || _readbackBuffer.Length == 0)
+            {
+                return (0, 0, 0, string.Empty);
+            }
+
+            byte min = byte.MaxValue;
+            byte max = byte.MinValue;
+            for (int i = 0; i < _readbackBuffer.Length; i++)
+            {
+                var value = _readbackBuffer[i];
+                if (value < min)
+                {
+                    min = value;
+                }
+
+                if (value > max)
+                {
+                    max = value;
+                }
+            }
+
+            var sampleCount = Math.Min(8, _readbackBuffer.Length);
+            var sampleValues = new string[sampleCount];
+            for (int i = 0; i < sampleCount; i++)
+            {
+                sampleValues[i] = _readbackBuffer[i].ToString();
+            }
+
+            return (_readbackBuffer.Length, min, max, string.Join(",", sampleValues));
+        }
+
+        private static (int length, byte min, byte max, string sample) SummarizeByteArray(byte[] data)
+        {
+            if (data == null || data.Length == 0)
+            {
+                return (0, 0, 0, string.Empty);
+            }
+
+            byte min = byte.MaxValue;
+            byte max = byte.MinValue;
+            for (int i = 0; i < data.Length; i++)
+            {
+                var value = data[i];
+                if (value < min)
+                {
+                    min = value;
+                }
+
+                if (value > max)
+                {
+                    max = value;
+                }
+            }
+
+            var sampleCount = Math.Min(8, data.Length);
+            var sample = string.Join(",", data.AsSpan(0, sampleCount).ToArray());
+            return (data.Length, min, max, sample);
+        }
+
         private int OutputChannels()
         {
             if (IsDepthMode)
@@ -840,11 +937,16 @@ namespace Scripts.VecEnv.Observation
                 return;
             }
 
-            var depthShader = Shader.Find(DepthEncodeShaderName);
+            var depthShader = Resources.Load<Shader>(DepthEncodeShaderResourcePath);
+            if (depthShader == null)
+            {
+                depthShader = Shader.Find(DepthEncodeShaderName);
+            }
             if (depthShader == null)
             {
                 throw new InvalidOperationException(
-                    $"Could not find shader '{DepthEncodeShaderName}' required for depth visual observations.");
+                    $"Could not find shader '{DepthEncodeShaderName}' required for depth visual observations. " +
+                    $"Looked in Resources at '{DepthEncodeShaderResourcePath}' and via Shader.Find.");
             }
 
             _depthEncodeMaterial = new Material(depthShader)
@@ -893,12 +995,22 @@ namespace Scripts.VecEnv.Observation
             }
 
             _hdrpDepthCustomPassBridgeComponent.hideFlags = HideFlags.HideAndDontSave;
-            _hdrpDepthCustomPassBridge.Configure(
+            _hdrpCustomPassRuntimeSupported = _hdrpDepthCustomPassBridge.Configure(
                 _runtimeCamera,
                 _renderTexture,
                 cullingMask,
                 Mathf.Max(0f, depthRangeMinMeters),
                 Mathf.Max(depthRangeMinMeters + 0.001f, depthRangeMaxMeters));
+
+            if (_hdrpCustomPassRuntimeSupported || _loggedHdrpCustomPassFallback)
+            {
+                return;
+            }
+
+            _loggedHdrpCustomPassFallback = true;
+            Debug.LogWarning(
+                $"HDRP custom-pass depth capture is unavailable for visual observation '{ObservationName}'. " +
+                $"Falling back to CameraDepthTexture depth encoding. {_hdrpDepthCustomPassBridge.UnsupportedReason}");
         }
 
         private void ClearHdrpCustomPassCapture()

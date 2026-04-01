@@ -11,13 +11,16 @@ namespace Scripts.VecEnv.Observation
     {
         private const string VolumeObjectName = "VecEnvHdrpDepthCustomPassVolume";
         private const string DepthOverrideShaderName = "Hidden/VecEnv/HdrpDepthRender";
+        private const string DepthOverrideShaderResourcePath = "VecEnv/HdrpDepthRender";
 
+        private static bool _loggedPipelineDiagnostics;
         private CustomPassVolume _volume;
         private CameraDepthCapturePass _pass;
         private Camera _targetCamera;
         private HDAdditionalCameraData _additionalCameraData;
+        public string UnsupportedReason { get; private set; }
 
-        public void Configure(Camera targetCamera, RenderTexture targetTexture, LayerMask layerMask, float depthMinMeters,
+        public bool Configure(Camera targetCamera, RenderTexture targetTexture, LayerMask layerMask, float depthMinMeters,
             float depthMaxMeters)
         {
             _targetCamera = targetCamera;
@@ -25,7 +28,7 @@ namespace Scripts.VecEnv.Observation
             EnsureVolume();
 
             _volume.targetCamera = targetCamera;
-            _volume.injectionPoint = CustomPassInjectionPoint.BeforeTransparent;
+            _volume.injectionPoint = CustomPassInjectionPoint.AfterOpaqueDepthAndNormal;
             _volume.isGlobal = true;
             _volume.priority = 1000f;
 
@@ -34,7 +37,11 @@ namespace Scripts.VecEnv.Observation
             _pass.layerMask = layerMask;
             _pass.depthMinMeters = Mathf.Max(0f, depthMinMeters);
             _pass.depthMaxMeters = Mathf.Max(depthMinMeters + 0.001f, depthMaxMeters);
-            _pass.enabled = targetCamera != null && targetTexture != null;
+            UnsupportedReason = GetUnsupportedReason();
+            _pass.enabled = targetCamera != null && targetTexture != null && string.IsNullOrEmpty(UnsupportedReason);
+
+            LogPipelineDiagnostics(targetCamera, targetTexture, layerMask);
+            return string.IsNullOrEmpty(UnsupportedReason);
         }
 
         private void OnEnable()
@@ -89,7 +96,7 @@ namespace Scripts.VecEnv.Observation
             _volume.name = VolumeObjectName;
             _volume.fadeRadius = 0f;
             _volume.priority = 1000f;
-            _volume.injectionPoint = CustomPassInjectionPoint.BeforeTransparent;
+            _volume.injectionPoint = CustomPassInjectionPoint.AfterOpaqueDepthAndNormal;
             _volume.isGlobal = true;
 
             if (_pass != null)
@@ -156,9 +163,76 @@ namespace Scripts.VecEnv.Observation
             _additionalCameraData = null;
         }
 
+        private static void LogPipelineDiagnostics(Camera targetCamera, RenderTexture targetTexture, LayerMask layerMask)
+        {
+            if (_loggedPipelineDiagnostics)
+            {
+                return;
+            }
+
+            _loggedPipelineDiagnostics = true;
+            var qualityLevel = QualitySettings.GetQualityLevel();
+            var qualityName = qualityLevel >= 0 && qualityLevel < QualitySettings.names.Length
+                ? QualitySettings.names[qualityLevel]
+                : qualityLevel.ToString();
+
+            var pipelineAsset = GraphicsSettings.currentRenderPipeline as HDRenderPipelineAsset;
+            if (pipelineAsset == null)
+            {
+                Debug.LogWarning(
+                    $"HDRP depth custom pass expected an HDRenderPipelineAsset, but GraphicsSettings.currentRenderPipeline is '{GraphicsSettings.currentRenderPipeline?.name ?? "null"}'.");
+                return;
+            }
+
+            var settings = pipelineAsset.currentPlatformRenderPipelineSettings;
+            Debug.Log(
+                $"HDRP depth custom pass diagnostics: quality='{qualityName}', pipeline='{pipelineAsset.name}', " +
+                $"supportCustomPass={settings.supportCustomPass}, supportedLitShaderMode={settings.supportedLitShaderMode}, " +
+                $"camera='{targetCamera?.name ?? "null"}', layerMask={layerMask.value}, targetTexture={(targetTexture != null ? $"{targetTexture.width}x{targetTexture.height}" : "null")}.");
+
+            if (!settings.supportCustomPass)
+            {
+                Debug.LogWarning(
+                    $"HDRP asset '{pipelineAsset.name}' has supportCustomPass disabled for the active player platform/quality level. " +
+                    "Custom-pass depth observations will stay black until Custom Pass is enabled.");
+            }
+
+            if (settings.supportedLitShaderMode != RenderPipelineSettings.SupportedLitShaderMode.Both)
+            {
+                Debug.LogWarning(
+                    $"HDRP asset '{pipelineAsset.name}' uses supportedLitShaderMode={settings.supportedLitShaderMode}. " +
+                    "Unity documents that custom passes render through the forward path; player builds can fail unless Lit Shader Mode is set to Both.");
+            }
+        }
+
+        private static string GetUnsupportedReason()
+        {
+            var pipelineAsset = GraphicsSettings.currentRenderPipeline as HDRenderPipelineAsset;
+            if (pipelineAsset == null)
+            {
+                return "GraphicsSettings.currentRenderPipeline is not an HDRenderPipelineAsset.";
+            }
+
+            var settings = pipelineAsset.currentPlatformRenderPipelineSettings;
+            if (!settings.supportCustomPass)
+            {
+                return $"HDRP asset '{pipelineAsset.name}' has supportCustomPass disabled for the active platform.";
+            }
+
+            if (settings.supportedLitShaderMode != RenderPipelineSettings.SupportedLitShaderMode.Both)
+            {
+                return $"HDRP asset '{pipelineAsset.name}' uses supportedLitShaderMode={settings.supportedLitShaderMode}. " +
+                       "Custom-pass renderer overrides require Lit Shader Mode to be set to Both.";
+            }
+
+            return null;
+        }
+
         [System.Serializable]
         private sealed class CameraDepthCapturePass : CustomPass
         {
+            private static bool _loggedMissingDepthShader;
+            private static bool _loggedFirstExecute;
             [System.NonSerialized] internal Camera targetCamera;
             [System.NonSerialized] internal RenderTexture targetTexture;
             [System.NonSerialized] internal LayerMask layerMask;
@@ -175,11 +249,27 @@ namespace Scripts.VecEnv.Observation
                     return;
                 }
 
-                var shader = Shader.Find(DepthOverrideShaderName);
+                var shader = Resources.Load<Shader>(DepthOverrideShaderResourcePath);
+                if (shader == null)
+                {
+                    shader = Shader.Find(DepthOverrideShaderName);
+                }
                 if (shader != null)
                 {
                     _depthOverrideMaterial = CoreUtils.CreateEngineMaterial(shader);
+                    return;
                 }
+
+                if (_loggedMissingDepthShader)
+                {
+                    return;
+                }
+
+                _loggedMissingDepthShader = true;
+                Debug.LogWarning(
+                    $"Could not find HDRP depth override shader '{DepthOverrideShaderName}'. " +
+                    $"Looked in Resources at '{DepthOverrideShaderResourcePath}' and via Shader.Find. " +
+                    "HDRP custom-pass depth observations will remain black until the shader is included in the build.");
             }
 
             protected override void Execute(CustomPassContext ctx)
@@ -187,6 +277,13 @@ namespace Scripts.VecEnv.Observation
                 if (!enabled || targetCamera == null || targetTexture == null || _depthOverrideMaterial == null)
                 {
                     return;
+                }
+
+                if (!_loggedFirstExecute)
+                {
+                    _loggedFirstExecute = true;
+                    Debug.Log(
+                        $"HDRP depth custom pass Execute() for camera '{targetCamera.name}' target='{targetTexture.width}x{targetTexture.height}' layerMask={layerMask.value} injectionPoint={injectionPoint}.");
                 }
 
                 _depthOverrideMaterial.SetFloat("_DepthMetersMin", Mathf.Max(0f, depthMinMeters));

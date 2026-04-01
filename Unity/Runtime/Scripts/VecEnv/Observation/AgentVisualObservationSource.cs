@@ -7,6 +7,8 @@ namespace Scripts.VecEnv.Observation
 {
     public abstract class AgentVisualObservationSource : MonoBehaviour
     {
+        private static readonly System.Collections.Generic.HashSet<string> LoggedBuildObservationSummaries = new();
+        private static readonly System.Collections.Generic.HashSet<string> LoggedNonZeroBuildObservationSummaries = new();
         [SerializeField] private string observationName = "visual";
 
         protected GymAgent Agent { get; private set; }
@@ -60,6 +62,8 @@ namespace Scripts.VecEnv.Observation
                 Buffer.BlockCopy(sourceBytes, 0, snapshot, 0, sourceBytes.Length);
             }
 
+            LogObservationSummaryOnce("source-snapshot", ObservationName, snapshot);
+
             return new AgentVisualObservation
             {
                 Name = ObservationName,
@@ -82,5 +86,60 @@ namespace Scripts.VecEnv.Observation
         protected abstract void OnBeginAsyncCapture();
         protected abstract void OnUpdateCapture();
         protected abstract void OnCaptureBlocking();
+
+        private static void LogObservationSummaryOnce(string stage, string observationName, byte[] data)
+        {
+            var key = $"{stage}:{observationName}";
+            var hasNonZero = false;
+            if (data != null)
+            {
+                for (int i = 0; i < data.Length; i++)
+                {
+                    if (data[i] != 0)
+                    {
+                        hasNonZero = true;
+                        break;
+                    }
+                }
+            }
+
+            var shouldLog = LoggedBuildObservationSummaries.Add(key);
+            if (hasNonZero)
+            {
+                shouldLog |= LoggedNonZeroBuildObservationSummaries.Add($"{key}:nonzero");
+            }
+
+            if (!shouldLog)
+            {
+                return;
+            }
+
+            if (data == null || data.Length == 0)
+            {
+                Debug.Log($"Visual observation '{observationName}' {stage}: len=0");
+                return;
+            }
+
+            byte min = byte.MaxValue;
+            byte max = byte.MinValue;
+            for (int i = 0; i < data.Length; i++)
+            {
+                var value = data[i];
+                if (value < min)
+                {
+                    min = value;
+                }
+
+                if (value > max)
+                {
+                    max = value;
+                }
+            }
+
+            var sampleCount = Math.Min(8, data.Length);
+            var sample = string.Join(",", data.AsSpan(0, sampleCount).ToArray());
+            Debug.Log(
+                $"Visual observation '{observationName}' {stage}: len={data.Length} min={min} max={max} sample=[{sample}]");
+        }
     }
 }
