@@ -18,6 +18,7 @@ def start_unity_process(executable_path: str,
                         decision_period: int = 10,
                         timeout_ms: int = 0,
                         no_graphics: bool = True,
+                        batch_mode: bool = True,
                         scene_load: str = ""):
     args = [executable_path,
             ARG_CHANNEL, str(port),
@@ -38,8 +39,11 @@ def start_unity_process(executable_path: str,
     if decision_period != 10:
         args += [ARG_DECISION_PERIOD, str(decision_period)]
 
+    if batch_mode:
+        args += ["-batchmode" ]
+
     if no_graphics:
-        args += ["-batchmode"] # "-nographics" # "-headless"
+        args += ["-nographics"]
 
     popen = subprocess.Popen(args)
     print("Started Unity process on port {}".format(port))

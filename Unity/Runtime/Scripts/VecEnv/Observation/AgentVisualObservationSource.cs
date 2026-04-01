@@ -53,10 +53,17 @@ namespace Scripts.VecEnv.Observation
 
         internal AgentVisualObservation BuildObservation()
         {
+            var sourceBytes = GetLatestObservationBytes() ?? Array.Empty<byte>();
+            var snapshot = new byte[sourceBytes.Length];
+            if (sourceBytes.Length > 0)
+            {
+                Buffer.BlockCopy(sourceBytes, 0, snapshot, 0, sourceBytes.Length);
+            }
+
             return new AgentVisualObservation
             {
                 Name = ObservationName,
-                Data = GetLatestObservationBytes() ?? Array.Empty<byte>()
+                Data = snapshot
             };
         }
 

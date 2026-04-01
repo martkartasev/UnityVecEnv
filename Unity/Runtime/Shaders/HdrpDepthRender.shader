@@ -57,7 +57,8 @@ Shader "Hidden/VecEnv/HdrpDepthRender"
 
                 float eyeDepth = LinearEyeDepth(fragInputs.positionSS.z, _ZBufferParams);
                 float depthRange = max(0.0001, _DepthMetersMax - _DepthMetersMin);
-                float depth01 = saturate((eyeDepth - _DepthMetersMin) / depthRange);
+                // Emit higher values for nearby pixels and fade toward 0 as depth approaches the max range.
+                float depth01 = 1.0 - saturate((eyeDepth - _DepthMetersMin) / depthRange);
 
                 surfaceData.color = depth01.xxx;
                 surfaceData.normalWS = 0.0;

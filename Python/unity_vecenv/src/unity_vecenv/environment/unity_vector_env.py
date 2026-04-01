@@ -36,12 +36,13 @@ class UnityVectorEnv(VectorEnv):
                  executable_path: Optional[str] = None,
                  start_process: bool = True,
                  no_graphics: bool = True,
+                 batch_mode: bool = True,
                  time_scale=10,
                  physics_steps_per_action: int = 10,
                  port: int = 50010,
                  num_envs: int = 1,
                  scene_load: str = "",
-                 log_file: str = "", ):
+                 log_file: str = ""):
         super(UnityVectorEnv, self).__init__()
 
         self.metadata = {
@@ -57,7 +58,7 @@ class UnityVectorEnv(VectorEnv):
                (not start_process and not is_port_in_use(self.port))):
             self.port += 1
 
-        self.process = start_unity_process(executable_path, scene_load=scene_load, port=self.port, nr_agents=num_envs, no_graphics=no_graphics, timescale=self.time_scale, log_file=log_file) if start_process else None
+        self.process = start_unity_process(executable_path, scene_load=scene_load, port=self.port, nr_agents=num_envs, batch_mode=batch_mode, no_graphics=no_graphics, timescale=self.time_scale, log_file=log_file) if start_process else None
         self.client = start_client(port=self.port)
 
         environment_description = self.initialize_environment(num_envs)
@@ -364,7 +365,8 @@ class UnityVectorEnv(VectorEnv):
             dtype = np.float32 if int(spec.dataType) == 1 else np.uint8
             shape = tuple(int(s) for s in spec.shape)
             expected = int(np.prod(shape, dtype=np.int64)) * nr_agents
-            arr = np.frombuffer(payload_lookup[key].data, dtype=dtype)
+            payload = bytes(payload_lookup[key].data)
+            arr = np.frombuffer(payload, dtype=dtype)
             if arr.size != expected:
                 raise RuntimeError(
                     f"Visual observation '{key}' has {arr.size} values, expected {expected}."
@@ -547,10 +549,3 @@ class UnityVectorEnv(VectorEnv):
             raise TypeError(f"Unsupported single_action_space: {type(sas)}")
 
         return step
-
-
-
-
-
-
-

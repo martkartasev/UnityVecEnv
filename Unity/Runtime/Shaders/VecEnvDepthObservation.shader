@@ -26,7 +26,8 @@ Shader "Hidden/VecEnv/DepthObservation"
                 const float rawDepth = SAMPLE_DEPTH_TEXTURE(_LastCameraDepthTexture, i.uv);
                 const float eyeDepth = LinearEyeDepth(rawDepth);
                 const float depthRange = max(0.0001, _DepthMetersMax - _DepthMetersMin);
-                const float depth01 = saturate((eyeDepth - _DepthMetersMin) / depthRange);
+                // Emit higher values for nearby pixels and fade toward 0 as depth approaches the max range.
+                const float depth01 = 1.0 - saturate((eyeDepth - _DepthMetersMin) / depthRange);
                 return fixed4(depth01, depth01, depth01, 1.0);
             }
             ENDCG

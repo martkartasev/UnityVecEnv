@@ -379,7 +379,7 @@ namespace Scripts.VecEnv.Networking
                 batchedVisuals[visualIndex] = new BatchedVisualObservation
                 {
                     Name = name,
-                    Data = ByteArrayToByteString(batchedData)
+                    Data = ByteString.CopyFrom(batchedData)
                 };
             }
 
