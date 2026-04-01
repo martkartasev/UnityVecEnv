@@ -206,8 +206,13 @@ void OnEnable()
 {
     GymVecEnvManager.Instance.PreInitialize += OnPreInitialize;
     GymVecEnvManager.Instance.PostInitialize += OnPostInitialize;
+    GymVecEnvManager.Instance.PreStep += OnPreStep;
     GymVecEnvManager.Instance.PreObservation += OnPreObservation;
+    GymVecEnvManager.Instance.PostObservation += OnPostObservation;
     GymVecEnvManager.Instance.EarlyObservation += OnEarlyObservation;
+    GymVecEnvManager.Instance.PreStepReset += OnPreStepReset;
+    GymVecEnvManager.Instance.PostStepReset += OnPostStepReset;
+    GymVecEnvManager.Instance.PostStep += OnPostStep;
 }
 ```
 
@@ -215,8 +220,23 @@ void OnEnable()
 |---|---|
 | `PreInitialize` | Before agents are spawned during initialization. |
 | `PostInitialize` | After all agents are initialized and `Initialize()` has been called. |
+| `PreStep` | At the start of a step, before the physics-step loop begins. |
 | `PreObservation` | Immediately before `CollectObservation` is called on all agents. |
+| `PostObservation` | Immediately after observations and infos have been collected for the current reset or step. |
 | `EarlyObservation` | Halfway through the physics steps, useful for mid-step state capture. |
+| `PreStepReset` | After a step result has been produced, immediately before done agents are reset. |
+| `PostStepReset` | Immediately after done agents have been reset at the end of a step. |
+| `PostStep` | After the step is fully complete. |
+
+During a normal connected step, the event order is:
+
+`PreStep -> EarlyObservation -> PreObservation -> PostObservation -> PreStepReset -> PostStepReset -> PostStep`
+
+During an explicit environment reset, only the observation events fire:
+
+`PreObservation -> PostObservation`
+
+These step events also fire in the disconnected Editor stepping loop, so subscribers can use the same hooks with or without a live Python connection.
 
 ---
 
