@@ -21,7 +21,7 @@ namespace Scripts.VecEnv.Observation
         public string UnsupportedReason { get; private set; }
 
         public bool Configure(Camera targetCamera, RenderTexture targetTexture, LayerMask layerMask, float depthMinMeters,
-            float depthMaxMeters)
+            float depthMaxMeters, bool verboseDebugLogging)
         {
             _targetCamera = targetCamera;
             EnsureAdditionalCameraData(targetCamera);
@@ -37,10 +37,11 @@ namespace Scripts.VecEnv.Observation
             _pass.layerMask = layerMask;
             _pass.depthMinMeters = Mathf.Max(0f, depthMinMeters);
             _pass.depthMaxMeters = Mathf.Max(depthMinMeters + 0.001f, depthMaxMeters);
+            _pass.verboseDebugLogging = verboseDebugLogging;
             UnsupportedReason = GetUnsupportedReason();
             _pass.enabled = targetCamera != null && targetTexture != null && string.IsNullOrEmpty(UnsupportedReason);
 
-            LogPipelineDiagnostics(targetCamera, targetTexture, layerMask);
+            LogPipelineDiagnostics(targetCamera, targetTexture, layerMask, verboseDebugLogging);
             return string.IsNullOrEmpty(UnsupportedReason);
         }
 
@@ -163,7 +164,8 @@ namespace Scripts.VecEnv.Observation
             _additionalCameraData = null;
         }
 
-        private static void LogPipelineDiagnostics(Camera targetCamera, RenderTexture targetTexture, LayerMask layerMask)
+        private static void LogPipelineDiagnostics(Camera targetCamera, RenderTexture targetTexture, LayerMask layerMask,
+            bool verboseDebugLogging)
         {
             if (_loggedPipelineDiagnostics)
             {
@@ -185,10 +187,13 @@ namespace Scripts.VecEnv.Observation
             }
 
             var settings = pipelineAsset.currentPlatformRenderPipelineSettings;
-            Debug.Log(
-                $"HDRP depth custom pass diagnostics: quality='{qualityName}', pipeline='{pipelineAsset.name}', " +
-                $"supportCustomPass={settings.supportCustomPass}, supportedLitShaderMode={settings.supportedLitShaderMode}, " +
-                $"camera='{targetCamera?.name ?? "null"}', layerMask={layerMask.value}, targetTexture={(targetTexture != null ? $"{targetTexture.width}x{targetTexture.height}" : "null")}.");
+            if (verboseDebugLogging)
+            {
+                Debug.Log(
+                    $"HDRP depth custom pass diagnostics: quality='{qualityName}', pipeline='{pipelineAsset.name}', " +
+                    $"supportCustomPass={settings.supportCustomPass}, supportedLitShaderMode={settings.supportedLitShaderMode}, " +
+                    $"camera='{targetCamera?.name ?? "null"}', layerMask={layerMask.value}, targetTexture={(targetTexture != null ? $"{targetTexture.width}x{targetTexture.height}" : "null")}.");
+            }
 
             if (!settings.supportCustomPass)
             {
@@ -238,6 +243,7 @@ namespace Scripts.VecEnv.Observation
             [System.NonSerialized] internal LayerMask layerMask;
             [System.NonSerialized] internal float depthMinMeters;
             [System.NonSerialized] internal float depthMaxMeters;
+            [System.NonSerialized] internal bool verboseDebugLogging;
             [System.NonSerialized] private Material _depthOverrideMaterial;
 
             protected override bool executeInSceneView => false;
@@ -279,7 +285,7 @@ namespace Scripts.VecEnv.Observation
                     return;
                 }
 
-                if (!_loggedFirstExecute)
+                if (verboseDebugLogging && !_loggedFirstExecute)
                 {
                     _loggedFirstExecute = true;
                     Debug.Log(

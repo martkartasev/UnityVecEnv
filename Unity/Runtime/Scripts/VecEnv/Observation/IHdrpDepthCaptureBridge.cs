@@ -6,6 +6,6 @@ namespace Scripts.VecEnv.Observation
     {
         string UnsupportedReason { get; }
         bool Configure(Camera targetCamera, RenderTexture targetTexture, LayerMask layerMask, float depthMinMeters,
-            float depthMaxMeters);
+            float depthMaxMeters, bool verboseDebugLogging);
     }
 }

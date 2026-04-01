@@ -722,6 +722,11 @@ namespace Scripts.VecEnv.Observation
 
         private void LogCaptureSummary()
         {
+            if (!VerboseDebugLoggingEnabled)
+            {
+                return;
+            }
+
             var rawSummary = SummarizeReadbackBuffer();
             var observationSummary = SummarizeByteArray(_latestObservationBytes);
             var shouldLog = _debugCaptureSummaryCount < 6 || (!_debugLoggedNonZeroCapture && observationSummary.max > 0);
@@ -1000,7 +1005,8 @@ namespace Scripts.VecEnv.Observation
                 _renderTexture,
                 cullingMask,
                 Mathf.Max(0f, depthRangeMinMeters),
-                Mathf.Max(depthRangeMinMeters + 0.001f, depthRangeMaxMeters));
+                Mathf.Max(depthRangeMinMeters + 0.001f, depthRangeMaxMeters),
+                VerboseDebugLoggingEnabled);
 
             if (_hdrpCustomPassRuntimeSupported || _loggedHdrpCustomPassFallback)
             {

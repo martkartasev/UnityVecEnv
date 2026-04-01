@@ -383,7 +383,10 @@ namespace Scripts.VecEnv.Networking
                     Name = name,
                     Data = ByteString.CopyFrom(batchedData)
                 };
-                LogVisualSummaryOnce("server-batch", name, batchedData);
+                if (firstVisual.DebugLoggingEnabled)
+                {
+                    LogVisualSummaryOnce("server-batch", name, batchedData);
+                }
             }
 
             return batchedVisuals;

@@ -67,6 +67,7 @@ namespace Scripts.VecEnv.Message
     {
         public string Name;
         public byte[] Data;
+        public bool DebugLoggingEnabled;
     }
 
     public struct AgentObservation

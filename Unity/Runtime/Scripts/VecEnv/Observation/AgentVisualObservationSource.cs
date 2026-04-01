@@ -10,6 +10,7 @@ namespace Scripts.VecEnv.Observation
         private static readonly System.Collections.Generic.HashSet<string> LoggedBuildObservationSummaries = new();
         private static readonly System.Collections.Generic.HashSet<string> LoggedNonZeroBuildObservationSummaries = new();
         [SerializeField] private string observationName = "visual";
+        [SerializeField] private bool verboseDebugLogging;
 
         protected GymAgent Agent { get; private set; }
         public string ObservationName { get; private set; }
@@ -18,6 +19,7 @@ namespace Scripts.VecEnv.Observation
             : ObservationName;
         public virtual Texture DebugPreviewTexture => null;
         public virtual string DebugPreviewDetails => null;
+        protected bool VerboseDebugLoggingEnabled => verboseDebugLogging;
 
         internal void InitializeSource(GymAgent agent, int index)
         {
@@ -62,12 +64,16 @@ namespace Scripts.VecEnv.Observation
                 Buffer.BlockCopy(sourceBytes, 0, snapshot, 0, sourceBytes.Length);
             }
 
-            LogObservationSummaryOnce("source-snapshot", ObservationName, snapshot);
+            if (verboseDebugLogging)
+            {
+                LogObservationSummaryOnce("source-snapshot", ObservationName, snapshot);
+            }
 
             return new AgentVisualObservation
             {
                 Name = ObservationName,
-                Data = snapshot
+                Data = snapshot,
+                DebugLoggingEnabled = verboseDebugLogging
             };
         }
 
