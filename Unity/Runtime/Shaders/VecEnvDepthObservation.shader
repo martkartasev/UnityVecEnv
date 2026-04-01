@@ -1,0 +1,35 @@
+Shader "Hidden/VecEnv/DepthObservation"
+{
+    SubShader
+    {
+        Tags { "RenderType" = "Opaque" }
+        Cull Off
+        ZWrite Off
+        ZTest Always
+
+        Pass
+        {
+            Name "DepthObservation"
+
+            CGPROGRAM
+            #pragma vertex vert_img
+            #pragma fragment frag
+
+            #include "UnityCG.cginc"
+
+            UNITY_DECLARE_DEPTH_TEXTURE(_LastCameraDepthTexture);
+            float _DepthMetersMin;
+            float _DepthMetersMax;
+
+            fixed4 frag(v2f_img i) : SV_Target
+            {
+                const float rawDepth = SAMPLE_DEPTH_TEXTURE(_LastCameraDepthTexture, i.uv);
+                const float eyeDepth = LinearEyeDepth(rawDepth);
+                const float depthRange = max(0.0001, _DepthMetersMax - _DepthMetersMin);
+                const float depth01 = saturate((eyeDepth - _DepthMetersMin) / depthRange);
+                return fixed4(depth01, depth01, depth01, 1.0);
+            }
+            ENDCG
+        }
+    }
+}

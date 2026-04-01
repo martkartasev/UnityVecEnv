@@ -101,7 +101,7 @@ namespace Scripts.VecEnv.Inference
                             $"Model expects visual input '{visualInput.name}', but no matching visual observation named '{visualKey}' was provided.");
                     }
 
-                    var inputTensor = CreateVisualInputTensor(binding.Observation, binding.Description);
+                    var inputTensor = CreateVisualInputTensor(binding.Observation, binding.Description, visualInput);
                     inputTensors.Add(inputTensor);
                     _worker.SetInput(visualInput.name, inputTensor);
                 }
@@ -136,46 +136,50 @@ namespace Scripts.VecEnv.Inference
 
         private static Tensor CreateVisualInputTensor(
             AgentVisualObservation visualObservation,
-            VisualObservationDescription description)
+            VisualObservationDescription description,
+            Model.Input modelInput)
         {
             if (description.Shape == null || description.Shape.Length == 0)
             {
                 throw new ArgumentException($"Visual observation '{description.Name}' has no shape metadata.");
             }
 
-            var elementCount = description.Shape.Aggregate(1, (acc, dim) => acc * dim);
-            var tensorShape = CreateTensorShapeWithBatch(description.Shape);
+            var sourceShape = description.Shape;
+            var sourceElementCount = sourceShape.Aggregate(1, (acc, dim) => acc * dim);
+            var targetShape = ResolveVisualTensorShape(modelInput, sourceShape);
+            var targetElementCount = targetShape.Aggregate(1, (acc, dim) => acc * dim);
+            var replicateSingleChannel = ShouldReplicateSingleChannel(sourceShape, targetShape);
+            var tensorShape = CreateTensorShapeWithBatch(targetShape);
 
             switch (description.DataType)
             {
                 case VisualObservationDataType.UInt8:
                 {
-                    if (visualObservation.Data == null || visualObservation.Data.Length != elementCount)
+                    if (visualObservation.Data == null || visualObservation.Data.Length != sourceElementCount)
                     {
                         throw new ArgumentException(
-                            $"Visual observation '{description.Name}' has {visualObservation.Data?.Length ?? 0} bytes, expected {elementCount}.");
+                            $"Visual observation '{description.Name}' has {visualObservation.Data?.Length ?? 0} bytes, expected {sourceElementCount}.");
                     }
 
-                    var values = new float[elementCount];
-                    for (var i = 0; i < elementCount; i++)
-                    {
-                        values[i] = visualObservation.Data[i];
-                    }
+                    var values = ConvertUInt8VisualData(visualObservation.Data, targetElementCount, replicateSingleChannel);
 
                     return new Tensor<float>(tensorShape, values);
                 }
 
                 case VisualObservationDataType.Float32:
                 {
-                    var expectedBytes = elementCount * sizeof(float);
+                    var expectedBytes = sourceElementCount * sizeof(float);
                     if (visualObservation.Data == null || visualObservation.Data.Length != expectedBytes)
                     {
                         throw new ArgumentException(
                             $"Visual observation '{description.Name}' has {visualObservation.Data?.Length ?? 0} bytes, expected {expectedBytes}.");
                     }
 
-                    var values = new float[elementCount];
-                    Buffer.BlockCopy(visualObservation.Data, 0, values, 0, expectedBytes);
+                    var values = ConvertFloat32VisualData(
+                        visualObservation.Data,
+                        sourceElementCount,
+                        targetElementCount,
+                        replicateSingleChannel);
                     return new Tensor<float>(tensorShape, values);
                 }
 
@@ -190,6 +194,162 @@ namespace Scripts.VecEnv.Inference
             fullShape[0] = 1;
             Array.Copy(shape, 0, fullShape, 1, shape.Length);
             return new TensorShape(fullShape);
+        }
+
+        private static int[] ResolveVisualTensorShape(Model.Input modelInput, int[] sourceShape)
+        {
+            var parsedModelShape = TryParseDynamicTensorShape(modelInput.shape.ToString());
+            if (parsedModelShape == null || parsedModelShape.Length != sourceShape.Length + 1)
+            {
+                return (int[])sourceShape.Clone();
+            }
+
+            var resolvedShape = new int[sourceShape.Length];
+            for (var i = 0; i < resolvedShape.Length; i++)
+            {
+                resolvedShape[i] = parsedModelShape[i + 1] > 0 ? parsedModelShape[i + 1] : sourceShape[i];
+            }
+
+            if (ShapesMatch(sourceShape, resolvedShape))
+            {
+                return resolvedShape;
+            }
+
+            if (ShouldReplicateSingleChannel(sourceShape, resolvedShape))
+            {
+                return resolvedShape;
+            }
+
+            throw new ArgumentException(
+                $"Visual observation '{modelInput.name}' expected shape {ShapeToString(resolvedShape)} but received {ShapeToString(sourceShape)}. " +
+                "Re-export the ONNX for the current visual configuration or use a compatible visual input shape.");
+        }
+
+        private static float[] ConvertUInt8VisualData(
+            byte[] sourceBytes,
+            int targetElementCount,
+            bool replicateSingleChannel)
+        {
+            if (!replicateSingleChannel)
+            {
+                var values = new float[targetElementCount];
+                for (var i = 0; i < targetElementCount; i++)
+                {
+                    values[i] = sourceBytes[i];
+                }
+
+                return values;
+            }
+
+            return ReplicateSingleChannelToRgb(sourceBytes);
+        }
+
+        private static float[] ConvertFloat32VisualData(
+            byte[] sourceBytes,
+            int sourceElementCount,
+            int targetElementCount,
+            bool replicateSingleChannel)
+        {
+            var sourceValues = new float[sourceElementCount];
+            Buffer.BlockCopy(sourceBytes, 0, sourceValues, 0, sourceBytes.Length);
+
+            if (!replicateSingleChannel)
+            {
+                return sourceValues;
+            }
+
+            var values = new float[targetElementCount];
+            for (var pixel = 0; pixel < sourceElementCount; pixel++)
+            {
+                var value = sourceValues[pixel];
+                var destinationIndex = pixel * 3;
+                values[destinationIndex] = value;
+                values[destinationIndex + 1] = value;
+                values[destinationIndex + 2] = value;
+            }
+
+            return values;
+        }
+
+        private static float[] ReplicateSingleChannelToRgb(byte[] sourceBytes)
+        {
+            var values = new float[sourceBytes.Length * 3];
+            for (var pixel = 0; pixel < sourceBytes.Length; pixel++)
+            {
+                var value = sourceBytes[pixel];
+                var destinationIndex = pixel * 3;
+                values[destinationIndex] = value;
+                values[destinationIndex + 1] = value;
+                values[destinationIndex + 2] = value;
+            }
+
+            return values;
+        }
+
+        private static bool ShapesMatch(int[] left, int[] right)
+        {
+            if (left.Length != right.Length)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < left.Length; i++)
+            {
+                if (left[i] != right[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool ShouldReplicateSingleChannel(int[] sourceShape, int[] targetShape)
+        {
+            if (sourceShape.Length != 3 || targetShape.Length != 3)
+            {
+                return false;
+            }
+
+            return sourceShape[0] == targetShape[0] &&
+                   sourceShape[1] == targetShape[1] &&
+                   sourceShape[2] == 1 &&
+                   targetShape[2] == 3;
+        }
+
+        private static int[] TryParseDynamicTensorShape(string shapeText)
+        {
+            if (string.IsNullOrWhiteSpace(shapeText))
+            {
+                return null;
+            }
+
+            var trimmed = shapeText.Trim();
+            if (trimmed == "?")
+            {
+                return null;
+            }
+
+            trimmed = trimmed.Trim('(', ')');
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                return Array.Empty<int>();
+            }
+
+            var parts = trimmed.Split(',');
+            var dimensions = new int[parts.Length];
+            for (var i = 0; i < parts.Length; i++)
+            {
+                var token = parts[i].Trim();
+                dimensions[i] = int.TryParse(token, out var parsedValue) ? parsedValue : -1;
+            }
+
+            return dimensions;
+        }
+
+        private static string ShapeToString(int[] shape)
+        {
+            return $"({string.Join(", ", shape)})";
         }
 
         private static Dictionary<string, VisualObservationBinding> BuildVisualLookup(

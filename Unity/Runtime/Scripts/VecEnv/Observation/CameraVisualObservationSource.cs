@@ -13,6 +13,18 @@ namespace Scripts.VecEnv.Observation
         Color
     }
 
+    public enum VisualObservationContentMode
+    {
+        Color,
+        Depth
+    }
+
+    public enum HdrpDepthCaptureMode
+    {
+        CameraDepthTexture = 0,
+        CustomPassDepth = 3
+    }
+
     public enum VisualObservationCaptureMode
     {
         EarlyAsync,
@@ -21,6 +33,7 @@ namespace Scripts.VecEnv.Observation
 
     public class CameraVisualObservationSource : AgentVisualObservationSource
     {
+        public GameObject demoObject;
         [Header("Camera")] public Camera sourceCamera;
         public Vector3 localPosition = new(0f, 2.0f, -4.5f);
         public Vector3 localEulerAngles = new(18f, 0f, 0f);
@@ -35,18 +48,25 @@ namespace Scripts.VecEnv.Observation
 
         [Header("Output")] public int width = 84;
         public int height = 84;
+        public VisualObservationContentMode contentMode = VisualObservationContentMode.Color;
         public VisualObservationColorMode colorMode = VisualObservationColorMode.Grayscale;
         public VisualObservationDataType dataType = VisualObservationDataType.UInt8;
+        [Header("Depth")] public float depthRangeMinMeters = 0f;
+        public float depthRangeMaxMeters = 20f;
+        public HdrpDepthCaptureMode hdrpDepthCaptureMode = HdrpDepthCaptureMode.CustomPassDepth;
 
         [Header("Capture")] public VisualObservationCaptureMode captureMode = VisualObservationCaptureMode.EarlyAsync;
 
         private const TextureFormat ReadbackFormat = TextureFormat.RGBA32;
         private const int ReadbackChannels = 4;
+        private const string DepthEncodeShaderName = "Hidden/VecEnv/DepthObservation";
 
         private Camera _runtimeCamera;
         private GameObject _runtimeCameraObject;
         private RenderTexture _renderTexture;
+        private RenderTexture _captureRenderTexture;
         private Texture2D _readbackTexture;
+        private Texture2D _debugPreviewTexture;
         private NativeArray<byte> _readbackBuffer;
         private AsyncGPUReadbackRequest _pendingRequest;
         private bool _capturePending;
@@ -55,12 +75,39 @@ namespace Scripts.VecEnv.Observation
         private byte[] _latestObservationBytes;
         private float[] _floatScratch;
         private bool _hasLatestObservation;
+        private Material _depthEncodeMaterial;
+        private Material _demoMaterial;
+        private Color32[] _debugPreviewPixels;
+        private Component _hdrpDepthCustomPassBridgeComponent;
+        private IHdrpDepthCaptureBridge _hdrpDepthCustomPassBridge;
+        private static readonly Type HdRenderPipelineAssetType =
+            Type.GetType("UnityEngine.Rendering.HighDefinition.HDRenderPipelineAsset, Unity.RenderPipelines.HighDefinition.Runtime", false);
+        private static readonly Type HdrpDepthCustomPassBridgeType =
+            Type.GetType("Scripts.VecEnv.Observation.HdrpDepthCustomPassBridge, MKA.GymVecEnv.Hdrp", false);
 
         private GraphicsFormat PreferredRenderTextureFormat =>
             AsyncGpuReadbackSupport.SelectPreferredReadbackFormat();
-        public override Texture DebugPreviewTexture => _renderTexture != null ? _renderTexture : _readbackTexture;
+
+        private bool IsDepthMode => contentMode == VisualObservationContentMode.Depth;
+        private static bool IsHdrpActive =>
+            HdRenderPipelineAssetType != null &&
+            GraphicsSettings.currentRenderPipeline != null &&
+            HdRenderPipelineAssetType.IsInstanceOfType(GraphicsSettings.currentRenderPipeline);
+        private bool UseHdrpCustomPassDepth =>
+            IsDepthMode &&
+            hdrpDepthCaptureMode == HdrpDepthCaptureMode.CustomPassDepth &&
+            IsHdrpActive &&
+            HdrpDepthCustomPassBridgeType != null;
+
+        public override Texture DebugPreviewTexture =>
+            _debugPreviewTexture != null ? _debugPreviewTexture : (_renderTexture != null ? _renderTexture : _readbackTexture);
+
         public override string DebugPreviewDetails =>
-            $"{width}x{height} | {colorMode} | {dataType} | {captureMode}" +
+            $"{width}x{height} | {contentMode} | {(IsDepthMode ? "SingleChannel" : colorMode.ToString())} | {dataType} | {captureMode}" +
+            (IsDepthMode ? $" | depth {Mathf.Max(0f, depthRangeMinMeters):0.##}-{Mathf.Max(depthRangeMinMeters, depthRangeMaxMeters):0.##}m" : string.Empty) +
+            (IsDepthMode
+                ? (UseHdrpCustomPassDepth ? " | HDRP CustomPassDepth" : " | CameraDepthTexture")
+                : string.Empty) +
             (_asyncReadbackDisabled ? " | ReadPixels fallback" : " | RenderTexture");
 
         protected override VisualObservationDescription CreateDescription()
@@ -69,7 +116,7 @@ namespace Scripts.VecEnv.Observation
             {
                 Shape = new[] { Mathf.Max(1, height), Mathf.Max(1, width), OutputChannels() },
                 DataType = dataType,
-                Low = dataType == VisualObservationDataType.UInt8 ? 0f : 0f,
+                Low = 0f,
                 High = dataType == VisualObservationDataType.UInt8 ? 255f : 1f
             };
         }
@@ -85,8 +132,23 @@ namespace Scripts.VecEnv.Observation
             EnsureRenderTarget();
             EnsureBuffers();
             _hasLatestObservation = false;
+
+            if (demoObject != null && demoObject.TryGetComponent<Renderer>(out var renderer))
+            {
+                var demoShader = Shader.Find("Unlit/Texture");
+                if (demoShader != null)
+                {
+                    _demoMaterial = new Material(demoShader)
+                    {
+                        hideFlags = HideFlags.HideAndDontSave,
+                        mainTexture = _renderTexture
+                    };
+                    renderer.material = _demoMaterial;
+                }
+            }
         }
 
+        
         protected override void OnShutdown()
         {
             if (_capturePending)
@@ -113,11 +175,37 @@ namespace Scripts.VecEnv.Observation
                 _renderTexture = null;
             }
 
+            if (_captureRenderTexture != null)
+            {
+                Destroy(_captureRenderTexture);
+                _captureRenderTexture = null;
+            }
+
             if (_readbackTexture != null)
             {
                 Destroy(_readbackTexture);
                 _readbackTexture = null;
             }
+
+            if (_debugPreviewTexture != null)
+            {
+                Destroy(_debugPreviewTexture);
+                _debugPreviewTexture = null;
+            }
+
+            if (_depthEncodeMaterial != null)
+            {
+                Destroy(_depthEncodeMaterial);
+                _depthEncodeMaterial = null;
+            }
+
+            if (_demoMaterial != null)
+            {
+                Destroy(_demoMaterial);
+                _demoMaterial = null;
+            }
+
+            ClearHdrpCustomPassCapture();
 
             if (_runtimeCameraObject != null)
             {
@@ -295,6 +383,23 @@ namespace Scripts.VecEnv.Observation
             EnsureCamera();
             EnsureRenderTarget();
             EnsureBuffers();
+            if (IsDepthMode)
+            {
+                EnsureDepthResources();
+                _runtimeCamera.targetTexture = _captureRenderTexture;
+                _runtimeCamera.Render();
+
+                if (UseHdrpCustomPassDepth)
+                {
+                    return;
+                }
+
+                ConfigureDepthEncodeMaterial();
+                Graphics.Blit(Texture2D.blackTexture, _renderTexture, _depthEncodeMaterial);
+                return;
+            }
+
+            _runtimeCamera.targetTexture = _renderTexture;
             _runtimeCamera.Render();
         }
 
@@ -325,58 +430,36 @@ namespace Scripts.VecEnv.Observation
             _runtimeCamera.farClipPlane = farClipPlane;
             _runtimeCamera.allowHDR = false;
             _runtimeCamera.allowMSAA = false;
+            if (IsDepthMode)
+            {
+                _runtimeCamera.depthTextureMode |= DepthTextureMode.Depth;
+            }
+            else
+            {
+                _runtimeCamera.depthTextureMode &= ~DepthTextureMode.Depth;
+            }
         }
 
         private void EnsureRenderTarget()
         {
-            if (_renderTexture != null &&
-                _renderTexture.width == width &&
-                _renderTexture.height == height)
-            {
-                if (_runtimeCamera.targetTexture != _renderTexture)
-                {
-                    _runtimeCamera.targetTexture = _renderTexture;
-                }
+            _renderTexture = EnsureCompatibleRenderTexture(
+                _renderTexture,
+                needsDepthBuffer: !IsDepthMode || UseHdrpCustomPassDepth);
 
+            if (IsDepthMode)
+            {
+                _captureRenderTexture = EnsureCompatibleRenderTexture(_captureRenderTexture, needsDepthBuffer: true);
+                EnsureDepthResources();
                 return;
             }
 
-            if (_renderTexture != null)
+            if (_captureRenderTexture != null)
             {
-                if (_runtimeCamera != null)
-                {
-                    _runtimeCamera.targetTexture = null;
-                }
-
-                Destroy(_renderTexture);
+                Destroy(_captureRenderTexture);
+                _captureRenderTexture = null;
             }
 
-            var preferredFormat = PreferredRenderTextureFormat;
-            if (preferredFormat != GraphicsFormat.None)
-            {
-                var descriptor = new RenderTextureDescriptor(width, height)
-                {
-                    depthBufferBits = 24,
-                    msaaSamples = 1,
-                    graphicsFormat = preferredFormat,
-                    useMipMap = false,
-                    autoGenerateMips = false,
-                    sRGB = false
-                };
-                _renderTexture = new RenderTexture(descriptor);
-            }
-            else
-            {
-                _renderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
-                {
-                    antiAliasing = 1,
-                    useMipMap = false,
-                    autoGenerateMips = false
-                };
-            }
-
-            _renderTexture.Create();
-            _runtimeCamera.targetTexture = _renderTexture;
+            ClearHdrpCustomPassCapture();
         }
 
         private void EnsureBuffers()
@@ -435,16 +518,128 @@ namespace Scripts.VecEnv.Observation
             if (dataType == VisualObservationDataType.UInt8)
             {
                 ConvertToUInt8(pixelCount);
+                UpdateDebugPreviewTexture(pixelCount);
                 _hasLatestObservation = true;
                 return;
             }
 
             ConvertToFloat32(pixelCount);
+            UpdateDebugPreviewTexture(pixelCount);
             _hasLatestObservation = true;
+        }
+
+        private void UpdateDebugPreviewTexture(int pixelCount)
+        {
+            if (!Application.isEditor)
+            {
+                return;
+            }
+
+            var previewTexture = EnsureDebugPreviewTexture();
+            if (_debugPreviewPixels == null || _debugPreviewPixels.Length != pixelCount)
+            {
+                _debugPreviewPixels = new Color32[pixelCount];
+            }
+
+            if (dataType == VisualObservationDataType.UInt8)
+            {
+                PopulateUInt8PreviewPixels(pixelCount);
+            }
+            else
+            {
+                PopulateFloat32PreviewPixels(pixelCount);
+            }
+
+            previewTexture.SetPixels32(_debugPreviewPixels);
+            previewTexture.Apply(false, false);
+        }
+
+        private Texture2D EnsureDebugPreviewTexture()
+        {
+            if (_debugPreviewTexture != null &&
+                _debugPreviewTexture.width == width &&
+                _debugPreviewTexture.height == height)
+            {
+                return _debugPreviewTexture;
+            }
+
+            if (_debugPreviewTexture != null)
+            {
+                Destroy(_debugPreviewTexture);
+            }
+
+            _debugPreviewTexture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+            {
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            return _debugPreviewTexture;
+        }
+
+        private void PopulateUInt8PreviewPixels(int pixelCount)
+        {
+            if (IsDepthMode || colorMode == VisualObservationColorMode.Grayscale)
+            {
+                for (int pixel = 0; pixel < pixelCount; pixel++)
+                {
+                    var value = _latestObservationBytes[pixel];
+                    _debugPreviewPixels[pixel] = new Color32(value, value, value, 255);
+                }
+
+                return;
+            }
+
+            for (int pixel = 0; pixel < pixelCount; pixel++)
+            {
+                var src = pixel * 3;
+                _debugPreviewPixels[pixel] = new Color32(
+                    _latestObservationBytes[src],
+                    _latestObservationBytes[src + 1],
+                    _latestObservationBytes[src + 2],
+                    255);
+            }
+        }
+
+        private void PopulateFloat32PreviewPixels(int pixelCount)
+        {
+            if (_floatScratch == null || _floatScratch.Length == 0)
+            {
+                return;
+            }
+
+            if (IsDepthMode || colorMode == VisualObservationColorMode.Grayscale)
+            {
+                for (int pixel = 0; pixel < pixelCount; pixel++)
+                {
+                    var value = ToByte01(_floatScratch[pixel]);
+                    _debugPreviewPixels[pixel] = new Color32(value, value, value, 255);
+                }
+
+                return;
+            }
+
+            for (int pixel = 0; pixel < pixelCount; pixel++)
+            {
+                var src = pixel * 3;
+                _debugPreviewPixels[pixel] = new Color32(
+                    ToByte01(_floatScratch[src]),
+                    ToByte01(_floatScratch[src + 1]),
+                    ToByte01(_floatScratch[src + 2]),
+                    255);
+            }
         }
 
         private void ConvertToUInt8(int pixelCount)
         {
+            if (IsDepthMode)
+            {
+                for (int pixel = 0; pixel < pixelCount; pixel++)
+                {
+                    _latestObservationBytes[pixel] = _readbackBuffer[pixel * ReadbackChannels];
+                }
+
+                return;
+            }
+
             if (colorMode == VisualObservationColorMode.Color)
             {
                 for (int pixel = 0; pixel < pixelCount; pixel++)
@@ -476,6 +671,17 @@ namespace Scripts.VecEnv.Observation
                 _floatScratch = new float[pixelCount * OutputChannels()];
             }
 
+            if (IsDepthMode)
+            {
+                for (int pixel = 0; pixel < pixelCount; pixel++)
+                {
+                    _floatScratch[pixel] = _readbackBuffer[pixel * ReadbackChannels] / 255f;
+                }
+
+                Buffer.BlockCopy(_floatScratch, 0, _latestObservationBytes, 0, _latestObservationBytes.Length);
+                return;
+            }
+
             if (colorMode == VisualObservationColorMode.Color)
             {
                 for (int pixel = 0; pixel < pixelCount; pixel++)
@@ -504,6 +710,11 @@ namespace Scripts.VecEnv.Observation
 
         private int OutputChannels()
         {
+            if (IsDepthMode)
+            {
+                return 1;
+            }
+
             return colorMode == VisualObservationColorMode.Color ? 3 : 1;
         }
 
@@ -516,6 +727,188 @@ namespace Scripts.VecEnv.Observation
         private static byte ToGrayscale(byte r, byte g, byte b)
         {
             return (byte)((299 * r + 587 * g + 114 * b + 500) / 1000);
+        }
+
+        private static byte ToByte01(float value)
+        {
+            return (byte)Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp01(value) * 255f), 0, 255);
+        }
+
+        private void EnsureDepthResources()
+        {
+            if (UseHdrpCustomPassDepth)
+            {
+                EnsureHdrpCustomPassCapture();
+                return;
+            }
+
+            ClearHdrpCustomPassCapture();
+            EnsureDepthEncodeMaterial();
+            ConfigureDepthEncodeMaterial();
+        }
+
+        private RenderTexture EnsureCompatibleRenderTexture(RenderTexture current, bool needsDepthBuffer,
+            GraphicsFormat preferredFormatOverride = GraphicsFormat.None)
+        {
+            var requiredDepthBufferBits = needsDepthBuffer ? 24 : 0;
+            var requiredDepthStencilFormat = needsDepthBuffer ? SelectPreferredDepthStencilFormat() : GraphicsFormat.None;
+            if (current != null &&
+                current.width == width &&
+                current.height == height &&
+                current.depth == requiredDepthBufferBits &&
+                (!needsDepthBuffer || requiredDepthStencilFormat == GraphicsFormat.None ||
+                 current.depthStencilFormat == requiredDepthStencilFormat) &&
+                (preferredFormatOverride == GraphicsFormat.None || current.graphicsFormat == preferredFormatOverride))
+            {
+                if (!current.IsCreated())
+                {
+                    current.Create();
+                }
+
+                return current;
+            }
+
+            if (current != null)
+            {
+                if (_runtimeCamera != null && _runtimeCamera.targetTexture == current)
+                {
+                    _runtimeCamera.targetTexture = null;
+                }
+
+                Destroy(current);
+            }
+
+            var preferredFormat = preferredFormatOverride != GraphicsFormat.None
+                ? preferredFormatOverride
+                : PreferredRenderTextureFormat;
+            RenderTexture renderTexture;
+            if (preferredFormat != GraphicsFormat.None)
+            {
+                var descriptor = new RenderTextureDescriptor(width, height)
+                {
+                    depthBufferBits = requiredDepthBufferBits,
+                    msaaSamples = 1,
+                    graphicsFormat = preferredFormat,
+                    useMipMap = false,
+                    autoGenerateMips = false,
+                    sRGB = false
+                };
+                if (requiredDepthStencilFormat != GraphicsFormat.None)
+                {
+                    descriptor.depthStencilFormat = requiredDepthStencilFormat;
+                }
+                renderTexture = new RenderTexture(descriptor);
+            }
+            else
+            {
+                renderTexture = new RenderTexture(width, height, requiredDepthBufferBits, RenderTextureFormat.ARGB32)
+                {
+                    antiAliasing = 1,
+                    useMipMap = false,
+                    autoGenerateMips = false
+                };
+            }
+
+            renderTexture.Create();
+            return renderTexture;
+        }
+
+        private static GraphicsFormat SelectPreferredDepthStencilFormat()
+        {
+            if (SystemInfo.IsFormatSupported(GraphicsFormat.D24_UNorm_S8_UInt, GraphicsFormatUsage.Render))
+            {
+                return GraphicsFormat.D24_UNorm_S8_UInt;
+            }
+
+            if (SystemInfo.IsFormatSupported(GraphicsFormat.D32_SFloat_S8_UInt, GraphicsFormatUsage.Render))
+            {
+                return GraphicsFormat.D32_SFloat_S8_UInt;
+            }
+
+            if (SystemInfo.IsFormatSupported(GraphicsFormat.D16_UNorm, GraphicsFormatUsage.Render))
+            {
+                return GraphicsFormat.D16_UNorm;
+            }
+
+            return GraphicsFormat.None;
+        }
+
+        private void EnsureDepthEncodeMaterial()
+        {
+            if (_depthEncodeMaterial != null)
+            {
+                return;
+            }
+
+            var depthShader = Shader.Find(DepthEncodeShaderName);
+            if (depthShader == null)
+            {
+                throw new InvalidOperationException(
+                    $"Could not find shader '{DepthEncodeShaderName}' required for depth visual observations.");
+            }
+
+            _depthEncodeMaterial = new Material(depthShader)
+            {
+                hideFlags = HideFlags.HideAndDontSave
+            };
+        }
+
+        private void ConfigureDepthEncodeMaterial()
+        {
+            if (_depthEncodeMaterial == null)
+            {
+                return;
+            }
+
+            _depthEncodeMaterial.SetFloat("_DepthMetersMin", Mathf.Max(0f, depthRangeMinMeters));
+            _depthEncodeMaterial.SetFloat("_DepthMetersMax", Mathf.Max(depthRangeMinMeters + 0.001f, depthRangeMaxMeters));
+        }
+
+        private void EnsureHdrpCustomPassCapture()
+        {
+            if (_runtimeCamera == null || _renderTexture == null)
+            {
+                return;
+            }
+
+            if (_hdrpDepthCustomPassBridge == null)
+            {
+                if (HdrpDepthCustomPassBridgeType == null)
+                {
+                    return;
+                }
+
+                _hdrpDepthCustomPassBridgeComponent = _runtimeCamera.gameObject.GetComponent(HdrpDepthCustomPassBridgeType);
+                if (_hdrpDepthCustomPassBridgeComponent == null)
+                {
+                    _hdrpDepthCustomPassBridgeComponent = _runtimeCamera.gameObject.AddComponent(HdrpDepthCustomPassBridgeType);
+                }
+
+                _hdrpDepthCustomPassBridge = _hdrpDepthCustomPassBridgeComponent as IHdrpDepthCaptureBridge;
+            }
+
+            if (_hdrpDepthCustomPassBridgeComponent == null || _hdrpDepthCustomPassBridge == null)
+            {
+                return;
+            }
+
+            _hdrpDepthCustomPassBridgeComponent.hideFlags = HideFlags.HideAndDontSave;
+            _hdrpDepthCustomPassBridge.Configure(
+                _runtimeCamera,
+                _renderTexture,
+                cullingMask,
+                Mathf.Max(0f, depthRangeMinMeters),
+                Mathf.Max(depthRangeMinMeters + 0.001f, depthRangeMaxMeters));
+        }
+
+        private void ClearHdrpCustomPassCapture()
+        {
+            if (_hdrpDepthCustomPassBridgeComponent != null)
+            {
+                Destroy(_hdrpDepthCustomPassBridgeComponent);
+                _hdrpDepthCustomPassBridgeComponent = null;
+                _hdrpDepthCustomPassBridge = null;
+            }
         }
     }
 }
