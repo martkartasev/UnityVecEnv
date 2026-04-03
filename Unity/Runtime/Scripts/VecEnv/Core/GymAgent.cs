@@ -5,7 +5,6 @@ using Scripts.VecEnv.Message;
 using Scripts.VecEnv.Observation;
 using Unity.InferenceEngine;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace Scripts.VecEnv.Core
 {
@@ -96,11 +95,11 @@ namespace Scripts.VecEnv.Core
 
         protected internal AgentObservation ProduceObservation()
         {
-            var produceObservation = new AgentObservation(continuousObservations, discreteObservations.Count);
-            CollectObservation(ref produceObservation);
-            produceObservation.VisualObservations = BuildVisualObservations(forceSynchronousIfMissing: true);
-            _latestObservation = produceObservation;
-            return produceObservation;
+            var observation = new AgentObservation(continuousObservations, discreteObservations.Count);
+            CollectObservation(ref observation);
+            observation.VisualObservations = BuildVisualObservations(forceSynchronousIfMissing: true);
+            _latestObservation = observation;
+            return observation;
         }
 
         protected internal EnvironmentState DoGymStep()
@@ -194,34 +193,41 @@ namespace Scripts.VecEnv.Core
 
             for (int i = 0; i < _visualObservationSources.Length; i++)
             {
-                var source = _visualObservationSources[i];
-                if (source == null)
-                {
-                    throw new InvalidOperationException(
-                        $"GymAgent '{name}' has a missing visual observation source reference at index {i}. " +
-                        "Remove null entries or assign a valid AgentVisualObservationSource in the Observation Specification.");
-                }
-
-                if (source.transform != transform && !source.transform.IsChildOf(transform))
-                {
-                    throw new InvalidOperationException(
-                        $"GymAgent '{name}' references visual observation source '{source.name}' that is not part of the agent hierarchy. " +
-                        "Assign only AgentVisualObservationSource components on this agent or its children.");
-                }
-
-                source.InitializeSource(this, i);
-                var description = source.GetDescription();
-                if (!usedNames.Add(description.Name))
-                {
-                    throw new InvalidOperationException(
-                        $"GymAgent '{name}' has duplicate visual observation name '{description.Name}'. " +
-                        "Visual observation source names must be unique per agent.");
-                }
-
-                _visualObservationDescriptions[i] = description;
+                _visualObservationDescriptions[i] = InitializeVisualObservationSource(_visualObservationSources[i], i, usedNames);
             }
 
             _visualObservationSourcesInitialized = true;
+        }
+
+        private VisualObservationDescription InitializeVisualObservationSource(
+            AgentVisualObservationSource source,
+            int index,
+            HashSet<string> usedNames)
+        {
+            if (source == null)
+            {
+                throw new InvalidOperationException(
+                    $"GymAgent '{name}' has a missing visual observation source reference at index {index}. " +
+                    "Remove null entries or assign a valid AgentVisualObservationSource in the Observation Specification.");
+            }
+
+            if (source.transform != transform && !source.transform.IsChildOf(transform))
+            {
+                throw new InvalidOperationException(
+                    $"GymAgent '{name}' references visual observation source '{source.name}' that is not part of the agent hierarchy. " +
+                    "Assign only AgentVisualObservationSource components on this agent or its children.");
+            }
+
+            source.InitializeSource(this, index);
+            var description = source.GetDescription();
+            if (!usedNames.Add(description.Name))
+            {
+                throw new InvalidOperationException(
+                    $"GymAgent '{name}' has duplicate visual observation name '{description.Name}'. " +
+                    "Visual observation source names must be unique per agent.");
+            }
+
+            return description;
         }
 
         private AgentVisualObservation[] BuildVisualObservations(bool forceSynchronousIfMissing)

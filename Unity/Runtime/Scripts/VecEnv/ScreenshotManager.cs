@@ -1,8 +1,6 @@
 using ExternalCommunication;
 using Scripts.VecEnv.Networking;
 using UnityEngine;
-using Quaternion = UnityEngine.Quaternion;
-using Vector3 = UnityEngine.Vector3;
 
 namespace Scripts.VecEnv
 {
@@ -12,40 +10,89 @@ namespace Scripts.VecEnv
         public int width = 1920;
         public int height = 1080;
 
+        private void Awake()
+        {
+            ResolveRenderCamera();
+        }
+
         public void DoAwake()
         {
-            if (renderCamera == null) GetComponent<Camera>();
+            ResolveRenderCamera();
         }
 
         internal byte[] TakeScreenshot(Screenshot screenshot)
         {
-            if (renderCamera == null) renderCamera = GameObject.FindGameObjectWithTag("ScreenshotCamera").GetComponent<Camera>();
-            TransformCamera(screenshot);
+            var camera = ResolveRenderCamera();
+            ApplyCameraTransform(camera, screenshot);
 
-            var rt = new RenderTexture(width, height, 24);
-            renderCamera.targetTexture = rt;
+            var renderTexture = new RenderTexture(width, height, 24);
+            var screenshotTexture = new Texture2D(width, height, TextureFormat.RGB24, false);
+            var previousActive = RenderTexture.active;
 
-            var screenShot = new Texture2D(width, height, TextureFormat.RGB24, false);
-            renderCamera.Render();
-            RenderTexture.active = rt;
-            screenShot.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-            screenShot.Apply();
+            try
+            {
+                camera.targetTexture = renderTexture;
+                RenderTexture.active = renderTexture;
 
-            renderCamera.targetTexture = null;
-            RenderTexture.active = null;
-            Destroy(rt);
+                camera.Render();
+                screenshotTexture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                screenshotTexture.Apply();
 
-            var bytes = screenShot.EncodeToPNG();
-            return bytes;
+                return screenshotTexture.EncodeToPNG();
+            }
+            finally
+            {
+                camera.targetTexture = null;
+                RenderTexture.active = previousActive;
+                Destroy(renderTexture);
+                Destroy(screenshotTexture);
+            }
         }
 
-        private void TransformCamera(Screenshot screenshot)
+        private Camera ResolveRenderCamera()
         {
-            var transformPosition = screenshot.Camera.Position.ToUnityVector();
-            if (transformPosition != Vector3.zero) renderCamera.transform.position = transformPosition;
+            if (renderCamera != null)
+            {
+                return renderCamera;
+            }
 
-            var transformOrientation = screenshot.Camera.Euler.ToUnityVector();
-            if (transformOrientation != Vector3.zero) renderCamera.transform.rotation = Quaternion.Euler(transformOrientation);
+            renderCamera = GetComponent<Camera>();
+            if (renderCamera != null)
+            {
+                return renderCamera;
+            }
+
+            var taggedCamera = GameObject.FindGameObjectWithTag("ScreenshotCamera");
+            if (taggedCamera == null || !taggedCamera.TryGetComponent(out renderCamera))
+            {
+                throw new MissingReferenceException("ScreenshotManager could not find a camera. Assign renderCamera or tag one camera as 'ScreenshotCamera'.");
+            }
+
+            return renderCamera;
+        }
+
+        private static void ApplyCameraTransform(Camera camera, Screenshot screenshot)
+        {
+            if (screenshot?.Camera == null)
+            {
+                return;
+            }
+
+            if (screenshot.Camera.Position != null)
+            {
+                camera.transform.position = screenshot.Camera.Position.ToUnityVector();
+            }
+
+            if (screenshot.Camera.Orientation != null)
+            {
+                camera.transform.rotation = screenshot.Camera.Orientation.ToUnityQuaternion();
+                return;
+            }
+
+            if (screenshot.Camera.Euler != null)
+            {
+                camera.transform.rotation = UnityEngine.Quaternion.Euler(screenshot.Camera.Euler.ToUnityVector());
+            }
         }
     }
 }
