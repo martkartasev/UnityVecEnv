@@ -12,9 +12,16 @@ class AutoResetMode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     NextStep: _ClassVar[AutoResetMode]
     SameStep: _ClassVar[AutoResetMode]
     Disabled: _ClassVar[AutoResetMode]
+
+class VisualObservationDataType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    UInt8: _ClassVar[VisualObservationDataType]
+    Float32: _ClassVar[VisualObservationDataType]
 NextStep: AutoResetMode
 SameStep: AutoResetMode
 Disabled: AutoResetMode
+UInt8: VisualObservationDataType
+Float32: VisualObservationDataType
 
 class InitializeEnvironments(_message.Message):
     __slots__ = ("autoResetMode", "requestedNumberOfEnvs")
@@ -25,16 +32,30 @@ class InitializeEnvironments(_message.Message):
     def __init__(self, autoResetMode: _Optional[_Union[AutoResetMode, str]] = ..., requestedNumberOfEnvs: _Optional[int] = ...) -> None: ...
 
 class EnvironmentDescription(_message.Message):
-    __slots__ = ("singleObservationSpace", "singleActionSpace", "trueNumberOfEnvs", "singleVisualObservationSpace")
+    __slots__ = ("singleObservationSpace", "singleActionSpace", "trueNumberOfEnvs", "singleVisualObservationSpace", "parameters")
     SINGLEOBSERVATIONSPACE_FIELD_NUMBER: _ClassVar[int]
     SINGLEACTIONSPACE_FIELD_NUMBER: _ClassVar[int]
     TRUENUMBEROFENVS_FIELD_NUMBER: _ClassVar[int]
     SINGLEVISUALOBSERVATIONSPACE_FIELD_NUMBER: _ClassVar[int]
+    PARAMETERS_FIELD_NUMBER: _ClassVar[int]
     singleObservationSpace: _containers.RepeatedCompositeFieldContainer[Space]
     singleActionSpace: _containers.RepeatedCompositeFieldContainer[Space]
     trueNumberOfEnvs: int
     singleVisualObservationSpace: _containers.RepeatedCompositeFieldContainer[VisualObservationSpace]
-    def __init__(self, singleObservationSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., singleActionSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., trueNumberOfEnvs: _Optional[int] = ..., singleVisualObservationSpace: _Optional[_Iterable[_Union[VisualObservationSpace, _Mapping]]] = ...) -> None: ...
+    parameters: _containers.RepeatedCompositeFieldContainer[EnvironmentParameter]
+    def __init__(self, singleObservationSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., singleActionSpace: _Optional[_Iterable[_Union[Space, _Mapping]]] = ..., trueNumberOfEnvs: _Optional[int] = ..., singleVisualObservationSpace: _Optional[_Iterable[_Union[VisualObservationSpace, _Mapping]]] = ..., parameters: _Optional[_Iterable[_Union[EnvironmentParameter, _Mapping]]] = ...) -> None: ...
+
+class EnvironmentParameter(_message.Message):
+    __slots__ = ("key", "string_value", "float_value", "int_value")
+    KEY_FIELD_NUMBER: _ClassVar[int]
+    STRING_VALUE_FIELD_NUMBER: _ClassVar[int]
+    FLOAT_VALUE_FIELD_NUMBER: _ClassVar[int]
+    INT_VALUE_FIELD_NUMBER: _ClassVar[int]
+    key: str
+    string_value: str
+    float_value: float
+    int_value: int
+    def __init__(self, key: _Optional[str] = ..., string_value: _Optional[str] = ..., float_value: _Optional[float] = ..., int_value: _Optional[int] = ...) -> None: ...
 
 class Space(_message.Message):
     __slots__ = ("name", "continuousSize", "continuousRange", "discreteSize")
@@ -105,13 +126,6 @@ class Observation(_message.Message):
     continuous: _containers.RepeatedScalarFieldContainer[float]
     discrete: _containers.RepeatedScalarFieldContainer[int]
     def __init__(self, index: _Optional[int] = ..., continuous: _Optional[_Iterable[float]] = ..., discrete: _Optional[_Iterable[int]] = ...) -> None: ...
-
-class VisualObservationDataType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
-    __slots__ = ()
-    UInt8: _ClassVar[VisualObservationDataType]
-    Float32: _ClassVar[VisualObservationDataType]
-UInt8: VisualObservationDataType
-Float32: VisualObservationDataType
 
 class VisualObservationSpace(_message.Message):
     __slots__ = ("name", "shape", "dataType", "low", "high")

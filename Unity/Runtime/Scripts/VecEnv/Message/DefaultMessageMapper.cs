@@ -88,6 +88,32 @@ namespace Scripts.VecEnv.Message
                 }
             }
 
+            if (description.Parameters != null)
+            {
+                foreach (var parameter in description.Parameters)
+                {
+                    var mappedParameter = new ExternalCommunication.EnvironmentParameter
+                    {
+                        Key = parameter.Key ?? string.Empty
+                    };
+
+                    switch (parameter.ValueType)
+                    {
+                        case EnvironmentParameterValueType.String:
+                            mappedParameter.StringValue = parameter.StringValue ?? string.Empty;
+                            break;
+                        case EnvironmentParameterValueType.Float:
+                            mappedParameter.FloatValue = parameter.FloatValue;
+                            break;
+                        case EnvironmentParameterValueType.Int:
+                            mappedParameter.IntValue = parameter.IntValue;
+                            break;
+                    }
+
+                    mapEnvironmentDescription.Parameters.Add(mappedParameter);
+                }
+            }
+
             mapEnvironmentDescription.TrueNumberOfEnvs = description.AgentCount;
             return mapEnvironmentDescription;
         }

@@ -6,6 +6,8 @@ from gymnasium.vector import VectorEnv, AutoresetMode
 
 import threading
 
+EnvironmentParameterValue = Union[str, float, int]
+
 
 class _ThreadWorker:
     def __init__(self, env: VectorEnv):
@@ -191,6 +193,24 @@ def _merge_infos(infos_per_env: Sequence[Dict[str, Any]], slices: Sequence[_Slic
 
     return out
 
+
+def _copy_environment_parameters(env: VectorEnv) -> Dict[str, EnvironmentParameterValue]:
+    raw_parameters = getattr(env, "environment_parameters", None)
+    if raw_parameters is None:
+        return {}
+    return dict(raw_parameters)
+
+
+def _validate_environment_parameters(envs: Sequence[VectorEnv]) -> Dict[str, EnvironmentParameterValue]:
+    expected = _copy_environment_parameters(envs[0])
+    for index, env in enumerate(envs[1:], start=1):
+        actual = _copy_environment_parameters(env)
+        if actual != expected:
+            raise ValueError(
+                f"Sub-environment {index} reported different environment_parameters than the first sub-environment."
+            )
+    return expected
+
 def _batch_space(single: spaces.Space, num_envs: int) -> spaces.Space:
     if isinstance(single, spaces.Box):
         low = np.broadcast_to(single.low, (num_envs,) + single.shape)
@@ -257,6 +277,8 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         self.metadata = dict(getattr(e0, "metadata", {}) or {})
         self.metadata["num_envs"] = self.num_envs
         self.metadata.setdefault("autoreset_mode", AutoresetMode.NEXT_STEP)
+        self.environment_parameters = _validate_environment_parameters(self.envs)
+        self.metadata["environment_parameters"] = dict(self.environment_parameters)
 
         # workers
         self.workers = [_ThreadWorker(e) for e in self.envs]

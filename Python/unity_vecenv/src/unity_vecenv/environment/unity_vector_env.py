@@ -1,5 +1,5 @@
 import subprocess
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 from gymnasium import spaces
@@ -28,6 +28,7 @@ from unity_vecenv.protobuf_gen.communication_pb2 import (
 
 _FLOAT32_LE = np.dtype("<f4")
 _INT32_LE = np.dtype("<i4")
+EnvironmentParameterValue = Union[str, float, int]
 
 
 class UnityVectorEnv(VectorEnv):
@@ -65,6 +66,7 @@ class UnityVectorEnv(VectorEnv):
         if environment_description.trueNumberOfEnvs == 0:
             raise RuntimeError("Failed to initialize environment connection. Number of envs returns 0.")
 
+        self.environment_parameters = self._decode_environment_parameters(environment_description)
         self.num_envs = int(environment_description.trueNumberOfEnvs)
 
         self.single_action_space = space_from_repeated(
@@ -97,6 +99,7 @@ class UnityVectorEnv(VectorEnv):
 
         self.action_space = batch_space(self.single_action_space, self.num_envs)
         self.observation_space = batch_space(self.single_observation_space, self.num_envs)
+        self.metadata["environment_parameters"] = dict(self.environment_parameters)
 
     def initialize_environment(self, num_envs):
         init = InitializeEnvironments()
@@ -104,6 +107,29 @@ class UnityVectorEnv(VectorEnv):
         init.requestedNumberOfEnvs = num_envs
         environment_description = self.client.initialize(init)
         return environment_description
+
+    def _decode_environment_parameters(self, environment_description) -> Dict[str, EnvironmentParameterValue]:
+        parameters: Dict[str, EnvironmentParameterValue] = {}
+        for parameter in getattr(environment_description, "parameters", []):
+            key = str(parameter.key).strip()
+            if not key:
+                raise RuntimeError("Environment parameter key cannot be empty.")
+            if key in parameters:
+                raise RuntimeError(f"Duplicate environment parameter key '{key}'.")
+
+            value_field = parameter.WhichOneof("value")
+            if value_field == "string_value":
+                value: EnvironmentParameterValue = str(parameter.string_value)
+            elif value_field == "float_value":
+                value = float(parameter.float_value)
+            elif value_field == "int_value":
+                value = int(parameter.int_value)
+            else:
+                raise RuntimeError(f"Environment parameter '{key}' is missing a typed value.")
+
+            parameters[key] = value
+
+        return parameters
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         reset_msg = Reset()

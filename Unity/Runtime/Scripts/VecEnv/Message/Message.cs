@@ -19,6 +19,83 @@ namespace Scripts.VecEnv.Message
         public int AgentCount;
     }
 
+    public enum EnvironmentParameterValueType
+    {
+        String,
+        Float,
+        Int
+    }
+
+    public struct EnvironmentParameter
+    {
+        public string Key;
+        public EnvironmentParameterValueType ValueType;
+        public string StringValue;
+        public float FloatValue;
+        public int IntValue;
+    }
+
+    public sealed class EnvironmentParameterCollector
+    {
+        private readonly List<EnvironmentParameter> _parameters = new();
+        private readonly HashSet<string> _keys = new(StringComparer.Ordinal);
+
+        public void Add(string key, string value)
+        {
+            AddInternal(new EnvironmentParameter
+            {
+                Key = NormalizeKey(key),
+                ValueType = EnvironmentParameterValueType.String,
+                StringValue = value ?? string.Empty
+            });
+        }
+
+        public void Add(string key, float value)
+        {
+            AddInternal(new EnvironmentParameter
+            {
+                Key = NormalizeKey(key),
+                ValueType = EnvironmentParameterValueType.Float,
+                FloatValue = value
+            });
+        }
+
+        public void Add(string key, int value)
+        {
+            AddInternal(new EnvironmentParameter
+            {
+                Key = NormalizeKey(key),
+                ValueType = EnvironmentParameterValueType.Int,
+                IntValue = value
+            });
+        }
+
+        public EnvironmentParameter[] ToArray()
+        {
+            return _parameters.ToArray();
+        }
+
+        private void AddInternal(EnvironmentParameter parameter)
+        {
+            if (!_keys.Add(parameter.Key))
+            {
+                throw new InvalidOperationException($"Duplicate environment parameter key '{parameter.Key}'.");
+            }
+
+            _parameters.Add(parameter);
+        }
+
+        private static string NormalizeKey(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentException("Environment parameter key cannot be null or whitespace.", nameof(key));
+            }
+
+            return key.Trim();
+        }
+    }
+
     public struct EnvironmentDescription
     {
         public int ContinuousActions;
@@ -27,6 +104,7 @@ namespace Scripts.VecEnv.Message
         public int[] DiscreteActions;
         public int[] DiscreteObservations;
         public VisualObservationDescription[] VisualObservations;
+        public EnvironmentParameter[] Parameters;
         
         public int AgentCount;
     }

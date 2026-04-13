@@ -56,6 +56,7 @@ namespace Scripts.VecEnv.Core
 
         private Step _gymStep;
         private EnvironmentDescription _environmentDescription;
+        private GymAgent _descriptionAgent;
         private Coroutine _disconnectedStepper;
         public GymAgentManager AgentManager { get; set; }
 
@@ -89,6 +90,7 @@ namespace Scripts.VecEnv.Core
 
         public void RegisterAgentDescription(GymAgent agentTemplate)
         {
+            _descriptionAgent = agentTemplate;
             _environmentDescription = new EnvironmentDescription
             {
                 ContinuousObservations = agentTemplate.continuousObservations,
@@ -96,6 +98,7 @@ namespace Scripts.VecEnv.Core
                 VisualObservations = agentTemplate.GetVisualObservationDescriptions(),
                 ContinuousActions = agentTemplate.continuousActions,
                 DiscreteActions = agentTemplate.discreteActions.ToArray(),
+                Parameters = Array.Empty<EnvironmentParameter>(),
             };
         }
 
@@ -212,9 +215,21 @@ namespace Scripts.VecEnv.Core
             _agents.ForEach(agent => agent.DoInitialize());
             PostInitialize?.Invoke();
 
+            RefreshEnvironmentParameters();
             _environmentDescription.AgentCount = _agents.Count;
             _connectionInitialized = true;
             callback?.Invoke(_environmentDescription);
+        }
+
+        private void RefreshEnvironmentParameters()
+        {
+            if (_descriptionAgent == null)
+            {
+                _environmentDescription.Parameters = Array.Empty<EnvironmentParameter>();
+                return;
+            }
+
+            _environmentDescription.Parameters = _descriptionAgent.ProduceEnvironmentParameters();
         }
 
         private IEnumerator DoReset(Reset reset, Action<AgentObservation[], Info[]> callback)

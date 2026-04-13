@@ -61,6 +61,10 @@ namespace Scripts.VecEnv.Core
         {
         }
 
+        protected virtual void CollectEnvironmentParameters(EnvironmentParameterCollector parameters)
+        {
+        }
+
 
         protected virtual AgentAction ProduceDummyAction(AgentAction dummyAgentAction)
         {
@@ -91,6 +95,13 @@ namespace Scripts.VecEnv.Core
             info.custom = dictionary;
 
             return info;
+        }
+
+        protected internal EnvironmentParameter[] ProduceEnvironmentParameters()
+        {
+            var collector = new EnvironmentParameterCollector();
+            CollectEnvironmentParameters(collector);
+            return collector.ToArray();
         }
 
         protected internal AgentObservation ProduceObservation()

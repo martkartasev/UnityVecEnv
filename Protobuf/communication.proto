@@ -17,6 +17,17 @@ message EnvironmentDescription {
   repeated Space singleActionSpace = 2;
   int32 trueNumberOfEnvs = 3;
   repeated VisualObservationSpace singleVisualObservationSpace = 4;
+  repeated EnvironmentParameter parameters = 5;
+}
+
+message EnvironmentParameter {
+  string key = 1;
+
+  oneof value {
+    string string_value = 2;
+    float float_value = 3;
+    int32 int_value = 4;
+  }
 }
 
 message Space {
