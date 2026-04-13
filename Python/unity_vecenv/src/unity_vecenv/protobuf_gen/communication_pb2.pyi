@@ -166,14 +166,38 @@ class BatchedObservation(_message.Message):
     def __init__(self, num_envs: _Optional[int] = ..., continuous_size: _Optional[int] = ..., discrete_size: _Optional[int] = ..., continuous_f32: _Optional[bytes] = ..., discrete_i32: _Optional[bytes] = ..., visual: _Optional[_Iterable[_Union[BatchedVisualObservation, _Mapping]]] = ...) -> None: ...
 
 class BatchedCustomInfo(_message.Message):
-    __slots__ = ("keys", "values_f32", "present")
+    __slots__ = ("keys", "values_f32", "present", "keys_i32", "values_i32", "present_i32", "keys_bool", "values_bool", "present_bool", "keys_vector3", "values_vector3_f32", "present_vector3", "keys_quaternion", "values_quaternion_f32", "present_quaternion")
     KEYS_FIELD_NUMBER: _ClassVar[int]
     VALUES_F32_FIELD_NUMBER: _ClassVar[int]
     PRESENT_FIELD_NUMBER: _ClassVar[int]
+    KEYS_I32_FIELD_NUMBER: _ClassVar[int]
+    VALUES_I32_FIELD_NUMBER: _ClassVar[int]
+    PRESENT_I32_FIELD_NUMBER: _ClassVar[int]
+    KEYS_BOOL_FIELD_NUMBER: _ClassVar[int]
+    VALUES_BOOL_FIELD_NUMBER: _ClassVar[int]
+    PRESENT_BOOL_FIELD_NUMBER: _ClassVar[int]
+    KEYS_VECTOR3_FIELD_NUMBER: _ClassVar[int]
+    VALUES_VECTOR3_F32_FIELD_NUMBER: _ClassVar[int]
+    PRESENT_VECTOR3_FIELD_NUMBER: _ClassVar[int]
+    KEYS_QUATERNION_FIELD_NUMBER: _ClassVar[int]
+    VALUES_QUATERNION_F32_FIELD_NUMBER: _ClassVar[int]
+    PRESENT_QUATERNION_FIELD_NUMBER: _ClassVar[int]
     keys: _containers.RepeatedScalarFieldContainer[str]
     values_f32: bytes
     present: bytes
-    def __init__(self, keys: _Optional[_Iterable[str]] = ..., values_f32: _Optional[bytes] = ..., present: _Optional[bytes] = ...) -> None: ...
+    keys_i32: _containers.RepeatedScalarFieldContainer[str]
+    values_i32: bytes
+    present_i32: bytes
+    keys_bool: _containers.RepeatedScalarFieldContainer[str]
+    values_bool: bytes
+    present_bool: bytes
+    keys_vector3: _containers.RepeatedScalarFieldContainer[str]
+    values_vector3_f32: bytes
+    present_vector3: bytes
+    keys_quaternion: _containers.RepeatedScalarFieldContainer[str]
+    values_quaternion_f32: bytes
+    present_quaternion: bytes
+    def __init__(self, keys: _Optional[_Iterable[str]] = ..., values_f32: _Optional[bytes] = ..., present: _Optional[bytes] = ..., keys_i32: _Optional[_Iterable[str]] = ..., values_i32: _Optional[bytes] = ..., present_i32: _Optional[bytes] = ..., keys_bool: _Optional[_Iterable[str]] = ..., values_bool: _Optional[bytes] = ..., present_bool: _Optional[bytes] = ..., keys_vector3: _Optional[_Iterable[str]] = ..., values_vector3_f32: _Optional[bytes] = ..., present_vector3: _Optional[bytes] = ..., keys_quaternion: _Optional[_Iterable[str]] = ..., values_quaternion_f32: _Optional[bytes] = ..., present_quaternion: _Optional[bytes] = ...) -> None: ...
 
 class BatchedFinalInfo(_message.Message):
     __slots__ = ("final_observation",)

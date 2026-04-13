@@ -97,7 +97,7 @@ protected virtual AgentAction ProduceDummyAction(AgentAction dummyAgentAction)
     return dummyAgentAction;
 }
 
-protected virtual void CollectInfo(Dictionary<string, float> metadata)
+protected virtual void CollectInfo(CustomInfoBuilder info)
 {
 }
 ```
@@ -144,17 +144,31 @@ The total number of appended values must match `continuousObservations` and `dis
 
 ### Custom info
 
-Override `CollectInfo` to send per-agent scalar metadata to Python alongside each step result. This is useful for logging episode statistics such as distance travelled or collisions.
+Override `CollectInfo` to send per-agent metadata to Python alongside each step result. This is useful for logging episode statistics such as distance travelled or collisions, and it now supports typed values instead of float-only scalars.
 
 ```csharp
-protected override void CollectInfo(Dictionary<string, float> metadata)
+using Scripts.VecEnv.Message;
+using UnityEngine;
+
+protected override void CollectInfo(CustomInfoBuilder info)
 {
-    metadata["distance"] = _totalDistance;
-    metadata["collisions"] = _collisionCount;
+    info.Add("distance", _totalDistance);          // float -> (num_envs,)
+    info.Add("collisions", _collisionCount);       // int -> (num_envs,)
+    info.Add("grounded", _isGrounded);             // bool -> (num_envs,)
+    info.Add("velocity", _rigidbody.velocity);     // Vector3 -> (num_envs, 3)
+    info.Add("rotation", transform.rotation);      // Quaternion -> (num_envs, 4)
 }
 ```
 
-Custom info is only transmitted for agents that override this method and populate the dictionary. On the Python side, each key appears as a `(num_envs,)` float array, with a corresponding `_<key>` boolean mask indicating which agents provided a value.
+Each key must keep a single type across all agents and steps. On the Python side, every key still appears as a NumPy array plus a `_<key>` boolean presence mask:
+
+- `float` -> `(num_envs,)` `float32`
+- `int` -> `(num_envs,)` `int32`
+- `bool` -> `(num_envs,)` `bool`
+- `Vector3` -> `(num_envs, 3)` `float32`
+- `Quaternion` -> `(num_envs, 4)` `float32`
+
+Custom info is only transmitted for agents that override this method and add values. Existing `CollectInfo(Dictionary<string, float>)` overrides are still supported for backward compatibility, but new Unity code should use `CustomInfoBuilder`.
 
 ### Receiving initialization parameters
 

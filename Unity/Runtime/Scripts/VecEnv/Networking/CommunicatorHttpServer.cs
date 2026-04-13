@@ -177,13 +177,27 @@ namespace Scripts.VecEnv.Networking
             var indices = new List<int>(infos.Length);
             for (int i = 0; i < infos.Length; i++)
             {
-                if (infos[i].custom != null && infos[i].custom.Count > 0)
+                if (infos[i].custom != null && infos[i].custom.HasAnyValues)
                 {
                     indices.Add(i);
                 }
             }
 
             return indices.ToArray();
+        }
+
+        private sealed class CustomInfoLayout
+        {
+            public readonly Dictionary<string, int> FloatKeyLookup = new(StringComparer.Ordinal);
+            public readonly List<string> FloatKeys = new();
+            public readonly Dictionary<string, int> IntKeyLookup = new(StringComparer.Ordinal);
+            public readonly List<string> IntKeys = new();
+            public readonly Dictionary<string, int> BoolKeyLookup = new(StringComparer.Ordinal);
+            public readonly List<string> BoolKeys = new();
+            public readonly Dictionary<string, int> Vector3KeyLookup = new(StringComparer.Ordinal);
+            public readonly List<string> Vector3Keys = new();
+            public readonly Dictionary<string, int> QuaternionKeyLookup = new(StringComparer.Ordinal);
+            public readonly List<string> QuaternionKeys = new();
         }
 
         private static int[] BuildFinalIndices(EnvironmentState[] dones)
@@ -213,8 +227,8 @@ namespace Scripts.VecEnv.Networking
                 return batchedCustomInfo;
             }
 
-            var keyLookup = new Dictionary<string, int>(StringComparer.Ordinal);
-            var orderedKeys = new List<string>();
+            var layout = new CustomInfoLayout();
+            var globalKeyTypes = new Dictionary<string, CustomInfoValueType>(StringComparer.Ordinal);
             for (int row = 0; row < indices.Length; row++)
             {
                 var custom = infos[indices[row]].custom;
@@ -223,25 +237,24 @@ namespace Scripts.VecEnv.Networking
                     continue;
                 }
 
-                foreach (var entry in custom)
-                {
-                    if (keyLookup.ContainsKey(entry.Key))
-                    {
-                        continue;
-                    }
-
-                    keyLookup[entry.Key] = orderedKeys.Count;
-                    orderedKeys.Add(entry.Key);
-                }
+                RegisterCustomKeys(custom.FloatValues, CustomInfoValueType.Float, globalKeyTypes, layout.FloatKeyLookup, layout.FloatKeys);
+                RegisterCustomKeys(custom.IntValues, CustomInfoValueType.Int, globalKeyTypes, layout.IntKeyLookup, layout.IntKeys);
+                RegisterCustomKeys(custom.BoolValues, CustomInfoValueType.Bool, globalKeyTypes, layout.BoolKeyLookup, layout.BoolKeys);
+                RegisterCustomKeys(custom.Vector3Values, CustomInfoValueType.Vector3, globalKeyTypes, layout.Vector3KeyLookup, layout.Vector3Keys);
+                RegisterCustomKeys(custom.QuaternionValues, CustomInfoValueType.Quaternion, globalKeyTypes, layout.QuaternionKeyLookup, layout.QuaternionKeys);
             }
 
-            if (orderedKeys.Count == 0)
-            {
-                return batchedCustomInfo;
-            }
+            var floatValues = new float[indices.Length * layout.FloatKeys.Count];
+            var floatPresent = new byte[floatValues.Length];
+            var intValues = new int[indices.Length * layout.IntKeys.Count];
+            var intPresent = new byte[intValues.Length];
+            var boolValues = new byte[indices.Length * layout.BoolKeys.Count];
+            var boolPresent = new byte[boolValues.Length];
+            var vector3Values = new float[indices.Length * layout.Vector3Keys.Count * 3];
+            var vector3Present = new byte[indices.Length * layout.Vector3Keys.Count];
+            var quaternionValues = new float[indices.Length * layout.QuaternionKeys.Count * 4];
+            var quaternionPresent = new byte[indices.Length * layout.QuaternionKeys.Count];
 
-            var values = new float[indices.Length * orderedKeys.Count];
-            var present = new byte[values.Length];
             for (int row = 0; row < indices.Length; row++)
             {
                 var custom = infos[indices[row]].custom;
@@ -250,18 +263,167 @@ namespace Scripts.VecEnv.Networking
                     continue;
                 }
 
-                foreach (var entry in custom)
-                {
-                    var offset = row * orderedKeys.Count + keyLookup[entry.Key];
-                    values[offset] = entry.Value;
-                    present[offset] = 1;
-                }
+                PopulateFloatCustomSection(custom, row, layout.FloatKeyLookup, layout.FloatKeys.Count, floatValues, floatPresent);
+                PopulateIntCustomSection(custom, row, layout.IntKeyLookup, layout.IntKeys.Count, intValues, intPresent);
+                PopulateBoolCustomSection(custom, row, layout.BoolKeyLookup, layout.BoolKeys.Count, boolValues, boolPresent);
+                PopulateVector3CustomSection(custom, row, layout.Vector3KeyLookup, layout.Vector3Keys.Count, vector3Values, vector3Present);
+                PopulateQuaternionCustomSection(custom, row, layout.QuaternionKeyLookup, layout.QuaternionKeys.Count, quaternionValues, quaternionPresent);
             }
 
-            batchedCustomInfo.Keys.Add(orderedKeys);
-            batchedCustomInfo.ValuesF32 = FloatArrayToByteString(values);
-            batchedCustomInfo.Present = ByteString.CopyFrom(present);
+            batchedCustomInfo.Keys.Add(layout.FloatKeys);
+            batchedCustomInfo.ValuesF32 = FloatArrayToByteString(floatValues);
+            batchedCustomInfo.Present = ByteArrayToByteString(floatPresent);
+            batchedCustomInfo.KeysI32.Add(layout.IntKeys);
+            batchedCustomInfo.ValuesI32 = IntArrayToByteString(intValues);
+            batchedCustomInfo.PresentI32 = ByteArrayToByteString(intPresent);
+            batchedCustomInfo.KeysBool.Add(layout.BoolKeys);
+            batchedCustomInfo.ValuesBool = ByteArrayToByteString(boolValues);
+            batchedCustomInfo.PresentBool = ByteArrayToByteString(boolPresent);
+            batchedCustomInfo.KeysVector3.Add(layout.Vector3Keys);
+            batchedCustomInfo.ValuesVector3F32 = FloatArrayToByteString(vector3Values);
+            batchedCustomInfo.PresentVector3 = ByteArrayToByteString(vector3Present);
+            batchedCustomInfo.KeysQuaternion.Add(layout.QuaternionKeys);
+            batchedCustomInfo.ValuesQuaternionF32 = FloatArrayToByteString(quaternionValues);
+            batchedCustomInfo.PresentQuaternion = ByteArrayToByteString(quaternionPresent);
             return batchedCustomInfo;
+        }
+
+        private static void RegisterCustomKeys<T>(
+            IReadOnlyDictionary<string, T> values,
+            CustomInfoValueType valueType,
+            Dictionary<string, CustomInfoValueType> globalKeyTypes,
+            Dictionary<string, int> keyLookup,
+            List<string> orderedKeys)
+        {
+            foreach (var key in values.Keys)
+            {
+                if (globalKeyTypes.TryGetValue(key, out var existingType) && existingType != valueType)
+                {
+                    throw new InvalidOperationException(
+                        $"Custom info key '{key}' was emitted as both {existingType} and {valueType}.");
+                }
+
+                globalKeyTypes[key] = valueType;
+                if (keyLookup.ContainsKey(key))
+                {
+                    continue;
+                }
+
+                keyLookup[key] = orderedKeys.Count;
+                orderedKeys.Add(key);
+            }
+        }
+
+        private static void PopulateFloatCustomSection(
+            CustomInfoBuilder custom,
+            int row,
+            Dictionary<string, int> keyLookup,
+            int keyCount,
+            float[] values,
+            byte[] present)
+        {
+            if (keyCount == 0)
+            {
+                return;
+            }
+
+            foreach (var entry in custom.FloatValues)
+            {
+                var offset = row * keyCount + keyLookup[entry.Key];
+                values[offset] = entry.Value;
+                present[offset] = 1;
+            }
+        }
+
+        private static void PopulateIntCustomSection(
+            CustomInfoBuilder custom,
+            int row,
+            Dictionary<string, int> keyLookup,
+            int keyCount,
+            int[] values,
+            byte[] present)
+        {
+            if (keyCount == 0)
+            {
+                return;
+            }
+
+            foreach (var entry in custom.IntValues)
+            {
+                var offset = row * keyCount + keyLookup[entry.Key];
+                values[offset] = entry.Value;
+                present[offset] = 1;
+            }
+        }
+
+        private static void PopulateBoolCustomSection(
+            CustomInfoBuilder custom,
+            int row,
+            Dictionary<string, int> keyLookup,
+            int keyCount,
+            byte[] values,
+            byte[] present)
+        {
+            if (keyCount == 0)
+            {
+                return;
+            }
+
+            foreach (var entry in custom.BoolValues)
+            {
+                var offset = row * keyCount + keyLookup[entry.Key];
+                values[offset] = entry.Value ? (byte)1 : (byte)0;
+                present[offset] = 1;
+            }
+        }
+
+        private static void PopulateVector3CustomSection(
+            CustomInfoBuilder custom,
+            int row,
+            Dictionary<string, int> keyLookup,
+            int keyCount,
+            float[] values,
+            byte[] present)
+        {
+            if (keyCount == 0)
+            {
+                return;
+            }
+
+            foreach (var entry in custom.Vector3Values)
+            {
+                var keyOffset = row * keyCount + keyLookup[entry.Key];
+                var valueOffset = keyOffset * 3;
+                values[valueOffset] = entry.Value.x;
+                values[valueOffset + 1] = entry.Value.y;
+                values[valueOffset + 2] = entry.Value.z;
+                present[keyOffset] = 1;
+            }
+        }
+
+        private static void PopulateQuaternionCustomSection(
+            CustomInfoBuilder custom,
+            int row,
+            Dictionary<string, int> keyLookup,
+            int keyCount,
+            float[] values,
+            byte[] present)
+        {
+            if (keyCount == 0)
+            {
+                return;
+            }
+
+            foreach (var entry in custom.QuaternionValues)
+            {
+                var keyOffset = row * keyCount + keyLookup[entry.Key];
+                var valueOffset = keyOffset * 4;
+                values[valueOffset] = entry.Value.x;
+                values[valueOffset + 1] = entry.Value.y;
+                values[valueOffset + 2] = entry.Value.z;
+                values[valueOffset + 3] = entry.Value.w;
+                present[keyOffset] = 1;
+            }
         }
 
         private static BatchedFinalInfo BuildBatchedFinalInfo(AgentObservation[] agentObservations, Info[] infos, int[] indices)

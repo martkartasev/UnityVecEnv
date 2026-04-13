@@ -57,6 +57,17 @@ namespace Scripts.VecEnv.Core
         protected abstract float CollectReward();
         protected abstract EnvironmentState GymStep();
 
+        protected virtual void CollectInfo(CustomInfoBuilder info)
+        {
+            var legacyMetadata = new Dictionary<string, float>();
+            CollectInfo(legacyMetadata);
+            foreach (var entry in legacyMetadata)
+            {
+                info.Add(entry.Key, entry.Value);
+            }
+        }
+
+        [Obsolete("Override CollectInfo(CustomInfoBuilder info) instead. The Dictionary<string, float> overload is legacy compatibility only.")]
         protected virtual void CollectInfo(Dictionary<string, float> metadata)
         {
         }
@@ -86,13 +97,13 @@ namespace Scripts.VecEnv.Core
             if (DoneStatus != EnvironmentState.Running)
             {
                 info.FinalObservation = _latestObservation;
-                info.EpisodeReward = _latestStepReward;
+                info.EpisodeReward = EpisodeReward;
                 info.EpisodeLength = CurrentStep;
             }
 
-            var dictionary = new Dictionary<string, float>();
-            CollectInfo(dictionary);
-            info.custom = dictionary;
+            var customInfo = new CustomInfoBuilder();
+            CollectInfo(customInfo);
+            info.custom = customInfo.HasAnyValues ? customInfo : null;
 
             return info;
         }

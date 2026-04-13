@@ -108,6 +108,18 @@ message BatchedCustomInfo {
   repeated string keys = 1;
   bytes values_f32 = 2;
   bytes present = 3;
+  repeated string keys_i32 = 4;
+  bytes values_i32 = 5;
+  bytes present_i32 = 6;
+  repeated string keys_bool = 7;
+  bytes values_bool = 8;
+  bytes present_bool = 9;
+  repeated string keys_vector3 = 10;
+  bytes values_vector3_f32 = 11;
+  bytes present_vector3 = 12;
+  repeated string keys_quaternion = 13;
+  bytes values_quaternion_f32 = 14;
+  bytes present_quaternion = 15;
 }
 
 message BatchedFinalInfo {

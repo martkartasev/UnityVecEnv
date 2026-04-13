@@ -117,13 +117,95 @@ namespace Scripts.VecEnv.Message
         public bool ApplyActionEveryStep;
     }
 
+    public enum CustomInfoValueType
+    {
+        Float,
+        Int,
+        Bool,
+        Vector3,
+        Quaternion
+    }
+
+    public sealed class CustomInfoBuilder
+    {
+        private readonly Dictionary<string, CustomInfoValueType> _valueTypes = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, float> _floatValues = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _intValues = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, bool> _boolValues = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, Vector3> _vector3Values = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, Quaternion> _quaternionValues = new(StringComparer.Ordinal);
+
+        public IReadOnlyDictionary<string, float> FloatValues => _floatValues;
+        public IReadOnlyDictionary<string, int> IntValues => _intValues;
+        public IReadOnlyDictionary<string, bool> BoolValues => _boolValues;
+        public IReadOnlyDictionary<string, Vector3> Vector3Values => _vector3Values;
+        public IReadOnlyDictionary<string, Quaternion> QuaternionValues => _quaternionValues;
+        public bool HasAnyValues => _valueTypes.Count > 0;
+
+        public void Add(string key, float value)
+        {
+            var normalizedKey = NormalizeKey(key);
+            RegisterType(normalizedKey, CustomInfoValueType.Float);
+            _floatValues[normalizedKey] = value;
+        }
+
+        public void Add(string key, int value)
+        {
+            var normalizedKey = NormalizeKey(key);
+            RegisterType(normalizedKey, CustomInfoValueType.Int);
+            _intValues[normalizedKey] = value;
+        }
+
+        public void Add(string key, bool value)
+        {
+            var normalizedKey = NormalizeKey(key);
+            RegisterType(normalizedKey, CustomInfoValueType.Bool);
+            _boolValues[normalizedKey] = value;
+        }
+
+        public void Add(string key, Vector3 value)
+        {
+            var normalizedKey = NormalizeKey(key);
+            RegisterType(normalizedKey, CustomInfoValueType.Vector3);
+            _vector3Values[normalizedKey] = value;
+        }
+
+        public void Add(string key, Quaternion value)
+        {
+            var normalizedKey = NormalizeKey(key);
+            RegisterType(normalizedKey, CustomInfoValueType.Quaternion);
+            _quaternionValues[normalizedKey] = value;
+        }
+
+        private void RegisterType(string key, CustomInfoValueType valueType)
+        {
+            if (_valueTypes.TryGetValue(key, out var existingType) && existingType != valueType)
+            {
+                throw new InvalidOperationException(
+                    $"Custom info key '{key}' was already registered as {existingType} and cannot be reassigned to {valueType}.");
+            }
+
+            _valueTypes[key] = valueType;
+        }
+
+        private static string NormalizeKey(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new ArgumentException("Custom info key cannot be null or whitespace.", nameof(key));
+            }
+
+            return key.Trim();
+        }
+    }
+
     public struct Info
     {
         public float EpisodeReward;
         public int EpisodeLength;
         public int AgentIndex;
         public AgentObservation FinalObservation;
-        public Dictionary<String, float> custom;
+        public CustomInfoBuilder custom;
     }
 
     public enum VisualObservationDataType

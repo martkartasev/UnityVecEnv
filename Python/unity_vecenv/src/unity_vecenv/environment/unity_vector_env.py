@@ -184,11 +184,17 @@ class UnityVectorEnv(VectorEnv):
             raise RuntimeError(f"{field_name} has {arr.size} int32 values, expected {expected_size}.")
         return arr
 
-    def _decode_bool_buffer(self, payload: bytes, expected_size: int, field_name: str) -> np.ndarray:
+    def _decode_bool_buffer(
+        self,
+        payload: bytes,
+        expected_size: int,
+        field_name: str,
+        copy: bool = True,
+    ) -> np.ndarray:
         arr = np.frombuffer(payload, dtype=np.bool_)
         if arr.size != expected_size:
             raise RuntimeError(f"{field_name} has {arr.size} boolean values, expected {expected_size}.")
-        return arr.copy()
+        return arr.copy() if copy else arr
 
     def _decode_sparse_indices(self, payload: bytes, nr_agents: int, field_name: str) -> np.ndarray:
         if len(payload) % _INT32_LE.itemsize != 0:
@@ -205,38 +211,100 @@ class UnityVectorEnv(VectorEnv):
             raise RuntimeError(f"{field_name} contains duplicate indices.")
         return indices
 
-    def _decode_columnar_custom(self, custom_payload, indices: np.ndarray, nr_agents: int, field_name: str):
-        keys = np.asarray(custom_payload.keys, dtype=object)
+    def _decode_custom_section(
+        self,
+        *,
+        keys,
+        values_payload: bytes,
+        present_payload: bytes,
+        indices: np.ndarray,
+        nr_agents: int,
+        field_prefix: str,
+        values_field_name: str,
+        present_field_name: str,
+        decode_values,
+        dtype,
+        value_shape=(),
+    ):
+        keys = np.asarray(keys, dtype=object)
         num_rows = int(indices.size)
         num_keys = int(keys.size)
+        value_shape = tuple(value_shape)
+        values_per_key = int(np.prod(value_shape, dtype=np.int64)) if value_shape else 1
 
-        full_values = np.zeros((nr_agents, num_keys), dtype=np.float32)
+        full_values = np.zeros((nr_agents, num_keys) + value_shape, dtype=dtype)
         full_present = np.zeros((nr_agents, num_keys), dtype=np.bool_)
-        full_mask = np.zeros((nr_agents,), dtype=np.bool_)
 
         if num_rows == 0:
-            if num_keys != 0 or len(custom_payload.values_f32) != 0 or len(custom_payload.present) != 0:
-                raise RuntimeError(f"{field_name} has payload data but no indices.")
-            return keys, full_values, full_present, full_mask
+            if num_keys != 0 or len(values_payload) != 0 or len(present_payload) != 0:
+                raise RuntimeError(f"{field_prefix} has payload data but no indices.")
+            return keys, full_values, full_present
 
         if num_keys == 0:
-            raise RuntimeError(f"{field_name} has {num_rows} rows but no keys.")
+            if len(values_payload) != 0 or len(present_payload) != 0:
+                raise RuntimeError(f"{field_prefix} has payload data but no keys.")
+            return keys, full_values, full_present
 
-        values = self._decode_float_buffer(
-            custom_payload.values_f32,
-            num_rows * num_keys,
-            f"{field_name}.values_f32",
-        ).reshape((num_rows, num_keys)).copy()
+        values = decode_values(
+            values_payload,
+            num_rows * num_keys * values_per_key,
+            f"{field_prefix}.{values_field_name}",
+        ).reshape((num_rows, num_keys) + value_shape)
         present = self._decode_bool_buffer(
-            custom_payload.present,
+            present_payload,
             num_rows * num_keys,
-            f"{field_name}.present",
+            f"{field_prefix}.{present_field_name}",
+            copy=False,
         ).reshape((num_rows, num_keys))
 
         full_values[indices] = values
         full_present[indices] = present
-        full_mask[indices] = np.any(present, axis=1)
-        return keys, full_values, full_present, full_mask
+        return keys, full_values, full_present
+
+    def _populate_typed_custom_info(self, info: Dict[str, Any], custom_payload, indices: np.ndarray, nr_agents: int):
+        section_specs = (
+            ("keys", "values_f32", "present", self._decode_float_buffer, np.float32, ()),
+            ("keys_i32", "values_i32", "present_i32", self._decode_int_buffer, np.int32, ()),
+            (
+                "keys_bool",
+                "values_bool",
+                "present_bool",
+                lambda payload, expected_size, field_name: self._decode_bool_buffer(
+                    payload,
+                    expected_size,
+                    field_name,
+                    copy=False,
+                ),
+                np.bool_,
+                (),
+            ),
+            ("keys_vector3", "values_vector3_f32", "present_vector3", self._decode_float_buffer, np.float32, (3,)),
+            (
+                "keys_quaternion",
+                "values_quaternion_f32",
+                "present_quaternion",
+                self._decode_float_buffer,
+                np.float32,
+                (4,),
+            ),
+        )
+
+        for keys_field, values_field, present_field, decode_values, dtype, value_shape in section_specs:
+            custom_keys, custom_values, custom_present = self._decode_custom_section(
+                keys=getattr(custom_payload, keys_field),
+                values_payload=getattr(custom_payload, values_field),
+                present_payload=getattr(custom_payload, present_field),
+                indices=indices,
+                nr_agents=nr_agents,
+                field_prefix="custom",
+                values_field_name=values_field,
+                present_field_name=present_field,
+                decode_values=decode_values,
+                dtype=dtype,
+                value_shape=value_shape,
+            )
+            if custom_keys.size > 0:
+                self._populate_custom_info(info, custom_keys, custom_values, custom_present)
 
     def _populate_custom_info(self, info: Dict[str, Any], custom_keys, custom_values, custom_present):
         for column, raw_key in enumerate(custom_keys.tolist()):
@@ -477,14 +545,7 @@ class UnityVectorEnv(VectorEnv):
         info: Dict[str, Any] = {}
 
         custom_indices = self._decode_sparse_indices(results.custom_indices_i32, nr_agents, "custom_indices_i32")
-        custom_keys, custom_values, custom_present, custom_mask = self._decode_columnar_custom(
-            results.custom,
-            custom_indices,
-            nr_agents,
-            "custom",
-        )
-        if custom_keys.size > 0:
-            self._populate_custom_info(info, custom_keys, custom_values, custom_present)
+        self._populate_typed_custom_info(info, results.custom, custom_indices, nr_agents)
 
         return obs, info
 
@@ -496,14 +557,7 @@ class UnityVectorEnv(VectorEnv):
         info: Dict[str, Any] = {}
 
         custom_indices = self._decode_sparse_indices(results.custom_indices_i32, self.num_envs, "custom_indices_i32")
-        custom_keys, custom_values, custom_present, custom_mask = self._decode_columnar_custom(
-            results.custom,
-            custom_indices,
-            self.num_envs,
-            "custom",
-        )
-        if custom_keys.size > 0:
-            self._populate_custom_info(info, custom_keys, custom_values, custom_present)
+        self._populate_typed_custom_info(info, results.custom, custom_indices, self.num_envs)
 
         final_mask = np.zeros((self.num_envs,), dtype=np.bool_)
         final_observation = self._zeros_like_observation(obs)
