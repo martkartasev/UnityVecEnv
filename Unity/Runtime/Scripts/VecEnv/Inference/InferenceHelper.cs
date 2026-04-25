@@ -17,15 +17,17 @@ namespace Scripts.VecEnv.Inference
         private readonly Model.Input _obsDiscrete;
         private readonly Model.Input _obsContinuous;
         private readonly Model.Input[] _visualInputs;
+        private readonly Dictionary<string, VisualObservationDescription> _visualDescriptionsByKey;
         private bool _disposed;
 
         public readonly ModelAsset PolicyAsset;
 
-        public InferenceHelper(ModelAsset modelAsset)
+        public InferenceHelper(ModelAsset modelAsset, VisualObservationDescription[] visualDescriptions = null)
         {
             _model = ModelLoader.Load(modelAsset);
             _worker = new Worker(_model, BackendType.CPU);
             PolicyAsset = modelAsset;
+            _visualDescriptionsByKey = BuildVisualDescriptionLookup(visualDescriptions);
 
             _actionContinuous = _model.outputs.Find(output => output.name == "action_continuous");
             _actionDiscrete = _model.outputs.Find(output => output.name == "action_discrete");
@@ -37,7 +39,7 @@ namespace Scripts.VecEnv.Inference
                 .ToArray();
         }
 
-        public AgentAction DoInference(AgentObservation observation, VisualObservationDescription[] visualDescriptions)
+        public AgentAction DoInference(AgentObservation observation)
         {
             if (_disposed)
             {
@@ -47,7 +49,7 @@ namespace Scripts.VecEnv.Inference
             var inputTensors = new List<Tensor>(_model.inputs.Count);
             try
             {
-                BindInputs(observation, visualDescriptions, inputTensors);
+                BindInputs(observation, inputTensors);
                 _worker.Schedule();
                 return HandleOutput();
             }
@@ -62,7 +64,6 @@ namespace Scripts.VecEnv.Inference
 
         private void BindInputs(
             AgentObservation observation,
-            VisualObservationDescription[] visualDescriptions,
             List<Tensor> inputTensors)
         {
             if (_obsContinuous.name != null)
@@ -91,7 +92,13 @@ namespace Scripts.VecEnv.Inference
 
             if (_visualInputs.Length > 0)
             {
-                var visualLookup = BuildVisualLookup(observation, visualDescriptions);
+                if (_visualDescriptionsByKey.Count == 0)
+                {
+                    throw new ArgumentException(
+                        "Model defines visual observation inputs, but no visual observation descriptions were provided when creating the inference helper.");
+                }
+
+                var visualLookup = BuildVisualLookup(observation);
                 foreach (var visualInput in _visualInputs)
                 {
                     var visualKey = GetVisualObservationLookupKey(visualInput.name);
@@ -352,18 +359,20 @@ namespace Scripts.VecEnv.Inference
             return $"({string.Join(", ", shape)})";
         }
 
-        private static Dictionary<string, VisualObservationBinding> BuildVisualLookup(
-            AgentObservation observation,
+        private static Dictionary<string, VisualObservationDescription> BuildVisualDescriptionLookup(
             VisualObservationDescription[] visualDescriptions)
         {
-            var descriptions = (visualDescriptions ?? Array.Empty<VisualObservationDescription>())
+            return (visualDescriptions ?? Array.Empty<VisualObservationDescription>())
                 .ToDictionary(description => SanitizeInputComponent(description.Name), description => description, StringComparer.Ordinal);
+        }
 
+        private Dictionary<string, VisualObservationBinding> BuildVisualLookup(AgentObservation observation)
+        {
             var lookup = new Dictionary<string, VisualObservationBinding>(StringComparer.Ordinal);
             foreach (var visualObservation in observation.VisualObservations ?? Array.Empty<AgentVisualObservation>())
             {
                 var key = SanitizeInputComponent(visualObservation.Name);
-                if (!descriptions.TryGetValue(key, out var description))
+                if (!_visualDescriptionsByKey.TryGetValue(key, out var description))
                 {
                     continue;
                 }

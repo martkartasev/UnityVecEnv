@@ -182,11 +182,12 @@ namespace Scripts.VecEnv.Core
                 if (_model == null || _model.PolicyAsset != inferencePolicy)
                 {
                     DisposeInferenceHelper();
-                    _model = new InferenceHelper(inferencePolicy);
+                    EnsureVisualObservationSourcesInitialized();
+                    _model = new InferenceHelper(inferencePolicy, _visualObservationDescriptions);
                 }
 
                 InferenceEnabled = true;
-                DoSetAction(_model.DoInference(_latestObservation, _visualObservationDescriptions));
+                DoSetAction(_model.DoInference(_latestObservation));
             }
             else
             {
