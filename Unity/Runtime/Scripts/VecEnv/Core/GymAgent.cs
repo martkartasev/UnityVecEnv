@@ -20,6 +20,7 @@ namespace Scripts.VecEnv.Core
 
         [Header("Inference")] public ModelAsset inferencePolicy;
         protected bool InferenceEnabled;
+        protected EnvironmentState TimeoutStatus = EnvironmentState.Truncated;
         private InferenceHelper _model;
         private AgentObservation _latestObservation;
         private AgentAction _latestAction;
@@ -128,7 +129,7 @@ namespace Scripts.VecEnv.Core
         {
             CurrentStep++;
             DoneStatus = GymStep();
-            if (DoneStatus == EnvironmentState.Running && CurrentStep >= gymSteps) DoneStatus = EnvironmentState.Truncated;
+            if (DoneStatus == EnvironmentState.Running && CurrentStep >= gymSteps) DoneStatus = TimeoutStatus;
             return DoneStatus;
         }
 
@@ -142,11 +143,11 @@ namespace Scripts.VecEnv.Core
         protected internal void DoReset()
         {
             PreviousEpisodeReward = EpisodeReward;
+            GymReset();
             EpisodeReward = 0;
             _latestStepReward = 0;
             CurrentStep = 0;
             DoneStatus = EnvironmentState.Running;
-            GymReset();
         }
 
         protected internal void DoSetAction(AgentAction agentAction)
