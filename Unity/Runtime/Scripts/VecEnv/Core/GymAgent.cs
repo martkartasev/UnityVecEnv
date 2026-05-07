@@ -28,7 +28,10 @@ namespace Scripts.VecEnv.Core
         private VisualObservationDescription[] _visualObservationDescriptions = Array.Empty<VisualObservationDescription>();
         private bool _visualObservationSourcesInitialized;
 
-        [Header("Agent")] public int gymSteps;
+        [Header("Agent")]
+        [Min(0)]
+        [Tooltip("Maximum steps per episode. Set to 0 to disable automatic truncation.")]
+        public int gymSteps;
 
         protected int CurrentStep;
         protected EnvironmentState DoneStatus;
@@ -129,7 +132,7 @@ namespace Scripts.VecEnv.Core
         {
             CurrentStep++;
             DoneStatus = GymStep();
-            if (DoneStatus == EnvironmentState.Running && CurrentStep >= gymSteps) DoneStatus = TimeoutStatus;
+            if (DoneStatus == EnvironmentState.Running && gymSteps > 0 && CurrentStep >= gymSteps) DoneStatus = TimeoutStatus;
             return DoneStatus;
         }
 
