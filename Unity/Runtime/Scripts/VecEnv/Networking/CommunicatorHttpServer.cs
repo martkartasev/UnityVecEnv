@@ -16,9 +16,10 @@ namespace Scripts.VecEnv.Networking
 {
     public class CommunicatorHttpServer : IExternalCommunication
     {
+        private const int DefaultChannel = 50010;
         private static readonly HashSet<string> LoggedBatchedVisualSummaries = new();
         private static readonly HashSet<string> LoggedNonZeroBatchedVisualSummaries = new();
-        public static int channel = 50010;
+        public static int channel = DefaultChannel;
         private static Lazy<CommunicatorHttpServer> _sLazy = new(() => new CommunicatorHttpServer());
         public static CommunicatorHttpServer Instance => _sLazy.Value;
         public static bool IsInitialized => _sLazy.IsValueCreated;
@@ -28,6 +29,7 @@ namespace Scripts.VecEnv.Networking
         private HttpListener _httpListener;
         private Thread _listenerThread;
         private bool _isRunning = true;
+        private bool _isDisposed;
 
         private readonly SemaphoreSlim _stepGate = new(1, 1);
         private readonly ManualResetEventSlim _messageAvailable = new(false);
@@ -39,6 +41,27 @@ namespace Scripts.VecEnv.Networking
         private ExternalCommunication.Reset _reset;
         private ExternalCommunication.Step _step;
         private InitializeEnvironments _initialize;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            if (_sLazy.IsValueCreated)
+            {
+                try
+                {
+                    _sLazy.Value.Dispose();
+                }
+                catch
+                {
+                    // Ignore shutdown errors while resetting play mode state.
+                }
+            }
+
+            channel = DefaultChannel;
+            LoggedBatchedVisualSummaries.Clear();
+            LoggedNonZeroBatchedVisualSummaries.Clear();
+            _sLazy = new Lazy<CommunicatorHttpServer>(() => new CommunicatorHttpServer());
+        }
 
 
         CommunicatorHttpServer()
@@ -53,6 +76,11 @@ namespace Scripts.VecEnv.Networking
 
         public Reset? FetchReset()
         {
+            if (_isDisposed)
+            {
+                return null;
+            }
+
             lock (_messageLock)
             {
                 if (_reset == null) return null;
@@ -66,6 +94,11 @@ namespace Scripts.VecEnv.Networking
 
         public Message.Step? FetchNextStep()
         {
+            if (_isDisposed)
+            {
+                return null;
+            }
+
             lock (_messageLock)
             {
                 if (_step == null) return null;
@@ -78,6 +111,11 @@ namespace Scripts.VecEnv.Networking
 
         public InitializeEnvironment? FetchInitialize()
         {
+            if (_isDisposed)
+            {
+                return null;
+            }
+
             lock (_messageLock)
             {
                 if (_initialize == null) return null;
@@ -90,6 +128,11 @@ namespace Scripts.VecEnv.Networking
 
         public bool WaitForNextMessage(int timeoutMilliseconds)
         {
+            if (_isDisposed)
+            {
+                return false;
+            }
+
             lock (_messageLock)
             {
                 if (_reset != null || _step != null || _initialize != null)
@@ -121,6 +164,11 @@ namespace Scripts.VecEnv.Networking
 
         public void StepCompleted(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info[] infos)
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             var customIndices = BuildCustomIndices(infos);
             var finalIndices = BuildFinalIndices(dones);
             var results = new BatchedStepResults
@@ -140,6 +188,11 @@ namespace Scripts.VecEnv.Networking
 
         public void ResetCompleted(AgentObservation[] agentObservations, Info[] infos)
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             var customIndices = BuildCustomIndices(infos);
             var results = new BatchedResetResults
             {
@@ -153,6 +206,11 @@ namespace Scripts.VecEnv.Networking
 
         public void InitializeCompleted(EnvironmentDescription initialize1)
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             var description = Mapper.MapEnvironmentDescription(initialize1);
             _initializeTcs?.TrySetResult(description);
         }
@@ -703,6 +761,10 @@ namespace Scripts.VecEnv.Networking
                 {
                     break; // Stop() called
                 }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
                 catch (Exception e)
                 {
                     Debug.LogError(e);
@@ -864,7 +926,16 @@ namespace Scripts.VecEnv.Networking
             }
             finally
             {
-                _stepGate.Release();
+                if (!_isDisposed)
+                {
+                    try
+                    {
+                        _stepGate.Release();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                }
             }
         }
 
@@ -911,10 +982,69 @@ namespace Scripts.VecEnv.Networking
 
         public void Dispose()
         {
-            _isRunning = false; // TODO: Need to fix handling
-            _httpListener.Stop();
-            _listenerThread.Join();
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            _isDisposed = true;
+            _isRunning = false;
+
+            lock (_messageLock)
+            {
+                _reset = null;
+                _step = null;
+                _initialize = null;
+                UpdateMessageAvailability_NoLock();
+            }
+
+            _initializeTcs?.TrySetCanceled();
+            _resetTcs?.TrySetCanceled();
+            _stepTcs?.TrySetCanceled();
+
+            try
+            {
+                _messageAvailable.Set();
+            }
+            catch
+            {
+                // ignored
+            }
+
+            try
+            {
+                _httpListener?.Stop();
+            }
+            catch
+            {
+                // ignored
+            }
+
+            if (_listenerThread != null && _listenerThread.IsAlive && Thread.CurrentThread != _listenerThread)
+            {
+                try
+                {
+                    _listenerThread.Join();
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
+
+            try
+            {
+                _httpListener?.Close();
+            }
+            catch
+            {
+                // ignored
+            }
+
+            _httpListener = null;
+            _listenerThread = null;
             _messageAvailable.Dispose();
+            _stepGate.Dispose();
         }
     }
 }

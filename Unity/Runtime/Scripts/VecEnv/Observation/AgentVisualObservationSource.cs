@@ -21,6 +21,13 @@ namespace Scripts.VecEnv.Observation
         public virtual string DebugPreviewDetails => null;
         protected bool VerboseDebugLoggingEnabled => verboseDebugLogging;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            LoggedBuildObservationSummaries.Clear();
+            LoggedNonZeroBuildObservationSummaries.Clear();
+        }
+
         internal void InitializeSource(GymAgent agent, int index)
         {
             Agent = agent;

@@ -20,6 +20,13 @@ namespace Scripts.VecEnv.Observation
         private HDAdditionalCameraData _additionalCameraData;
         public string UnsupportedReason { get; private set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            _loggedPipelineDiagnostics = false;
+            CameraDepthCapturePass.ResetStaticState();
+        }
+
         public bool Configure(Camera targetCamera, RenderTexture targetTexture, LayerMask layerMask, float depthMinMeters,
             float depthMaxMeters, bool verboseDebugLogging)
         {
@@ -245,6 +252,12 @@ namespace Scripts.VecEnv.Observation
             [System.NonSerialized] internal float depthMaxMeters;
             [System.NonSerialized] internal bool verboseDebugLogging;
             [System.NonSerialized] private Material _depthOverrideMaterial;
+
+            internal static void ResetStaticState()
+            {
+                _loggedMissingDepthShader = false;
+                _loggedFirstExecute = false;
+            }
 
             protected override bool executeInSceneView => false;
 

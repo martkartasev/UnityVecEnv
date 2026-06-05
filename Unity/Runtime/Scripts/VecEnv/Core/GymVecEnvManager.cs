@@ -60,6 +60,12 @@ namespace Scripts.VecEnv.Core
         private Coroutine _disconnectedStepper;
         public GymAgentManager AgentManager { get; set; }
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            _sLazy = new Lazy<GymVecEnvManager>(CreateGymVecEnvManager);
+        }
+
         static GymVecEnvManager CreateGymVecEnvManager()
         {
             if (IsInitialized)
@@ -194,7 +200,7 @@ namespace Scripts.VecEnv.Core
             Application.Quit();
 #endif
             IsShuttingDown = true;
-            _communicator.Dispose();
+            DisposeCommunicator();
         }
 
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
@@ -349,13 +355,13 @@ namespace Scripts.VecEnv.Core
 
         private void OnDestroy()
         {
-            _communicator.Dispose();
+            DisposeCommunicator();
         }
 
         private void OnApplicationQuit()
         {
             IsShuttingDown = true;
-            _communicator.Dispose();
+            DisposeCommunicator();
         }
 
         public void ClearAgents()
@@ -383,6 +389,17 @@ namespace Scripts.VecEnv.Core
                 Debug.LogWarning($"Expected {expectedAgentCount} agents during initialization, but only found {_agents.Count}. " +
                                  "If your environments spawn GymAgents asynchronously, ensure they are created within the first few frames.");
             }
+        }
+
+        private void DisposeCommunicator()
+        {
+            if (_communicator == null)
+            {
+                return;
+            }
+
+            _communicator.Dispose();
+            _communicator = null;
         }
     }
 }

@@ -19,6 +19,22 @@ namespace Scripts.VecEnv.Core
         private static int? _configuredPhysicsStepsPerGymStep;
         private static int? _configuredAgentCount;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneUnloaded -= OnSceneUnloaded;
+
+            LoadingDone = false;
+            SceneToLoad = null;
+            GymAgentManager = null;
+            _args = null;
+            _sceneCallbacksRegistered = false;
+            _configuredTimeoutMilliseconds = null;
+            _configuredPhysicsStepsPerGymStep = null;
+            _configuredAgentCount = null;
+        }
+
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void BeforeSceneLoad()
