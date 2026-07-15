@@ -1,5 +1,6 @@
+import numbers
 import subprocess
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Mapping, Optional, Union
 
 import numpy as np
 from gymnasium import spaces
@@ -22,6 +23,7 @@ from unity_vecenv.protobuf_gen.communication_pb2 import (
     Step,
     Action,
     BatchedStepResults,
+    EnvironmentParameter as EnvironmentParameterProto,
     InitializeEnvironments,
     AutoResetMode,
 )
@@ -29,6 +31,68 @@ from unity_vecenv.protobuf_gen.communication_pb2 import (
 _FLOAT32_LE = np.dtype("<f4")
 _INT32_LE = np.dtype("<i4")
 EnvironmentParameterValue = Union[str, float, int]
+
+
+def _normalize_autoreset_mode(mode: Union[AutoresetMode, str]) -> AutoresetMode:
+    if isinstance(mode, AutoresetMode):
+        normalized = mode
+    elif isinstance(mode, str):
+        name = mode.strip().lower().replace("-", "_")
+        modes_by_name = {
+            "next_step": AutoresetMode.NEXT_STEP,
+            "samestep": AutoresetMode.SAME_STEP,
+            "same_step": AutoresetMode.SAME_STEP,
+            "nextstep": AutoresetMode.NEXT_STEP,
+        }
+        if name not in modes_by_name:
+            raise ValueError(f"Unsupported autoreset mode '{mode}'; expected 'next_step' or 'same_step'.")
+        normalized = modes_by_name[name]
+    else:
+        raise TypeError("autoreset_mode must be a gymnasium AutoresetMode or string.")
+
+    if normalized not in (AutoresetMode.NEXT_STEP, AutoresetMode.SAME_STEP):
+        raise ValueError(f"Unsupported autoreset mode {normalized}; only next-step and same-step are implemented.")
+    return normalized
+
+
+def _normalize_environment_parameters(
+    parameters: Optional[Mapping[str, EnvironmentParameterValue]],
+) -> Dict[str, EnvironmentParameterValue]:
+    if parameters is None:
+        return {}
+
+    normalized: Dict[str, EnvironmentParameterValue] = {}
+    for raw_key, value in parameters.items():
+        key = str(raw_key).strip()
+        if not key:
+            raise ValueError("Environment parameter key cannot be empty.")
+        if key in normalized:
+            raise ValueError(f"Duplicate environment parameter key '{key}'.")
+        normalized[key] = value
+
+    return normalized
+
+
+def _environment_parameter_to_proto(
+    key: str,
+    value: EnvironmentParameterValue,
+) -> EnvironmentParameterProto:
+    parameter = EnvironmentParameterProto()
+    parameter.key = key
+
+    if isinstance(value, str):
+        parameter.string_value = value
+    elif isinstance(value, numbers.Integral):
+        parameter.int_value = int(value)
+    elif isinstance(value, numbers.Real):
+        parameter.float_value = float(value)
+    else:
+        raise TypeError(
+            f"Unsupported environment parameter '{key}' value type {type(value).__name__}; "
+            "expected str, int, or float."
+        )
+
+    return parameter
 
 
 class UnityVectorEnv(VectorEnv):
@@ -43,14 +107,19 @@ class UnityVectorEnv(VectorEnv):
                  port: int = 50010,
                  num_envs: int = 1,
                  scene_load: str = "",
-                 log_file: str = ""):
+                 log_file: str = "",
+                 env_parameters: Optional[Mapping[str, EnvironmentParameterValue]] = None,
+                 autoreset_mode: Union[AutoresetMode, str] = AutoresetMode.NEXT_STEP):
         super(UnityVectorEnv, self).__init__()
+        self.initialization_parameters = _normalize_environment_parameters(env_parameters)
+        self.autoreset_mode = _normalize_autoreset_mode(autoreset_mode)
 
         self.metadata = {
-            "autoreset_mode": AutoresetMode.NEXT_STEP,
+            "autoreset_mode": self.autoreset_mode,
             "num_envs": num_envs,
             "time_scale": time_scale,
             "physics_steps_per_action": physics_steps_per_action,
+            "initialization_parameters": dict(self.initialization_parameters),
         }
         self.time_scale = time_scale
         self.physics_steps_per_action = physics_steps_per_action
@@ -62,7 +131,11 @@ class UnityVectorEnv(VectorEnv):
         self.process = start_unity_process(executable_path, scene_load=scene_load, port=self.port, nr_agents=num_envs, batch_mode=batch_mode, no_graphics=no_graphics, timescale=self.time_scale, log_file=log_file) if start_process else None
         self.client = start_client(port=self.port)
 
-        environment_description = self.initialize_environment(num_envs)
+        environment_description = self.initialize_environment(
+            num_envs,
+            self.initialization_parameters,
+            self.autoreset_mode,
+        )
         if environment_description.trueNumberOfEnvs == 0:
             raise RuntimeError("Failed to initialize environment connection. Number of envs returns 0.")
 
@@ -101,10 +174,22 @@ class UnityVectorEnv(VectorEnv):
         self.observation_space = batch_space(self.single_observation_space, self.num_envs)
         self.metadata["environment_parameters"] = dict(self.environment_parameters)
 
-    def initialize_environment(self, num_envs):
+    def initialize_environment(
+            self,
+            num_envs,
+            env_parameters: Optional[Mapping[str, EnvironmentParameterValue]] = None,
+            autoreset_mode: AutoresetMode = AutoresetMode.NEXT_STEP,
+    ):
         init = InitializeEnvironments()
-        init.autoResetMode = AutoResetMode.NextStep
+        proto_modes = {
+            AutoresetMode.NEXT_STEP: AutoResetMode.NextStep,
+            AutoresetMode.SAME_STEP: AutoResetMode.SameStep,
+        }
+        normalized_autoreset_mode = _normalize_autoreset_mode(autoreset_mode)
+        init.autoResetMode = proto_modes[normalized_autoreset_mode]
         init.requestedNumberOfEnvs = num_envs
+        for key, value in _normalize_environment_parameters(env_parameters).items():
+            init.parameters.append(_environment_parameter_to_proto(key, value))
         environment_description = self.client.initialize(init)
         return environment_description
 

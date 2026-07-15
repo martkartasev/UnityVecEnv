@@ -14,9 +14,17 @@ namespace Scripts.VecEnv.Message
         Truncated
     }
 
+    public enum EnvironmentAutoResetMode
+    {
+        NextStep,
+        SameStep
+    }
+
     public struct InitializeEnvironment
     {
+        public EnvironmentAutoResetMode AutoResetMode;
         public int AgentCount;
+        public EnvironmentParameter[] Parameters;
     }
 
     public enum EnvironmentParameterValueType

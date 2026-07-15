@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using ExternalCommunication;
 
@@ -118,10 +119,54 @@ namespace Scripts.VecEnv.Message
             return mapEnvironmentDescription;
         }
 
+        private static EnvironmentParameter MapEnvironmentParameter(ExternalCommunication.EnvironmentParameter parameter)
+        {
+            var mappedParameter = new EnvironmentParameter
+            {
+                Key = parameter.Key ?? string.Empty
+            };
+
+            switch (parameter.ValueCase)
+            {
+                case ExternalCommunication.EnvironmentParameter.ValueOneofCase.StringValue:
+                    mappedParameter.ValueType = EnvironmentParameterValueType.String;
+                    mappedParameter.StringValue = parameter.StringValue ?? string.Empty;
+                    break;
+                case ExternalCommunication.EnvironmentParameter.ValueOneofCase.FloatValue:
+                    mappedParameter.ValueType = EnvironmentParameterValueType.Float;
+                    mappedParameter.FloatValue = parameter.FloatValue;
+                    break;
+                case ExternalCommunication.EnvironmentParameter.ValueOneofCase.IntValue:
+                    mappedParameter.ValueType = EnvironmentParameterValueType.Int;
+                    mappedParameter.IntValue = parameter.IntValue;
+                    break;
+                default:
+                    throw new InvalidOperationException($"Environment parameter '{mappedParameter.Key}' is missing a typed value.");
+            }
+
+            return mappedParameter;
+        }
+
         public InitializeEnvironment MapInitialize(InitializeEnvironments initialize)
         {
-            var initializeEnvironment = new InitializeEnvironment();
-            initializeEnvironment.AgentCount = initialize.RequestedNumberOfEnvs;
+            var initializeEnvironment = new InitializeEnvironment
+            {
+                AgentCount = initialize.RequestedNumberOfEnvs,
+                Parameters = initialize.Parameters.Select(MapEnvironmentParameter).ToArray()
+            };
+
+            switch (initialize.AutoResetMode)
+            {
+                case ExternalCommunication.AutoResetMode.NextStep:
+                    initializeEnvironment.AutoResetMode = EnvironmentAutoResetMode.NextStep;
+                    break;
+                case ExternalCommunication.AutoResetMode.SameStep:
+                    initializeEnvironment.AutoResetMode = EnvironmentAutoResetMode.SameStep;
+                    break;
+                default:
+                    throw new NotSupportedException($"Auto-reset mode {initialize.AutoResetMode} is not supported.");
+            }
+
             return initializeEnvironment;
         }
     }

@@ -172,16 +172,21 @@ Custom info is only transmitted for agents that override this method and add val
 
 ### Receiving initialization parameters
 
-To respond to per-episode initialization data passed from Python's `reset(options={"init": ...})`:
+To respond to run-level initialization data passed from Python's `UnityVectorEnv(env_parameters={...})`, read the manager inside `Initialize()` or from a `PreInitialize` event subscriber:
 
 ```csharp
-protected override void GymReset()
+protected override void Initialize()
 {
-    // Access initialization parameters if needed.
-    // Currently parameters are passed via ResetParameters on the proto;
-    // override GymReset and read from your own stored state.
+    var manager = GymVecEnvManager.Instance;
+    var difficulty = manager.GetInitializationInt("difficulty", 1);
+    var layout = manager.GetInitializationString("layout", "default");
+    var windScale = manager.GetInitializationFloat("wind_scale", 0f);
 }
 ```
+
+`InitializationParameters` is populated before `PreInitialize`, agent spawning, and `GymAgent.Initialize()`. Available value types are `string`, `float`, and `int`.
+
+Per-episode reset data is still passed separately through Python's `reset(options={"init": ...})`.
 
 ---
 

@@ -24,12 +24,14 @@ UInt8: VisualObservationDataType
 Float32: VisualObservationDataType
 
 class InitializeEnvironments(_message.Message):
-    __slots__ = ("autoResetMode", "requestedNumberOfEnvs")
+    __slots__ = ("autoResetMode", "requestedNumberOfEnvs", "parameters")
     AUTORESETMODE_FIELD_NUMBER: _ClassVar[int]
     REQUESTEDNUMBEROFENVS_FIELD_NUMBER: _ClassVar[int]
+    PARAMETERS_FIELD_NUMBER: _ClassVar[int]
     autoResetMode: AutoResetMode
     requestedNumberOfEnvs: int
-    def __init__(self, autoResetMode: _Optional[_Union[AutoResetMode, str]] = ..., requestedNumberOfEnvs: _Optional[int] = ...) -> None: ...
+    parameters: _containers.RepeatedCompositeFieldContainer[EnvironmentParameter]
+    def __init__(self, autoResetMode: _Optional[_Union[AutoResetMode, str]] = ..., requestedNumberOfEnvs: _Optional[int] = ..., parameters: _Optional[_Iterable[_Union[EnvironmentParameter, _Mapping]]] = ...) -> None: ...
 
 class EnvironmentDescription(_message.Message):
     __slots__ = ("singleObservationSpace", "singleActionSpace", "trueNumberOfEnvs", "singleVisualObservationSpace", "parameters")

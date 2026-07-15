@@ -58,7 +58,10 @@ namespace Scripts.VecEnv.Core
         private EnvironmentDescription _environmentDescription;
         private GymAgent _descriptionAgent;
         private Coroutine _disconnectedStepper;
+        private EnvironmentAutoResetMode _autoResetMode = EnvironmentAutoResetMode.NextStep;
+        private readonly Dictionary<string, EnvironmentParameter> _initializationParameters = new(StringComparer.Ordinal);
         public GymAgentManager AgentManager { get; set; }
+        public IReadOnlyDictionary<string, EnvironmentParameter> InitializationParameters => _initializationParameters;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStaticState()
@@ -120,6 +123,26 @@ namespace Scripts.VecEnv.Core
         public void UnregisterAgent(GymAgent externalAgent)
         {
             _agents.Remove(externalAgent);
+        }
+
+        public bool TryGetInitializationParameter(string key, out EnvironmentParameter parameter)
+        {
+            return InitializationParameterUtils.TryGet(_initializationParameters, key, out parameter);
+        }
+
+        public string GetInitializationString(string key, string defaultValue = "")
+        {
+            return InitializationParameterUtils.GetString(_initializationParameters, key, defaultValue);
+        }
+
+        public float GetInitializationFloat(string key, float defaultValue = 0f)
+        {
+            return InitializationParameterUtils.GetFloat(_initializationParameters, key, defaultValue);
+        }
+
+        public int GetInitializationInt(string key, int defaultValue = 0)
+        {
+            return InitializationParameterUtils.GetInt(_initializationParameters, key, defaultValue);
         }
 
         private void Start()
@@ -206,6 +229,8 @@ namespace Scripts.VecEnv.Core
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
         {
             while (!Bootstrap.LoadingDone) yield return new WaitForFixedUpdate();
+            _autoResetMode = initializeEnvironments.AutoResetMode;
+            InitializationParameterUtils.Replace(_initializationParameters, initializeEnvironments.Parameters);
             PreInitialize?.Invoke();
 
             var expectedAgentCount = _agents.Count;
@@ -294,16 +319,29 @@ namespace Scripts.VecEnv.Core
             var doneAgents = _agents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ToList();
 
             PreObservation?.Invoke();
-          
-            //TODO: Implement autoreset_mode, currently default to next.
             var agentObservations = _agents.Select(agent => agent.ProduceObservation()).ToArray();
             var infos = _agents.Select(agent => agent.ProduceInfo()).ToArray();
             PostObservation?.Invoke();
-            
-            completedCallback.Invoke(agentObservations, dones, rewards, infos);
-            PreStepReset?.Invoke();
-            doneAgents.ForEach(agent => agent.DoReset());
-            PostStepReset?.Invoke();
+
+            if (_autoResetMode == EnvironmentAutoResetMode.SameStep && doneAgents.Count > 0)
+            {
+                PreStepReset?.Invoke();
+                doneAgents.ForEach(agent => agent.DoReset());
+                PostStepReset?.Invoke();
+
+                PreObservation?.Invoke();
+                agentObservations = _agents.Select(agent => agent.ProduceObservation()).ToArray();
+                PostObservation?.Invoke();
+
+                completedCallback.Invoke(agentObservations, dones, rewards, infos);
+            }
+            else
+            {
+                completedCallback.Invoke(agentObservations, dones, rewards, infos);
+                PreStepReset?.Invoke();
+                doneAgents.ForEach(agent => agent.DoReset());
+                PostStepReset?.Invoke();
+            }
             
             _gymStepOngoing = false;
             PostStep?.Invoke();

@@ -10,6 +10,7 @@ enum AutoResetMode {
 message InitializeEnvironments {
   AutoResetMode autoResetMode = 1;
   int32 requestedNumberOfEnvs = 2;
+  repeated EnvironmentParameter parameters = 3;
 }
 
 message EnvironmentDescription {

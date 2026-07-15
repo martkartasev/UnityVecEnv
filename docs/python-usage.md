@@ -20,6 +20,7 @@ pip install -e ./Python/unity_vecenv[cuda121] --extra-index-url https://download
 The primary class. Wraps a single Unity process as a [Gymnasium `VectorEnv`](https://gymnasium.farama.org/api/vector/).
 
 ```python
+from gymnasium.vector import AutoresetMode
 from unity_vecenv import UnityVectorEnv
 
 env = UnityVectorEnv(
@@ -29,6 +30,8 @@ env = UnityVectorEnv(
     time_scale=10,
     physics_steps_per_action=10,
     port=50010,
+    env_parameters={"difficulty": 2, "variant": "wide"},
+    autoreset_mode=AutoresetMode.SAME_STEP,
 )
 ```
 
@@ -60,6 +63,8 @@ This is useful for connecting to the Unity Editor during development.
 | `num_envs` | `int` | `1` | Number of parallel agents to request from Unity. |
 | `scene_load` | `str` | `""` | Scene name to load on startup (passed as a command-line argument). |
 | `log_file` | `str` | `""` | Path for Unity's player log. |
+| `env_parameters` | `Mapping[str, str \| float \| int] \| None` | `None` | Parameters sent during environment initialization and available in Unity before `GymAgent.Initialize()`. |
+| `autoreset_mode` | `AutoresetMode \| str` | `AutoresetMode.NEXT_STEP` | `NEXT_STEP` returns the terminal observation; `SAME_STEP` resets before returning and stores terminal observations in `info["final_observation"]`. Strings `"next_step"` and `"same_step"` are also accepted. |
 
 ## Gymnasium API
 
@@ -113,6 +118,24 @@ obs, info = env.reset(options={"init": init})
 ```
 
 Each row is passed to the corresponding agent's `GymReset` call on the Unity side.
+
+### Passing environment parameters on initialize
+
+Use `env_parameters` for run-level configuration that should be available before agents initialize:
+
+```python
+env = UnityVectorEnv(
+    executable_path="builds/MyGame.exe",
+    num_envs=8,
+    env_parameters={
+        "difficulty": 2,
+        "wind_scale": 0.35,
+        "layout": "wide",
+    },
+)
+```
+
+These values are sent in the `/initialize/` request, so they also work when `start_process=False` and Python connects to an already-running Unity Editor instance.
 
 ---
 
