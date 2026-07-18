@@ -120,6 +120,19 @@ namespace Scripts.VecEnv.Core
             }
         }
 
+        public void RegisterAgentsInOrder(IEnumerable<GymAgent> orderedAgents)
+        {
+            _agents = orderedAgents
+                .Where(agent => agent != null)
+                .Distinct()
+                .ToList();
+
+            for (var index = 0; index < _agents.Count; index++)
+            {
+                _agents[index].AssignIndex(index);
+            }
+        }
+
         public void UnregisterAgent(GymAgent externalAgent)
         {
             _agents.Remove(externalAgent);
@@ -266,20 +279,63 @@ namespace Scripts.VecEnv.Core
         private IEnumerator DoReset(Reset reset, Action<AgentObservation[], Info[]> callback)
         {
             AgentManager.InitializeEnvAndRegisterAgents();
-            foreach (var externalAgent in _agents)
-            {
-                externalAgent.DoReset();
-            }
-
             _gymStepOngoing = false;
-
             yield return new WaitForFixedUpdate();
+
+            var resetSeeds = BuildResetSeedMap(reset);
+            ResetAgents(_agents, resetSeeds);
 
             PreObservation?.Invoke();
             callback.Invoke(_agents.Select(agent => agent.ProduceObservation()).ToArray(), _agents.Select(agent => agent.ProduceInfo()).ToArray());
             PostObservation?.Invoke();
             
             _firstResetComplete = true;
+        }
+
+        private IReadOnlyDictionary<int, int?> BuildResetSeedMap(Reset reset)
+        {
+            var resetSeeds = new Dictionary<int, int?>();
+            foreach (var parameters in reset.ParametersPerAgent ?? Array.Empty<ResetParameters>())
+            {
+                if (parameters.AgentIndex < 0 || parameters.AgentIndex >= _agents.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"Reset parameter agent index {parameters.AgentIndex} is outside the valid range 0..{_agents.Count - 1}.");
+                }
+
+                if (resetSeeds.ContainsKey(parameters.AgentIndex))
+                {
+                    throw new InvalidOperationException(
+                        $"Reset parameters contain duplicate agent index {parameters.AgentIndex}.");
+                }
+
+                resetSeeds.Add(parameters.AgentIndex, parameters.Seed);
+            }
+
+            return resetSeeds;
+        }
+
+        private void ResetAgents(
+            IEnumerable<GymAgent> agents,
+            IReadOnlyDictionary<int, int?> seedsByAgentIndex = null)
+        {
+            var resetAgents = agents as IReadOnlyList<GymAgent> ?? agents.ToList();
+            if (resetAgents.Count == 0) return;
+
+            PreStepReset?.Invoke();
+            foreach (var agent in resetAgents)
+            {
+                int? seed = null;
+                if (seedsByAgentIndex != null)
+                {
+                    seedsByAgentIndex.TryGetValue(agent.GetGymAgentIndex(), out seed);
+                }
+
+                agent.DoReset(seed);
+            }
+
+            Physics.SyncTransforms();
+            PostStepReset?.Invoke();
         }
 
 
@@ -325,9 +381,7 @@ namespace Scripts.VecEnv.Core
 
             if (_autoResetMode == EnvironmentAutoResetMode.SameStep && doneAgents.Count > 0)
             {
-                PreStepReset?.Invoke();
-                doneAgents.ForEach(agent => agent.DoReset());
-                PostStepReset?.Invoke();
+                ResetAgents(doneAgents);
 
                 PreObservation?.Invoke();
                 agentObservations = _agents.Select(agent => agent.ProduceObservation()).ToArray();
@@ -338,9 +392,7 @@ namespace Scripts.VecEnv.Core
             else
             {
                 completedCallback.Invoke(agentObservations, dones, rewards, infos);
-                PreStepReset?.Invoke();
-                doneAgents.ForEach(agent => agent.DoReset());
-                PostStepReset?.Invoke();
+                if (doneAgents.Count > 0) ResetAgents(doneAgents);
             }
             
             _gymStepOngoing = false;
@@ -351,7 +403,7 @@ namespace Scripts.VecEnv.Core
         {
             var enabledAgents = _agents.FindAll(agent => agent.isActiveAndEnabled);
             enabledAgents.ForEach(agent => agent.DoInitialize());
-            enabledAgents.ForEach(agent => agent.DoReset());
+            ResetAgents(enabledAgents);
             enabledAgents.ForEach(agent => agent.ProduceObservation());
             enabledAgents.ForEach(agent => agent.DoInternalAction());
 
@@ -381,9 +433,8 @@ namespace Scripts.VecEnv.Core
                 PreObservation?.Invoke();
                 enabledAgents.ForEach(agent => agent.ProduceObservation());
                 PostObservation?.Invoke();
-                PreStepReset?.Invoke();
-                enabledAgents.FindAll(agent => agent.IsDone() != EnvironmentState.Running).ForEach(agent => { agent.DoReset(); });
-                PostStepReset?.Invoke();
+                var doneAgents = enabledAgents.FindAll(agent => agent.IsDone() != EnvironmentState.Running);
+                if (doneAgents.Count > 0) ResetAgents(doneAgents);
                 PostStep?.Invoke();
                 enabledAgents.ForEach(agent => agent.DoInternalAction());
             }

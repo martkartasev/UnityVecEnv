@@ -5,6 +5,7 @@ using Scripts.VecEnv.Message;
 using Scripts.VecEnv.Observation;
 using Unity.InferenceEngine;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Scripts.VecEnv.Core
 {
@@ -39,6 +40,8 @@ namespace Scripts.VecEnv.Core
         protected float PreviousEpisodeReward;
         private float _latestStepReward;
         private int _gymAgentIndex = -1;
+        private Random.State _resetRandomState;
+        private bool _hasResetRandomState;
 
         public int GetGymAgentIndex()
         {
@@ -143,10 +146,34 @@ namespace Scripts.VecEnv.Core
             return _latestStepReward;
         }
 
-        protected internal void DoReset()
+        protected internal void DoReset(int? seed = null)
         {
             PreviousEpisodeReward = EpisodeReward;
-            GymReset();
+            var sharedRandomState = Random.state;
+            try
+            {
+                if (seed.HasValue)
+                {
+                    Random.InitState(seed.Value);
+                }
+                else if (_hasResetRandomState)
+                {
+                    Random.state = _resetRandomState;
+                }
+                else
+                {
+                    Random.InitState(_gymAgentIndex >= 0 ? _gymAgentIndex : 0);
+                }
+
+                GymReset();
+                _resetRandomState = Random.state;
+                _hasResetRandomState = true;
+            }
+            finally
+            {
+                Random.state = sharedRandomState;
+            }
+
             EpisodeReward = 0;
             _latestStepReward = 0;
             CurrentStep = 0;

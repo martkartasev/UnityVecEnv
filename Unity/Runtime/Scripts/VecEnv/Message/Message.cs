@@ -319,6 +319,7 @@ namespace Scripts.VecEnv.Message
     public struct ResetParameters
     {
         public int AgentIndex;
+        public int? Seed;
         public float[] Continuous;
     }
 

@@ -1,6 +1,6 @@
 import numbers
 import subprocess
-from typing import Any, Dict, Mapping, Optional, Union
+from typing import Any, Dict, Mapping, Optional, Sequence, Union
 
 import numpy as np
 from gymnasium import spaces
@@ -30,7 +30,52 @@ from unity_vecenv.protobuf_gen.communication_pb2 import (
 
 _FLOAT32_LE = np.dtype("<f4")
 _INT32_LE = np.dtype("<i4")
+_INT32_MIN = -(2 ** 31)
+_INT32_MAX = 2 ** 31 - 1
 EnvironmentParameterValue = Union[str, float, int]
+
+
+def _validate_reset_seed(seed: Any, *, label: str) -> int:
+    if isinstance(seed, bool) or not isinstance(seed, numbers.Integral):
+        raise TypeError(f"{label} must be an integer, got {type(seed).__name__}.")
+
+    value = int(seed)
+    if value < _INT32_MIN or value > _INT32_MAX:
+        raise ValueError(
+            f"{label} must fit a signed int32 ({_INT32_MIN}..{_INT32_MAX}), got {value}."
+        )
+    return value
+
+
+def _normalize_reset_seeds(
+    seed: Optional[Union[int, Sequence[int]]],
+    num_envs: int,
+) -> list[Optional[int]]:
+    if seed is None:
+        return [None] * num_envs
+
+    if isinstance(seed, numbers.Integral) and not isinstance(seed, bool):
+        base_seed = _validate_reset_seed(seed, label="seed")
+        seeds = []
+        for index in range(num_envs):
+            seeds.append(_validate_reset_seed(base_seed + index, label=f"seed + env index {index}"))
+        return seeds
+
+    if isinstance(seed, (str, bytes)):
+        raise TypeError("seed must be an integer, a sequence of integers, or None.")
+
+    try:
+        seed_values = list(seed)
+    except TypeError as exc:
+        raise TypeError("seed must be an integer, a sequence of integers, or None.") from exc
+
+    if len(seed_values) != num_envs:
+        raise ValueError(f"seed sequence length must be {num_envs}, got {len(seed_values)}.")
+
+    return [
+        _validate_reset_seed(value, label=f"seed[{index}]")
+        for index, value in enumerate(seed_values)
+    ]
 
 
 def _normalize_autoreset_mode(mode: Union[AutoresetMode, str]) -> AutoresetMode:
@@ -216,14 +261,32 @@ class UnityVectorEnv(VectorEnv):
 
         return parameters
 
-    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
+    def reset(
+            self,
+            seed: Optional[Union[int, Sequence[int]]] = None,
+            options: Optional[dict] = None,
+    ):
         reset_msg = Reset()
         reset_msg.reloadScene = False
+        reset_seeds = _normalize_reset_seeds(seed, self.num_envs)
 
-        if options is not None:  # TODO: Proper seeding and options passing
-            agent_inits = options["init"]
-            for i in range(self.num_envs):
-                reset_msg.envsToReset.append(self.map_reset_params_to_proto(i, agent_inits[i, :]))
+        agent_inits = None
+        if options is not None:
+            if "init" not in options or options["init"] is None:
+                raise ValueError('reset options must contain a non-null "init" value.')
+            agent_inits = np.asarray(options["init"])
+            if agent_inits.ndim == 0 or agent_inits.shape[0] != self.num_envs:
+                raise ValueError(
+                    f'options["init"] first dimension must be {self.num_envs}, got {agent_inits.shape}.'
+                )
+
+        for index, reset_seed in enumerate(reset_seeds):
+            if reset_seed is None and agent_inits is None:
+                continue
+            initialization = () if agent_inits is None else agent_inits[index]
+            reset_msg.envsToReset.append(
+                self.map_reset_params_to_proto(index, initialization, seed=reset_seed)
+            )
 
         reset = self.client.reset(reset_msg)
         obs, info = self.reset_result_to_numpy(reset, self.num_envs)
@@ -251,10 +314,12 @@ class UnityVectorEnv(VectorEnv):
                 self.process.kill()
                 self.process.wait()
 
-    def map_reset_params_to_proto(self, i, initialization):
+    def map_reset_params_to_proto(self, i, initialization=(), *, seed: Optional[int] = None):
         params = ResetParameters()
         params.index = i
         params.continuous.extend(initialization)
+        if seed is not None:
+            params.seed = _validate_reset_seed(seed, label=f"seed[{i}]")
         return params
 
     def _decode_float_buffer(self, payload: bytes, expected_size: int, field_name: str) -> np.ndarray:

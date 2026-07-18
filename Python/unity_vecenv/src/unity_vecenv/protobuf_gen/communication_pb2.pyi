@@ -90,12 +90,14 @@ class Reset(_message.Message):
     def __init__(self, envsToReset: _Optional[_Iterable[_Union[ResetParameters, _Mapping]]] = ..., reloadScene: bool = ...) -> None: ...
 
 class ResetParameters(_message.Message):
-    __slots__ = ("index", "continuous")
+    __slots__ = ("index", "continuous", "seed")
     INDEX_FIELD_NUMBER: _ClassVar[int]
     CONTINUOUS_FIELD_NUMBER: _ClassVar[int]
+    SEED_FIELD_NUMBER: _ClassVar[int]
     index: int
     continuous: _containers.RepeatedScalarFieldContainer[float]
-    def __init__(self, index: _Optional[int] = ..., continuous: _Optional[_Iterable[float]] = ...) -> None: ...
+    seed: int
+    def __init__(self, index: _Optional[int] = ..., continuous: _Optional[_Iterable[float]] = ..., seed: _Optional[int] = ...) -> None: ...
 
 class Step(_message.Message):
     __slots__ = ("actions", "stepCount", "timeScale", "applyActionEveryPhysicsStep")

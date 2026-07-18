@@ -2,6 +2,9 @@
 
 namespace Scripts.VecEnv.Core
 {
+    using System;
+    using System.Collections.Generic;
+
     [DefaultExecutionOrder(-501)]
     public class GymAgentManager : MonoBehaviour
     {
@@ -12,7 +15,7 @@ namespace Scripts.VecEnv.Core
 
         public void HandleSceneLoad()
         {
-            if (!TryFindEnvironmentTemplate(out _) && FindObjectsByType<GymAgent>(FindObjectsSortMode.None).Length == 0)
+            if (!TryFindEnvironmentTemplate(out _) && FindOrderedComponents<GymAgent>().Length == 0)
             {
                 _agentTemplate = null;
                 return;
@@ -36,7 +39,7 @@ namespace Scripts.VecEnv.Core
                 return SpawnEnvironments(environmentTemplate, agents);
             }
 
-            var agentsInScene = FindObjectsByType<GymAgent>(FindObjectsSortMode.None);
+            var agentsInScene = FindOrderedComponents<GymAgent>();
             if (agentsInScene.Length > 0)
             {
                 _agentTemplate = agentsInScene[0].gameObject;
@@ -62,18 +65,14 @@ namespace Scripts.VecEnv.Core
 
         public void InitializeEnvAndRegisterAgents()
         {
-            var externalAgents = FindObjectsByType<GymAgent>(FindObjectsSortMode.None);
+            var externalAgents = FindOrderedComponents<GymAgent>();
             var descriptionAgent = ResolveDescriptionAgent(externalAgents);
             if (descriptionAgent == null) return;
 
             Bootstrap.EnsureVecEnvInitialized();
             var manager = GymVecEnvManager.Instance;
 
-            foreach (var externalAgent in externalAgents)
-            {
-                manager.RegisterAgent(externalAgent);
-            }
-
+            manager.RegisterAgentsInOrder(externalAgents);
             manager.RegisterAgentDescription(descriptionAgent);
         }
 
@@ -101,7 +100,7 @@ namespace Scripts.VecEnv.Core
 
         private bool TryFindEnvironmentTemplate(out GymEnvironmentTemplate environmentTemplate)
         {
-            var templates = FindObjectsByType<GymEnvironmentTemplate>(FindObjectsSortMode.None);
+            var templates = FindOrderedComponents<GymEnvironmentTemplate>();
             environmentTemplate = templates.Length > 0 ? templates[0] : null;
             _environmentTemplate = environmentTemplate;
             return environmentTemplate != null;
@@ -109,7 +108,7 @@ namespace Scripts.VecEnv.Core
 
         private int SpawnEnvironments(GymEnvironmentTemplate environmentTemplate, int requestedEnvironments)
         {
-            var environmentsInScene = FindObjectsByType<GymEnvironmentTemplate>(FindObjectsSortMode.None);
+            var environmentsInScene = FindOrderedComponents<GymEnvironmentTemplate>();
             var targetEnvironments = ResolveEnvironmentCount(environmentTemplate, requestedEnvironments, environmentsInScene.Length);
             if (targetEnvironments <= 0) return environmentsInScene.Length;
 
@@ -183,7 +182,7 @@ namespace Scripts.VecEnv.Core
                 if (templateDescriptionAgent != null) return templateDescriptionAgent;
             }
 
-            if (_agentTemplate == null) _agentTemplate = FindAnyObjectByType<GymAgent>()?.gameObject;
+            if (_agentTemplate == null && externalAgents.Length > 0) _agentTemplate = externalAgents[0].gameObject;
             if (_agentTemplate != null)
             {
                 var templateAgent = _agentTemplate.GetComponent<GymAgent>();
@@ -191,6 +190,59 @@ namespace Scripts.VecEnv.Core
             }
 
             return externalAgents.Length > 0 ? externalAgents[0] : null;
+        }
+
+        private static T[] FindOrderedComponents<T>() where T : Component
+        {
+            var components = FindObjectsByType<T>(FindObjectsSortMode.None);
+            Array.Sort(components, CompareComponentsByHierarchy);
+            return components;
+        }
+
+        private static int CompareComponentsByHierarchy<T>(T left, T right) where T : Component
+        {
+            if (ReferenceEquals(left, right)) return 0;
+            if (left == null) return 1;
+            if (right == null) return -1;
+
+            var leftScene = string.IsNullOrEmpty(left.gameObject.scene.path)
+                ? left.gameObject.scene.name
+                : left.gameObject.scene.path;
+            var rightScene = string.IsNullOrEmpty(right.gameObject.scene.path)
+                ? right.gameObject.scene.name
+                : right.gameObject.scene.path;
+            var sceneComparison = string.CompareOrdinal(leftScene, rightScene);
+            if (sceneComparison != 0) return sceneComparison;
+
+            var leftPath = GetSiblingIndexPath(left.transform);
+            var rightPath = GetSiblingIndexPath(right.transform);
+            var commonLength = Math.Min(leftPath.Count, rightPath.Count);
+            for (var index = 0; index < commonLength; index++)
+            {
+                var indexComparison = leftPath[index].CompareTo(rightPath[index]);
+                if (indexComparison != 0) return indexComparison;
+            }
+
+            var pathLengthComparison = leftPath.Count.CompareTo(rightPath.Count);
+            if (pathLengthComparison != 0) return pathLengthComparison;
+
+            var typeComparison = string.CompareOrdinal(left.GetType().FullName, right.GetType().FullName);
+            if (typeComparison != 0) return typeComparison;
+
+            return Array.IndexOf(left.GetComponents<Component>(), left)
+                .CompareTo(Array.IndexOf(right.GetComponents<Component>(), right));
+        }
+
+        private static List<int> GetSiblingIndexPath(Transform transform)
+        {
+            var path = new List<int>();
+            for (var current = transform; current != null; current = current.parent)
+            {
+                path.Add(current.GetSiblingIndex());
+            }
+
+            path.Reverse();
+            return path;
         }
     }
 }

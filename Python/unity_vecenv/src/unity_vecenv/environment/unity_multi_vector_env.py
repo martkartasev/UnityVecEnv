@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from gymnasium import spaces
 from gymnasium.vector import VectorEnv, AutoresetMode
 
+from unity_vecenv.environment.unity_vector_env import _normalize_reset_seeds
+
 import threading
 
 EnvironmentParameterValue = Union[str, float, int]
@@ -345,15 +347,10 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         seeds_per_env = [None] * len(self.envs)
         if seed is None:
             seeds_per_env = [None] * len(self.envs)
-        elif isinstance(seed, (int, np.integer)):
-            base = int(seed)
-            seeds_per_env = [base + i for i in range(len(self.envs))]
         else:
-            seed_list = list(seed)
-            if len(seed_list) != self.num_envs:
-                raise ValueError(f"seed sequence length must be {self.num_envs}, got {len(seed_list)}")
+            flattened_seeds = _normalize_reset_seeds(seed, self.num_envs)
             for i, slc in enumerate(self._slices):
-                seeds_per_env[i] = seed_list[slc.start:slc.end]
+                seeds_per_env[i] = flattened_seeds[slc.start:slc.end]
 
         options_per_env = self._split_inits_from_options(options)
 

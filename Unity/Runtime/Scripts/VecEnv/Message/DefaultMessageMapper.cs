@@ -10,6 +10,8 @@ namespace Scripts.VecEnv.Message
         {
             return new ResetParameters
             {
+                AgentIndex = resetParameters.Index,
+                Seed = resetParameters.HasSeed ? resetParameters.Seed : null,
                 Continuous = resetParameters.Continuous.ToArray()
             };
         }
