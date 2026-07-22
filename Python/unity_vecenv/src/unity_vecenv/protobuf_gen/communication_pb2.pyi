@@ -100,16 +100,18 @@ class ResetParameters(_message.Message):
     def __init__(self, index: _Optional[int] = ..., continuous: _Optional[_Iterable[float]] = ..., seed: _Optional[int] = ...) -> None: ...
 
 class Step(_message.Message):
-    __slots__ = ("actions", "stepCount", "timeScale", "applyActionEveryPhysicsStep")
+    __slots__ = ("actions", "stepCount", "timeScale", "applyActionEveryPhysicsStep", "uiStrings")
     ACTIONS_FIELD_NUMBER: _ClassVar[int]
     STEPCOUNT_FIELD_NUMBER: _ClassVar[int]
     TIMESCALE_FIELD_NUMBER: _ClassVar[int]
     APPLYACTIONEVERYPHYSICSSTEP_FIELD_NUMBER: _ClassVar[int]
+    UISTRINGS_FIELD_NUMBER: _ClassVar[int]
     actions: _containers.RepeatedCompositeFieldContainer[Action]
     stepCount: int
     timeScale: float
     applyActionEveryPhysicsStep: bool
-    def __init__(self, actions: _Optional[_Iterable[_Union[Action, _Mapping]]] = ..., stepCount: _Optional[int] = ..., timeScale: _Optional[float] = ..., applyActionEveryPhysicsStep: bool = ...) -> None: ...
+    uiStrings: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, actions: _Optional[_Iterable[_Union[Action, _Mapping]]] = ..., stepCount: _Optional[int] = ..., timeScale: _Optional[float] = ..., applyActionEveryPhysicsStep: bool = ..., uiStrings: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class Action(_message.Message):
     __slots__ = ("agentIndex", "continuous", "discrete")

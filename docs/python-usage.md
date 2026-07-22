@@ -80,6 +80,24 @@ for _ in range(steps):
 env.close()
 ```
 
+### Displaying step text in Unity
+
+Pass `ui_strings` to display ordered text lines in the top-left corner of the Unity Game view or graphical player:
+
+```python
+obs, rewards, dones, truncates, info = env.step(
+    action,
+    ui_strings=[
+        "Episode 12",
+        "Reward: 1.25",
+    ],
+)
+```
+
+The text remains visible until a later step replaces it. Calling `step` without `ui_strings`, or passing an empty list, removes the overlay. The overlay is created only when at least one string is supplied and is also removed when the environment resets or reinitializes.
+
+This display requires a graphical Unity runtime, such as a running Unity Editor or a player launched with `no_graphics=False`. `FlattenedVectorEnvThreaded` broadcasts the same `ui_strings` list to every backing Unity process.
+
 
 ### Spaces
 

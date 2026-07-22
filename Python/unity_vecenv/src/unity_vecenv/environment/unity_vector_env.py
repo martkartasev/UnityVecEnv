@@ -35,6 +35,27 @@ _INT32_MAX = 2 ** 31 - 1
 EnvironmentParameterValue = Union[str, float, int]
 
 
+def _normalize_ui_strings(ui_strings: Optional[Sequence[str]]) -> list[str]:
+    if ui_strings is None:
+        return []
+
+    if isinstance(ui_strings, (str, bytes)):
+        raise TypeError("ui_strings must be a sequence of strings or None, not a single string.")
+
+    try:
+        normalized = list(ui_strings)
+    except TypeError as exc:
+        raise TypeError("ui_strings must be a sequence of strings or None.") from exc
+
+    for index, value in enumerate(normalized):
+        if not isinstance(value, str):
+            raise TypeError(
+                f"ui_strings[{index}] must be a string, got {type(value).__name__}."
+            )
+
+    return normalized
+
+
 def _validate_reset_seed(seed: Any, *, label: str) -> int:
     if isinstance(seed, bool) or not isinstance(seed, numbers.Integral):
         raise TypeError(f"{label} must be an integer, got {type(seed).__name__}.")
@@ -292,10 +313,12 @@ class UnityVectorEnv(VectorEnv):
         obs, info = self.reset_result_to_numpy(reset, self.num_envs)
         return obs, info
 
-    def step(self, action):
+    def step(self, action, ui_strings: Optional[Sequence[str]] = None):
+        normalized_ui_strings = _normalize_ui_strings(ui_strings)
         action_msg = self.map_action_to_proto(action)
         action_msg.stepCount = self.physics_steps_per_action
         action_msg.timeScale = self.time_scale
+        action_msg.uiStrings.extend(normalized_ui_strings)
         step_result = self.client.step(action_msg)
 
         (obs, dones, truncates, rewards, info) = self.step_result_to_numpy(step_result)

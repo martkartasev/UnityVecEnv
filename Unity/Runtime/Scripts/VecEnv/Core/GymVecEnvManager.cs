@@ -58,6 +58,7 @@ namespace Scripts.VecEnv.Core
         private EnvironmentDescription _environmentDescription;
         private GymAgent _descriptionAgent;
         private Coroutine _disconnectedStepper;
+        private GymUserStringOverlay _userStringOverlay;
         private EnvironmentAutoResetMode _autoResetMode = EnvironmentAutoResetMode.NextStep;
         private readonly Dictionary<string, EnvironmentParameter> _initializationParameters = new(StringComparer.Ordinal);
         public GymAgentManager AgentManager { get; set; }
@@ -230,6 +231,7 @@ namespace Scripts.VecEnv.Core
 
         public void Shutdown()
         {
+            ClearUserStrings();
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
@@ -241,6 +243,7 @@ namespace Scripts.VecEnv.Core
 
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
         {
+            ClearUserStrings();
             while (!Bootstrap.LoadingDone) yield return new WaitForFixedUpdate();
             _autoResetMode = initializeEnvironments.AutoResetMode;
             InitializationParameterUtils.Replace(_initializationParameters, initializeEnvironments.Parameters);
@@ -278,6 +281,7 @@ namespace Scripts.VecEnv.Core
 
         private IEnumerator DoReset(Reset reset, Action<AgentObservation[], Info[]> callback)
         {
+            ClearUserStrings();
             AgentManager.InitializeEnvAndRegisterAgents();
             _gymStepOngoing = false;
             yield return new WaitForFixedUpdate();
@@ -341,6 +345,7 @@ namespace Scripts.VecEnv.Core
 
         private Step ReceiveStep(Step step)
         {
+            UpdateUserStrings(step.UiStrings);
             Time.timeScale = step.TimeScale;
 
             if (step.PhysicsStepCount == 0) step.PhysicsStepCount = physicsStepsPerGymStep;
@@ -352,6 +357,31 @@ namespace Scripts.VecEnv.Core
 
             _gymStepOngoing = true;
             return step;
+        }
+
+        private void UpdateUserStrings(IReadOnlyList<string> uiStrings)
+        {
+            if (uiStrings == null || uiStrings.Count == 0)
+            {
+                ClearUserStrings();
+                return;
+            }
+
+            if (_userStringOverlay == null)
+            {
+                _userStringOverlay = gameObject.AddComponent<GymUserStringOverlay>();
+            }
+
+            _userStringOverlay.SetLines(uiStrings);
+        }
+
+        private void ClearUserStrings()
+        {
+            if (_userStringOverlay == null) return;
+
+            _userStringOverlay.enabled = false;
+            Destroy(_userStringOverlay);
+            _userStringOverlay = null;
         }
 
         private IEnumerator ManageStep(Step step, Action<AgentObservation[], EnvironmentState[], float[], Info[]> completedCallback)
@@ -449,6 +479,7 @@ namespace Scripts.VecEnv.Core
 
         private void OnApplicationQuit()
         {
+            ClearUserStrings();
             IsShuttingDown = true;
             DisposeCommunicator();
         }

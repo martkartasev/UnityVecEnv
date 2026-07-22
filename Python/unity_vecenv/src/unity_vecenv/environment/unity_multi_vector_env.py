@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from gymnasium import spaces
 from gymnasium.vector import VectorEnv, AutoresetMode
 
-from unity_vecenv.environment.unity_vector_env import _normalize_reset_seeds
+from unity_vecenv.environment.unity_vector_env import _normalize_reset_seeds, _normalize_ui_strings
 
 import threading
 
@@ -37,8 +37,11 @@ class _ThreadWorker:
 
             kind = cmd[0]
             if kind == "step":
-                _, a = cmd
-                res = self.env.step(a)
+                _, a, ui_strings = cmd
+                if ui_strings:
+                    res = self.env.step(a, ui_strings=ui_strings)
+                else:
+                    res = self.env.step(a)
             elif kind == "reset":
                 _, seed, options = cmd
                 res = self.env.reset(seed=seed, options=options)
@@ -49,9 +52,9 @@ class _ThreadWorker:
                 self._result = res
             self.has_result.set()
 
-    def submit_step(self, action: np.ndarray):
+    def submit_step(self, action: np.ndarray, ui_strings: Sequence[str]):
         with self.lock:
-            self._pending_action = ("step", action)
+            self._pending_action = ("step", action, ui_strings)
             self._result = None
         self.has_result.clear()
         self.has_action.set()
@@ -309,8 +312,12 @@ class FlattenedVectorEnvThreaded(VectorEnv):
             info = {}
         return obs, info
 
-    def step(self, actions: np.ndarray):
-        self.step_async(actions)
+    def step(
+            self,
+            actions: np.ndarray,
+            ui_strings: Optional[Sequence[str]] = None,
+    ):
+        self.step_async(actions, ui_strings=ui_strings)
         obs, rewards, dones, truncs, info = self.step_wait()
         if info is None:
             info = {}
@@ -375,13 +382,14 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         obs = _concat_by_space(self.single_observation_space, obs_parts)
         return obs, _merge_infos(infos, self._slices)
 
-    def step_async(self, actions):
+    def step_async(self, actions, ui_strings: Optional[Sequence[str]] = None):
         if self._pending_kind is not None:
             raise RuntimeError("step_async called while another async call is pending")
 
+        normalized_ui_strings = tuple(_normalize_ui_strings(ui_strings))
         parts = self._split_actions(actions)
         for w, a_part in zip(self.workers, parts):
-            w.submit_step(a_part)
+            w.submit_step(a_part, normalized_ui_strings)
 
         self._pending_kind = "step"
 

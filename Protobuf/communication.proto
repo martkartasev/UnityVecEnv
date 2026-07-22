@@ -63,6 +63,7 @@ message Step {
   optional int32 stepCount = 2;
   optional float timeScale = 3;
   bool applyActionEveryPhysicsStep = 4;
+  repeated string uiStrings = 5;
 }
 
 message Action {

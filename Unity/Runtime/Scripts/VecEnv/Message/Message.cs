@@ -123,6 +123,7 @@ namespace Scripts.VecEnv.Message
         public int PhysicsStepCount;
         public float TimeScale;
         public bool ApplyActionEveryStep;
+        public string[] UiStrings;
     }
 
     public enum CustomInfoValueType

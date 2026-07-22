@@ -48,6 +48,7 @@ namespace Scripts.VecEnv.Message
             mapStep.ApplyActionEveryStep = step.ApplyActionEveryPhysicsStep;
             mapStep.TimeScale = step.TimeScale;
             mapStep.AgentActions = step.Actions.Select(MapAction).ToArray();
+            mapStep.UiStrings = step.UiStrings.ToArray();
             return mapStep;
         }
 
