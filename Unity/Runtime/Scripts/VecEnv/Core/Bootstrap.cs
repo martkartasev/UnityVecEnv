@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Scripts.VecEnv.Networking;
@@ -74,7 +73,6 @@ namespace Scripts.VecEnv.Core
 
         private static void ParseCommandLine()
         {
-            Console.TreatControlCAsInput = true;
             _args = GetCommandlineArgs();
 
             if (_args.TryGetValue("-channel", out var channel))

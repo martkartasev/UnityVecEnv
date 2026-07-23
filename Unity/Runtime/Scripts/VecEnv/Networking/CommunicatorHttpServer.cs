@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using ExternalCommunication;
@@ -719,31 +718,27 @@ namespace Scripts.VecEnv.Networking
 
         private HttpListener ListenerSetup()
         {
-            var l = new HttpListener();
-            while (!l.IsListening)
+            var listener = new HttpListener();
+            try
             {
-                try
-                {
-                    l.Prefixes.Add($"http://localhost:{channel}/step/");
-                    l.Prefixes.Add($"http://127.0.0.1:{channel}/step/");
+                listener.Prefixes.Add($"http://localhost:{channel}/step/");
+                listener.Prefixes.Add($"http://127.0.0.1:{channel}/step/");
 
-                    l.Prefixes.Add($"http://localhost:{channel}/reset/");
-                    l.Prefixes.Add($"http://127.0.0.1:{channel}/reset/");
+                listener.Prefixes.Add($"http://localhost:{channel}/reset/");
+                listener.Prefixes.Add($"http://127.0.0.1:{channel}/reset/");
 
-                    l.Prefixes.Add($"http://localhost:{channel}/initialize/");
-                    l.Prefixes.Add($"http://127.0.0.1:{channel}/initialize/");
+                listener.Prefixes.Add($"http://localhost:{channel}/initialize/");
+                listener.Prefixes.Add($"http://127.0.0.1:{channel}/initialize/");
 
-                    l.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
-                    l.Start();
-                }
-                catch (SocketException)
-                {
-                    l.Prefixes.Clear();
-                    channel += 1;
-                }
+                listener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
+                listener.Start();
+                return listener;
             }
-
-            return l;
+            catch
+            {
+                listener.Close();
+                throw;
+            }
         }
 
 
