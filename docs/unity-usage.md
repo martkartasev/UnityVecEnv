@@ -9,7 +9,7 @@ package from git URL**, or add it directly to your project's
 ```json
 {
   "dependencies": {
-    "com.mka.gymvecenv": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.8"
+    "com.mka.gymvecenv": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.9"
   }
 }
 ```

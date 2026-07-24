@@ -2,6 +2,12 @@
 
 A framework for running Unity environments as [Gymnasium](https://gymnasium.farama.org/)-compatible vectorized environments for reinforcement learning. Multiple agents train in parallel inside Unity while Python drives the training loop.
 
+> [!WARNING]
+> **Development status: Alpha.** UnityVecEnv is under active development. APIs,
+> the communication protocol, and package structure may change between minor
+> releases. Pin exact versions and use matching Python and Unity package
+> versions.
+
 ## Overview
 
 UnityVecEnv bridges Unity and Python over a local HTTP connection using Protocol Buffers. Unity runs an embedded HTTP server; Python acts as the client. Observations and actions are binary-serialized in batches for minimal overhead.
@@ -15,6 +21,18 @@ UnityVectorEnv  ──────────►  Unity (CommunicatorHttpServer
   • receives obs/rewards          • collects observations
   • Gymnasium VectorEnv API       • serializes batched results
 ```
+
+## Features
+
+- A standard Gymnasium `VectorEnv` interface for Unity environments.
+- Many agents batched inside one Unity process.
+- Multiple Unity processes exposed as one environment with
+  `FlattenedVectorEnvThreaded`.
+- Continuous, discrete, and mixed action/observation spaces, plus visual
+  observations.
+- Gymnasium `NEXT_STEP` and `SAME_STEP` autoreset modes.
+- Typed per-agent info values and run-level environment parameters.
+- Optional ONNX export and Unity tensor-renaming utilities.
 
 ## Quick Start
 
@@ -49,7 +67,7 @@ git URL**, or add it to your project's `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.mka.gymvecenv": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.8"
+    "com.mka.gymvecenv": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.9"
   }
 }
 ```

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "unity-vecenv"
-version = "0.1.8"
+version = "0.1.9"
 description = "Gymnasium-compatible vectorized reinforcement-learning environments backed by Unity."
 readme = "README.md"
 authors = [
@@ -53,6 +53,7 @@ unity-vecenv = "unity_vecenv.cli:main"
 [project.urls]
 Documentation = "https://github.com/martkartasev/UnityVecEnv/tree/master/docs"
 Issues = "https://github.com/martkartasev/UnityVecEnv/issues"
+"Release notes" = "https://github.com/martkartasev/UnityVecEnv/releases"
 Repository = "https://github.com/martkartasev/UnityVecEnv"
 
 [tool.setuptools]
