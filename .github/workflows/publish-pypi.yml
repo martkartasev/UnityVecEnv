@@ -1,0 +1,102 @@
+name: Publish Python package to PyPI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: pypi-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Python distributions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Verify release versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import tomllib
+
+          tag = os.environ["RELEASE_TAG"]
+          if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
+              raise SystemExit(f"Release tag must be vMAJOR.MINOR.PATCH, got {tag!r}")
+
+          expected = tag.removeprefix("v")
+          pyproject = tomllib.loads(
+              pathlib.Path("Python/unity_vecenv/pyproject.toml").read_text(encoding="utf-8")
+          )
+          python_version = pyproject["project"]["version"]
+          unity_version = json.loads(
+              pathlib.Path("Unity/package.json").read_text(encoding="utf-8")
+          )["version"]
+
+          if python_version != expected or unity_version != expected:
+              raise SystemExit(
+                  "Version mismatch: "
+                  f"tag={expected}, Python={python_version}, Unity={unity_version}"
+              )
+          PY
+
+      - name: Install build tools
+        run: python -m pip install "build>=1.2,<2" "twine>=5,<7"
+
+      - name: Build wheel and source distribution
+        run: python -m build Python/unity_vecenv
+
+      - name: Validate distribution metadata
+        run: python -m twine check Python/unity_vecenv/dist/*
+
+      - name: Smoke-test the built wheel
+        run: |
+          python -m pip install pytest Python/unity_vecenv/dist/*.whl
+          python -m pytest Python/unity_vecenv/tests
+
+      - name: Store distribution artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-distributions
+          path: Python/unity_vecenv/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish Python distributions
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/unity-vecenv
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: python-distributions
+          path: dist/
+
+      - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
