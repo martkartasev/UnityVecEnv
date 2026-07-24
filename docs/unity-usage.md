@@ -2,15 +2,20 @@
 
 ## Package Installation
 
-Install `./Unity/package.json` via **Window -> Package Manager -> + -> Install package from disk**, or add a relative path directly to your project's `Packages/manifest.json`:
+Install the tagged package through **Window -> Package Manager -> + -> Install
+package from git URL**, or add it directly to your project's
+`Packages/manifest.json`:
 
 ```json
 {
   "dependencies": {
-    "com.unityvecenv": "file:../../UnityVecEnv/Unity"
+    "com.mka.gymvecenv": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.8"
   }
 }
 ```
+
+For local UnityVecEnv development, use **Install package from disk** and select
+`./Unity/package.json`.
 
 ---
 
@@ -281,6 +286,7 @@ Assign a trained ONNX model as a `ModelAsset` to the `inferencePolicy` field on 
 Use the CLI tool to rename ONNX inputs if the model was exported from a framework that uses different input names than Unity expects:
 
 ```bash
+pip install "unity-vecenv[onnx]"
 unity-vecenv onnx-rename model.onnx model_unity.onnx --unity-defaults
 ```
 

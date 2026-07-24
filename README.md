@@ -43,34 +43,43 @@ For more detailed information, see both the [Python side](./docs/python-usage.md
 
 ### Unity Package
 
-Install `./Unity/package.json` via **Package Manager → Install package from disk**, or add a relative path to your project's `manifest.json`:
+Install the tagged package through **Package Manager → Install package from
+git URL**, or add it to your project's `Packages/manifest.json`:
 
 ```json
 {
   "dependencies": {
-    "com.unityvecenv": "file:../../UnityVecEnv/Unity"
+    "com.mka.gymvecenv": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.8"
   }
 }
 ```
 
+For local UnityVecEnv development, use **Install package from disk** and select
+`./Unity/package.json` instead.
+
 ### Python Package
 
 ```bash
-pip install -e ./Python/unity_vecenv
+pip install unity-vecenv
 ```
 
-Optional GPU convenience installs:
+Install the optional ONNX export and model-renaming utilities with:
 
 ```bash
-# CUDA 11.8
-pip install -e ./Python/unity_vecenv[cuda118] --extra-index-url https://download.pytorch.org/whl/cu118
-
-# CUDA 12.1
-pip install -e ./Python/unity_vecenv[cuda121] --extra-index-url https://download.pytorch.org/whl/cu121
+pip install "unity-vecenv[onnx]"
 ```
 
+For local development:
+
+```bash
+pip install -e "./Python/unity_vecenv[dev,onnx]"
+```
+
+For CUDA-enabled ONNX export, install the appropriate PyTorch build for your
+system before installing the `onnx` extra.
 
 See [docs/python-usage.md](docs/python-usage.md) for the full Python API reference and [docs/unity-usage.md](docs/unity-usage.md) for implementing agents in Unity.
+
 
 ## Managing Protobuf
 
@@ -103,3 +112,8 @@ protoc -I ./Protobuf \
   --csharp_out=./Unity/Runtime/Scripts/ProtobufGenerated \
   ./Protobuf/communication.proto
 ```
+
+
+## License
+
+UnityVecEnv is available under the [MIT License](LICENSE).

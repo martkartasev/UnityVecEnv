@@ -1,11 +1,10 @@
 {
   "name": "com.mka.gymvecenv",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "displayName": "VecEnv Gymnasium Unity",
   "description": "A VecEnv api for defining Reinforcement Learning (RL) agents. Inspired by MLAgents",
   "documentationUrl": "https://github.com/martkartasev/UnityVecEnv",
-  "changelogUrl": "https://github.com/martkartasev/UnityVecEnv",
-  "licensesUrl": "https://github.com/martkartasev/UnityVecEnv",
+  "licensesUrl": "https://github.com/martkartasev/UnityVecEnv/blob/master/LICENSE",
   "author": {
     "name": "Mart Kartasev",
     "email": "mart.kartasev@gmail.com",

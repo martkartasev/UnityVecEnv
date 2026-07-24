@@ -1,43 +1,65 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "unity-vecenv"
-version = "0.0.1"
-description = "Short description of my package"
+version = "0.1.8"
+description = "Gymnasium-compatible vectorized reinforcement-learning environments backed by Unity."
 readme = "README.md"
 authors = [
     { name = "Mart Kartasev", email = "mart.kartasev@gmail.com" }
 ]
 requires-python = ">=3.10"
-
-dependencies = [ # pip install -e UnityVecEnv/python/unity_vecenv/
-    "numpy==1.23.5",
-    "torch==2.2.2",
-    "gymnasium==1.2.3",
-    "tyro==1.0.5",
-    "tensorboard",
-    "requests",
-    "httpx",
-    "onnx"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = [
+    "gymnasium",
+    "reinforcement-learning",
+    "unity",
+    "vector-environment",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "gymnasium>=1.2,<2",
+    "numpy>=1.23.5,<3",
+    "protobuf>=4.25,<8",
+    "requests>=2.28,<3",
 ]
 
 [project.optional-dependencies]
+onnx = [
+    "onnx>=1.16,<2",
+    "torch>=2.2,<3",
+]
 dev = [
-    "pytest",
-    "black",
-    "ruff"
+    "build>=1.2,<2",
+    "pytest>=8,<10",
+    "ruff>=0.6,<1",
+    "twine>=5,<7",
 ]
-cuda118 = [ # pip install -e UnityVecEnv/python/unity_vecenv/[cuda118] --extra-index-url https://download.pytorch.org/whl/cu118
-  "torch==2.1.2+cu118"
-]
-cuda121 = [ # pip install -e UnityVecEnv/python/unity_vecenv/[cuda121] --extra-index-url https://download.pytorch.org/whl/cu121
-  "torch==2.2.2+cu121"
-]
+
+[project.scripts]
+unity-vecenv = "unity_vecenv.cli:main"
+
+[project.urls]
+Documentation = "https://github.com/martkartasev/UnityVecEnv/tree/master/docs"
+Issues = "https://github.com/martkartasev/UnityVecEnv/issues"
+Repository = "https://github.com/martkartasev/UnityVecEnv"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"unity_vecenv.protobuf_gen" = ["*.pyi"]

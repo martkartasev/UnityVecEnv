@@ -3,15 +3,23 @@
 ## Installation
 
 ```bash
-pip install -e ./Python/unity_vecenv
+pip install unity-vecenv
 ```
 
-With GPU support:
+Install the optional ONNX export and model-renaming utilities with:
 
 ```bash
-pip install -e ./Python/unity_vecenv[cuda118] --extra-index-url https://download.pytorch.org/whl/cu118
-pip install -e ./Python/unity_vecenv[cuda121] --extra-index-url https://download.pytorch.org/whl/cu121
+pip install "unity-vecenv[onnx]"
 ```
+
+For local development, run this command from the repository root:
+
+```bash
+pip install -e "./Python/unity_vecenv[dev,onnx]"
+```
+
+For CUDA-enabled ONNX export, install the appropriate PyTorch build for your
+system before installing the `onnx` extra.
 
 ---
 
@@ -194,12 +202,24 @@ Rename ONNX model inputs to match Unity's Inference Engine naming conventions:
 unity-vecenv onnx-rename input.onnx output.onnx --unity-defaults
 ```
 
+Custom tensor names can be supplied more than once:
+
+```bash
+unity-vecenv onnx-rename input.onnx output.onnx \
+  --rename observation=obs_continuous \
+  --rename policy_action=action_continuous
+```
+
 ### Python API
 
 ```python
-from unity_vecenv.onnx_utilities.onnx_rename import rename_onnx_inputs
+from unity_vecenv.onnx_utilities.onnx_rename import rename_onnx_tensors
 
-rename_onnx_inputs("input.onnx", "output.onnx", mapping={"old_name": "new_name"})
+rename_onnx_tensors(
+    "input.onnx",
+    "output.onnx",
+    renames={"old_name": "new_name"},
+)
 ```
 
 ---
