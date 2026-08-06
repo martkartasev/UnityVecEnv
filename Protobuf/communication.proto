@@ -11,6 +11,15 @@ message InitializeEnvironments {
   AutoResetMode autoResetMode = 1;
   int32 requestedNumberOfEnvs = 2;
   repeated EnvironmentParameter parameters = 3;
+
+  // Scene to activate for this initialization. Empty keeps the current scene.
+  // A different name always forces a reload.
+  string sceneName = 4;
+
+  // Force a full single-mode scene reload even when the scene is unchanged.
+  // This discards residual physics and transform state so a re-initialized
+  // process starts from the same state as a freshly launched one.
+  bool reloadScene = 5;
 }
 
 message EnvironmentDescription {

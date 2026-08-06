@@ -175,7 +175,8 @@ class UnityVectorEnv(VectorEnv):
                  scene_load: str = "",
                  log_file: str = "",
                  env_parameters: Optional[Mapping[str, EnvironmentParameterValue]] = None,
-                 autoreset_mode: Union[AutoresetMode, str] = AutoresetMode.NEXT_STEP):
+                 autoreset_mode: Union[AutoresetMode, str] = AutoresetMode.NEXT_STEP,
+                 reload_scene: bool = False):
         super(UnityVectorEnv, self).__init__()
         self.initialization_parameters = _normalize_environment_parameters(env_parameters)
         self.autoreset_mode = _normalize_autoreset_mode(autoreset_mode)
@@ -197,11 +198,24 @@ class UnityVectorEnv(VectorEnv):
         self.process = start_unity_process(executable_path, scene_load=scene_load, port=self.port, nr_agents=num_envs, batch_mode=batch_mode, no_graphics=no_graphics, timescale=self.time_scale, log_file=log_file) if start_process else None
         self.client = start_client(port=self.port)
 
+        self.scene_load = scene_load
+        # reload_scene makes this first initialize take the same reload path as every
+        # later reinitialize(), so a freshly launched process and a reused one start
+        # from an identical scene. Costs one extra scene load at startup.
         environment_description = self.initialize_environment(
             num_envs,
             self.initialization_parameters,
             self.autoreset_mode,
+            reload_scene=reload_scene,
         )
+        self._apply_environment_description(environment_description)
+
+    def _apply_environment_description(self, environment_description) -> None:
+        """Adopt the spaces and env count returned by an initialize call.
+
+        Shared by construction and :meth:`reinitialize`, because a re-initialized
+        process may return a different scene's spaces and agent count.
+        """
         if environment_description.trueNumberOfEnvs == 0:
             raise RuntimeError("Failed to initialize environment connection. Number of envs returns 0.")
 
@@ -238,6 +252,7 @@ class UnityVectorEnv(VectorEnv):
 
         self.action_space = batch_space(self.single_action_space, self.num_envs)
         self.observation_space = batch_space(self.single_observation_space, self.num_envs)
+        self.metadata["num_envs"] = self.num_envs
         self.metadata["environment_parameters"] = dict(self.environment_parameters)
 
     def initialize_environment(
@@ -245,6 +260,8 @@ class UnityVectorEnv(VectorEnv):
             num_envs,
             env_parameters: Optional[Mapping[str, EnvironmentParameterValue]] = None,
             autoreset_mode: AutoresetMode = AutoresetMode.NEXT_STEP,
+            scene_load: Optional[str] = None,
+            reload_scene: bool = False,
     ):
         init = InitializeEnvironments()
         proto_modes = {
@@ -256,7 +273,53 @@ class UnityVectorEnv(VectorEnv):
         init.requestedNumberOfEnvs = num_envs
         for key, value in _normalize_environment_parameters(env_parameters).items():
             init.parameters.append(_environment_parameter_to_proto(key, value))
+        if scene_load:
+            init.sceneName = str(scene_load)
+        init.reloadScene = bool(reload_scene)
         environment_description = self.client.initialize(init)
+        return environment_description
+
+    def reinitialize(
+            self,
+            num_envs: Optional[int] = None,
+            env_parameters: Optional[Mapping[str, EnvironmentParameterValue]] = None,
+            autoreset_mode: Optional[Union[AutoresetMode, str]] = None,
+            scene_load: Optional[str] = None,
+            reload_scene: bool = True,
+    ):
+        """Re-initialize this live Unity process, optionally into another scene.
+
+        Reuses the running process instead of paying a full relaunch. With
+        ``reload_scene`` (the default) Unity reloads the scene in Single mode, so
+        the environment starts from the same state as a freshly launched process
+        rather than inheriting residual physics and sensor state from the previous
+        episodes. Observation and action spaces are rebuilt from the response,
+        because another scene may describe different spaces or agent counts.
+        """
+        if num_envs is None:
+            num_envs = self.num_envs
+        if env_parameters is None:
+            env_parameters = self.initialization_parameters
+        else:
+            env_parameters = _normalize_environment_parameters(env_parameters)
+        if autoreset_mode is None:
+            autoreset_mode = self.autoreset_mode
+
+        self.initialization_parameters = dict(env_parameters)
+        self.autoreset_mode = _normalize_autoreset_mode(autoreset_mode)
+        if scene_load:
+            self.scene_load = str(scene_load)
+        self.metadata["autoreset_mode"] = self.autoreset_mode
+        self.metadata["initialization_parameters"] = dict(self.initialization_parameters)
+
+        environment_description = self.initialize_environment(
+            num_envs,
+            self.initialization_parameters,
+            self.autoreset_mode,
+            scene_load=scene_load,
+            reload_scene=reload_scene,
+        )
+        self._apply_environment_description(environment_description)
         return environment_description
 
     def _decode_environment_parameters(self, environment_description) -> Dict[str, EnvironmentParameterValue]:

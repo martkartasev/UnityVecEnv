@@ -5,10 +5,12 @@ using System.Linq;
 using Scripts.VecEnv.Message;
 using Scripts.VecEnv.Networking;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using Action = System.Action;
 using Debug = UnityEngine.Debug;
 using Info = Scripts.VecEnv.Message.Info;
+using Random = UnityEngine.Random;
 using Reset = Scripts.VecEnv.Message.Reset;
 using Step = Scripts.VecEnv.Message.Step;
 
@@ -244,7 +246,16 @@ namespace Scripts.VecEnv.Core
         private IEnumerator DoInitialize(InitializeEnvironment initializeEnvironments, Action<EnvironmentDescription> callback)
         {
             ClearUserStrings();
+
+            // Park the step loop before any yield. Initialization spans several frames
+            // (more when a scene reloads), and FixedUpdate would otherwise fall through
+            // to WaitForNextMessage and shut the process down mid-initialization.
+            _gymStepOngoing = false;
+            _firstResetComplete = false;
+            _connectionInitialized = false;
+
             while (!Bootstrap.LoadingDone) yield return new WaitForFixedUpdate();
+            yield return StartCoroutine(ApplySceneSelection(initializeEnvironments));
             _autoResetMode = initializeEnvironments.AutoResetMode;
             InitializationParameterUtils.Replace(_initializationParameters, initializeEnvironments.Parameters);
             PreInitialize?.Invoke();
@@ -255,9 +266,6 @@ namespace Scripts.VecEnv.Core
                 expectedAgentCount = AgentManager.SpawnAgents(initializeEnvironments.AgentCount);
             }
 
-            _gymStepOngoing = false;
-            _firstResetComplete = false;
-
             yield return StartCoroutine(RegisterAgentsForInitialization(expectedAgentCount));
             _agents.ForEach(agent => agent.DoInitialize());
             PostInitialize?.Invoke();
@@ -266,6 +274,69 @@ namespace Scripts.VecEnv.Core
             _environmentDescription.AgentCount = _agents.Count;
             _connectionInitialized = true;
             callback?.Invoke(_environmentDescription);
+        }
+
+        /// <summary>
+        /// Activates the requested scene, reloading it in Single mode when the caller
+        /// asks for a different scene or explicitly requests a reload.
+        ///
+        /// A reload is the only way to discard residual physics, transform and sensor
+        /// state left by a previous episode, so a re-initialized process starts from
+        /// the same state as a freshly launched one. Bootstrap's sceneLoaded and
+        /// sceneUnloaded callbacks clear and respawn agents around the load.
+        /// </summary>
+        private IEnumerator ApplySceneSelection(InitializeEnvironment initializeEnvironments)
+        {
+            var activeScene = SceneManager.GetActiveScene().name;
+            var requestedScene = initializeEnvironments.SceneName;
+            var targetScene = string.IsNullOrWhiteSpace(requestedScene) ? activeScene : requestedScene.Trim();
+
+            if (!initializeEnvironments.ReloadScene && targetScene == activeScene)
+            {
+                yield break;
+            }
+
+            if (Application.isEditor && targetScene != activeScene)
+            {
+                Debug.LogWarning(
+                    $"Ignoring requested scene '{targetScene}' in the editor; open it manually. " +
+                    "Scene switching over the initialize endpoint applies to player builds.");
+                yield break;
+            }
+
+            Debug.Log($"Reloading scene '{targetScene}' for initialization (was '{activeScene}').");
+
+            // Pin the shared stream before scene objects awake, so every reload starts
+            // from the same layout. Note this makes reloads identical to each other, not
+            // to a cold launch, whose shared stream is seeded non-deterministically by
+            // Unity. Callers that need every initialization to agree should reload on the
+            // first initialize too (UnityVectorEnv(reload_scene=True)).
+            Resources.UnloadUnusedAssets();
+            Random.InitState(0);
+
+            ClearAgents();
+            Bootstrap.SceneToLoad = targetScene;
+            Bootstrap.LoadingDone = false;
+
+            var load = SceneManager.LoadSceneAsync(targetScene, LoadSceneMode.Single);
+            if (load == null)
+            {
+                // Continue un-reloaded rather than hanging the caller, which has no
+                // failure channel on this endpoint. The scene must be in build settings.
+                Bootstrap.SceneToLoad = activeScene;
+                Bootstrap.LoadingDone = true;
+                Debug.LogError(
+                    $"Scene '{targetScene}' could not be loaded; add it to the build settings. " +
+                    "Continuing without a reload, so this initialization does NOT start from a clean scene.");
+                yield break;
+            }
+
+            yield return load;
+            while (!Bootstrap.LoadingDone) yield return new WaitForFixedUpdate();
+
+            // Let the reloaded scene's Awake/Start and the first physics tick settle so
+            // sensors are populated before agents are registered and observed.
+            yield return new WaitForFixedUpdate();
         }
 
         private void RefreshEnvironmentParameters()

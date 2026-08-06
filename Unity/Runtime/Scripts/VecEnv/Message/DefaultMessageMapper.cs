@@ -155,7 +155,9 @@ namespace Scripts.VecEnv.Message
             var initializeEnvironment = new InitializeEnvironment
             {
                 AgentCount = initialize.RequestedNumberOfEnvs,
-                Parameters = initialize.Parameters.Select(MapEnvironmentParameter).ToArray()
+                Parameters = initialize.Parameters.Select(MapEnvironmentParameter).ToArray(),
+                SceneName = initialize.SceneName ?? string.Empty,
+                ReloadScene = initialize.ReloadScene
             };
 
             switch (initialize.AutoResetMode)

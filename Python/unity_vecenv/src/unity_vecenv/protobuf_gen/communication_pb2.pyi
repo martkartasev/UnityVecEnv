@@ -24,14 +24,18 @@ UInt8: VisualObservationDataType
 Float32: VisualObservationDataType
 
 class InitializeEnvironments(_message.Message):
-    __slots__ = ("autoResetMode", "requestedNumberOfEnvs", "parameters")
+    __slots__ = ("autoResetMode", "requestedNumberOfEnvs", "parameters", "sceneName", "reloadScene")
     AUTORESETMODE_FIELD_NUMBER: _ClassVar[int]
     REQUESTEDNUMBEROFENVS_FIELD_NUMBER: _ClassVar[int]
     PARAMETERS_FIELD_NUMBER: _ClassVar[int]
+    SCENENAME_FIELD_NUMBER: _ClassVar[int]
+    RELOADSCENE_FIELD_NUMBER: _ClassVar[int]
     autoResetMode: AutoResetMode
     requestedNumberOfEnvs: int
     parameters: _containers.RepeatedCompositeFieldContainer[EnvironmentParameter]
-    def __init__(self, autoResetMode: _Optional[_Union[AutoResetMode, str]] = ..., requestedNumberOfEnvs: _Optional[int] = ..., parameters: _Optional[_Iterable[_Union[EnvironmentParameter, _Mapping]]] = ...) -> None: ...
+    sceneName: str
+    reloadScene: bool
+    def __init__(self, autoResetMode: _Optional[_Union[AutoResetMode, str]] = ..., requestedNumberOfEnvs: _Optional[int] = ..., parameters: _Optional[_Iterable[_Union[EnvironmentParameter, _Mapping]]] = ..., sceneName: _Optional[str] = ..., reloadScene: bool = ...) -> None: ...
 
 class EnvironmentDescription(_message.Message):
     __slots__ = ("singleObservationSpace", "singleActionSpace", "trueNumberOfEnvs", "singleVisualObservationSpace", "parameters")

@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, Callable
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from dataclasses import dataclass
 from gymnasium import spaces
 from gymnasium.vector import VectorEnv, AutoresetMode
@@ -45,6 +45,15 @@ class _ThreadWorker:
             elif kind == "reset":
                 _, seed, options = cmd
                 res = self.env.reset(seed=seed, options=options)
+            elif kind == "reinitialize":
+                # A scene reload can fail (missing build-settings entry, dead
+                # process). Hand the error back instead of killing this thread,
+                # which would leave the caller blocked until its timeout.
+                _, kwargs = cmd
+                try:
+                    res = self.env.reinitialize(**kwargs)
+                except BaseException as exc:  # noqa: BLE001 - surfaced on the caller
+                    res = exc
             else:
                 raise RuntimeError(f"Unknown worker command: {kind}")
 
@@ -62,6 +71,13 @@ class _ThreadWorker:
     def submit_reset(self, seed, options):
         with self.lock:
             self._pending_action = ("reset", seed, options)
+            self._result = None
+        self.has_result.clear()
+        self.has_action.set()
+
+    def submit_reinitialize(self, kwargs: Dict[str, Any]):
+        with self.lock:
+            self._pending_action = ("reinitialize", dict(kwargs))
             self._result = None
         self.has_result.clear()
         self.has_action.set()
@@ -259,6 +275,20 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         else:
             self.envs = list(envs)  # type: ignore[assignment]
 
+        self._rebuild_layout()
+
+        # workers
+        self.workers = [_ThreadWorker(e) for e in self.envs]
+
+        self._pending_kind: Optional[str] = None
+
+    def _rebuild_layout(self) -> None:
+        """Recompute slices, spaces, metadata and buffers from the sub-envs.
+
+        Runs at construction and again after :meth:`reinitialize`, because a
+        re-initialized process may come back with a different scene's spaces or
+        a different agent count.
+        """
         # slices
         self._slices: List[_Slice] = []
         cur = 0
@@ -285,11 +315,6 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         self.environment_parameters = _validate_environment_parameters(self.envs)
         self.metadata["environment_parameters"] = dict(self.environment_parameters)
 
-        # workers
-        self.workers = [_ThreadWorker(e) for e in self.envs]
-
-        self._pending_kind: Optional[str] = None
-
         self._rew_buf = np.empty((self.num_envs,), dtype=np.float32)
         self._done_buf = np.empty((self.num_envs,), dtype=np.bool_)
         self._trunc_buf = np.empty((self.num_envs,), dtype=np.bool_)
@@ -299,6 +324,42 @@ class FlattenedVectorEnvThreaded(VectorEnv):
             self._obs_buf = np.empty(obs_shape, dtype=self.single_observation_space.dtype)
         else:
             self._obs_buf = None  # structured or discrete obs
+
+    def reinitialize(
+            self,
+            num_envs: Optional[int] = None,
+            env_parameters: Optional[Mapping[str, EnvironmentParameterValue]] = None,
+            autoreset_mode: Optional[Union[AutoresetMode, str]] = None,
+            scene_load: Optional[str] = None,
+            reload_scene: bool = True,
+            timeout: Optional[float] = None,
+    ):
+        """Re-initialize every Unity instance concurrently, optionally into another scene.
+
+        ``num_envs`` is per instance, matching construction. Instances reload in
+        parallel, so this costs about one reload rather than one per instance.
+        """
+        kwargs = {
+            "num_envs": num_envs,
+            "env_parameters": env_parameters,
+            "autoreset_mode": autoreset_mode,
+            "scene_load": scene_load,
+            "reload_scene": reload_scene,
+        }
+        for worker in self.workers:
+            worker.submit_reinitialize(kwargs)
+        results = [worker.get_result(timeout=timeout) for worker in self.workers]
+
+        failures = [result for result in results if isinstance(result, BaseException)]
+        if failures:
+            raise RuntimeError(
+                f"{len(failures)} of {len(results)} Unity instances failed to "
+                f"re-initialize; first error: {failures[0]!r}"
+            ) from failures[0]
+
+        self._pending_kind = None
+        self._rebuild_layout()
+        return results
 
     def reset(
             self,

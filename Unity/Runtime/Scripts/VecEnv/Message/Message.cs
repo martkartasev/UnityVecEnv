@@ -25,6 +25,12 @@ namespace Scripts.VecEnv.Message
         public EnvironmentAutoResetMode AutoResetMode;
         public int AgentCount;
         public EnvironmentParameter[] Parameters;
+
+        /// Scene to activate. Empty keeps the current scene; a different name forces a reload.
+        public string SceneName;
+
+        /// Force a full scene reload even when the scene name is unchanged.
+        public bool ReloadScene;
     }
 
     public enum EnvironmentParameterValueType
