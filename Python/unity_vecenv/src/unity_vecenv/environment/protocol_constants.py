@@ -4,6 +4,7 @@ ARG_TIMEOUT = "-timeout"
 ARG_TIMESCALE = "-timescale"
 ARG_SCENE = "-scene"
 ARG_DECISION_PERIOD = "-decisionperiod"
+ARG_SHARED_MEMORY_OBSERVATIONS = "-sharedmemoryobservations"
 
 DEFAULT_HOST = "127.0.0.1"
 ENDPOINT_INITIALIZE = "initialize"

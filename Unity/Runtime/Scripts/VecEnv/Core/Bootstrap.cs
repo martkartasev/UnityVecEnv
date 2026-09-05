@@ -82,6 +82,15 @@ namespace Scripts.VecEnv.Core
                 Debug.Log($"Channel value: {channelValue}");
             }
 
+            if (_args.TryGetValue("-sharedmemoryobservations", out var sharedMemoryValue))
+            {
+                var enabled = sharedMemoryValue == null ||
+                              !bool.TryParse(sharedMemoryValue, out var parsed) ||
+                              parsed;
+                CommunicatorHttpServer.SharedMemoryObservationsEnabled = enabled;
+                Debug.Log($"Shared-memory observations: {enabled}");
+            }
+
             if (_args.TryGetValue("-timeout", out var timeout))
             {
                 if (int.TryParse(timeout, out var timeoutValue))

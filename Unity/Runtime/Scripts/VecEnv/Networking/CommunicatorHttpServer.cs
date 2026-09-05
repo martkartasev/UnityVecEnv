@@ -19,6 +19,7 @@ namespace Scripts.VecEnv.Networking
         private static readonly HashSet<string> LoggedBatchedVisualSummaries = new();
         private static readonly HashSet<string> LoggedNonZeroBatchedVisualSummaries = new();
         public static int channel = DefaultChannel;
+        public static bool SharedMemoryObservationsEnabled { get; set; }
         private static Lazy<CommunicatorHttpServer> _sLazy = new(() => new CommunicatorHttpServer());
         public static CommunicatorHttpServer Instance => _sLazy.Value;
         public static bool IsInitialized => _sLazy.IsValueCreated;
@@ -29,6 +30,9 @@ namespace Scripts.VecEnv.Networking
         private Thread _listenerThread;
         private bool _isRunning = true;
         private bool _isDisposed;
+        private SharedMemoryObservationWriter _sharedMemoryObservationWriter;
+        private bool _sharedMemoryFailureLogged;
+        private bool _sharedMemoryTransportDisabled;
 
         private readonly SemaphoreSlim _stepGate = new(1, 1);
         private readonly ManualResetEventSlim _messageAvailable = new(false);
@@ -57,6 +61,7 @@ namespace Scripts.VecEnv.Networking
             }
 
             channel = DefaultChannel;
+            SharedMemoryObservationsEnabled = false;
             LoggedBatchedVisualSummaries.Clear();
             LoggedNonZeroBatchedVisualSummaries.Clear();
             _sLazy = new Lazy<CommunicatorHttpServer>(() => new CommunicatorHttpServer());
@@ -170,9 +175,11 @@ namespace Scripts.VecEnv.Networking
 
             var customIndices = BuildCustomIndices(infos);
             var finalIndices = BuildFinalIndices(dones);
+            var observation = BuildBatchedObservation(agentObservations);
+            TryMoveObservationToSharedMemory(observation);
             var results = new BatchedStepResults
             {
-                Observation = BuildBatchedObservation(agentObservations),
+                Observation = observation,
                 RewardsF32 = FloatArrayToByteString(rewards),
                 Dones = StateArrayToByteString(dones, EnvironmentState.Done),
                 Truncates = StateArrayToByteString(dones, EnvironmentState.Truncated),
@@ -193,14 +200,48 @@ namespace Scripts.VecEnv.Networking
             }
 
             var customIndices = BuildCustomIndices(infos);
+            var observation = BuildBatchedObservation(agentObservations);
+            TryMoveObservationToSharedMemory(observation);
             var results = new BatchedResetResults
             {
-                Observation = BuildBatchedObservation(agentObservations),
+                Observation = observation,
                 CustomIndicesI32 = IntArrayToByteString(customIndices),
                 Custom = BuildBatchedCustomInfo(infos, customIndices)
             };
 
             _resetTcs?.TrySetResult(results);
+        }
+
+        private void TryMoveObservationToSharedMemory(BatchedObservation observation)
+        {
+            if (!SharedMemoryObservationsEnabled || _sharedMemoryTransportDisabled || observation == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _sharedMemoryObservationWriter ??= new SharedMemoryObservationWriter(channel);
+                _sharedMemoryObservationWriter.TryWriteAndClear(observation);
+            }
+            catch (Exception exception)
+            {
+                // The populated protobuf fields remain intact unless publication
+                // completed. Keep later responses inline too: recreating the
+                // writer would restart its sequence and could make a client
+                // mistake a fresh frame for stale data.
+                _sharedMemoryTransportDisabled = true;
+                if (!_sharedMemoryFailureLogged)
+                {
+                    _sharedMemoryFailureLogged = true;
+                    Debug.LogWarning(
+                        $"Shared-memory observations are unavailable; falling back to inline protobuf payloads. " +
+                        exception);
+                }
+
+                _sharedMemoryObservationWriter?.Dispose();
+                _sharedMemoryObservationWriter = null;
+            }
         }
 
         public void InitializeCompleted(EnvironmentDescription initialize1)
@@ -996,6 +1037,9 @@ namespace Scripts.VecEnv.Networking
             _initializeTcs?.TrySetCanceled();
             _resetTcs?.TrySetCanceled();
             _stepTcs?.TrySetCanceled();
+
+            _sharedMemoryObservationWriter?.Dispose();
+            _sharedMemoryObservationWriter = null;
 
             try
             {

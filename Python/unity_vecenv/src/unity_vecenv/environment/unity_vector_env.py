@@ -14,6 +14,7 @@ from unity_vecenv.environment.spaces import (
     visual_spaces_from_repeated,
 )
 from unity_vecenv.environment.network_utils import is_port_in_use
+from unity_vecenv.environment.shared_memory_observations import SharedMemoryObservationReader
 from unity_vecenv.environment.unity_client import start_client
 from unity_vecenv.environment.unity_process import start_unity_process
 from unity_vecenv.protobuf_gen.communication_pb2 import (
@@ -176,7 +177,8 @@ class UnityVectorEnv(VectorEnv):
                  log_file: str = "",
                  env_parameters: Optional[Mapping[str, EnvironmentParameterValue]] = None,
                  autoreset_mode: Union[AutoresetMode, str] = AutoresetMode.NEXT_STEP,
-                 reload_scene: bool = False):
+                 reload_scene: bool = False,
+                 shared_memory_observations: bool = False):
         super(UnityVectorEnv, self).__init__()
         self.initialization_parameters = _normalize_environment_parameters(env_parameters)
         self.autoreset_mode = _normalize_autoreset_mode(autoreset_mode)
@@ -187,6 +189,7 @@ class UnityVectorEnv(VectorEnv):
             "time_scale": time_scale,
             "physics_steps_per_action": physics_steps_per_action,
             "initialization_parameters": dict(self.initialization_parameters),
+            "shared_memory_observations": bool(shared_memory_observations),
         }
         self.time_scale = time_scale
         self.physics_steps_per_action = physics_steps_per_action
@@ -195,7 +198,23 @@ class UnityVectorEnv(VectorEnv):
                (not start_process and not is_port_in_use(self.port))):
             self.port += 1
 
-        self.process = start_unity_process(executable_path, scene_load=scene_load, port=self.port, nr_agents=num_envs, batch_mode=batch_mode, no_graphics=no_graphics, timescale=self.time_scale, log_file=log_file) if start_process else None
+        self._shared_memory_observations = bool(shared_memory_observations)
+        self._shared_observation_reader = (
+            SharedMemoryObservationReader(self.port)
+            if self._shared_memory_observations
+            else None
+        )
+        self.process = start_unity_process(
+            executable_path,
+            scene_load=scene_load,
+            port=self.port,
+            nr_agents=num_envs,
+            batch_mode=batch_mode,
+            no_graphics=no_graphics,
+            timescale=self.time_scale,
+            log_file=log_file,
+            shared_memory_observations=self._shared_memory_observations,
+        ) if start_process else None
         self.client = start_client(port=self.port)
 
         self.scene_load = scene_load
@@ -392,6 +411,9 @@ class UnityVectorEnv(VectorEnv):
         # TODO: Screenshot/Video manager back into API
 
     def close(self):
+        if self._shared_observation_reader is not None:
+            self._shared_observation_reader.close()
+            self._shared_observation_reader = None
         if self.process is not None:
             self.process.terminate()
             try:
@@ -615,26 +637,46 @@ class UnityVectorEnv(VectorEnv):
 
         return continuous
 
-    def _batched_scalar_observation_to_numpy(self, observation, nr_agents, scalar_space):
+    def _batched_scalar_observation_to_numpy(
+        self,
+        observation,
+        nr_agents,
+        scalar_space,
+        shared_payloads=None,
+    ):
         num_envs = int(observation.num_envs or nr_agents)
         if num_envs != nr_agents:
             raise RuntimeError(f"Batched observation reports {num_envs} envs, expected {nr_agents}.")
 
         continuous = None
         if observation.continuous_size > 0:
+            payload = (
+                shared_payloads.continuous
+                if shared_payloads is not None
+                else observation.continuous_f32
+            )
             continuous = self._decode_float_buffer(
-                observation.continuous_f32,
+                payload,
                 nr_agents * int(observation.continuous_size),
                 "observation.continuous_f32",
-            ).reshape((nr_agents, int(observation.continuous_size))).copy()
+            ).reshape((nr_agents, int(observation.continuous_size)))
+            if shared_payloads is None:
+                continuous = continuous.copy()
 
         discrete = None
         if observation.discrete_size > 0:
+            payload = (
+                shared_payloads.discrete
+                if shared_payloads is not None
+                else observation.discrete_i32
+            )
             discrete = self._decode_int_buffer(
-                observation.discrete_i32,
+                payload,
                 nr_agents * int(observation.discrete_size),
                 "observation.discrete_i32",
-            ).reshape((nr_agents, int(observation.discrete_size))).copy()
+            ).reshape((nr_agents, int(observation.discrete_size)))
+            if shared_payloads is None:
+                discrete = discrete.copy()
 
         sos = scalar_space
         if isinstance(sos, spaces.Box):
@@ -674,7 +716,7 @@ class UnityVectorEnv(VectorEnv):
 
         raise TypeError(f"Unsupported single_observation_space: {type(sos)}")
 
-    def _decode_visual_observations_to_numpy(self, observation, nr_agents):
+    def _decode_visual_observations_to_numpy(self, observation, nr_agents, shared_payloads=None):
         if not self._visual_observation_specs:
             if len(observation.visual) != 0:
                 raise RuntimeError("Received visual observations but no visual observation spaces were negotiated.")
@@ -695,13 +737,19 @@ class UnityVectorEnv(VectorEnv):
             dtype = np.float32 if int(spec.dataType) == 1 else np.uint8
             shape = tuple(int(s) for s in spec.shape)
             expected = int(np.prod(shape, dtype=np.int64)) * nr_agents
-            payload = bytes(payload_lookup[key].data)
+            payload = (
+                shared_payloads.visual[key]
+                if shared_payloads is not None
+                else bytes(payload_lookup[key].data)
+            )
             arr = np.frombuffer(payload, dtype=dtype)
             if arr.size != expected:
                 raise RuntimeError(
                     f"Visual observation '{key}' has {arr.size} values, expected {expected}."
                 )
-            decoded[key] = arr.reshape((nr_agents,) + shape).copy()
+            decoded[key] = arr.reshape((nr_agents,) + shape)
+            if shared_payloads is None:
+                decoded[key] = decoded[key].copy()
 
         extra = set(payload_lookup.keys()) - set(self._visual_observation_specs.keys())
         if extra:
@@ -709,7 +757,7 @@ class UnityVectorEnv(VectorEnv):
 
         return decoded
 
-    def _batched_observation_to_numpy(self, observation, nr_agents):
+    def _batched_observation_to_numpy(self, observation, nr_agents, shared_payloads=None):
         state_present = self._state_observation_space is not None and not is_empty_placeholder_space(
             self._state_observation_space
         )
@@ -720,15 +768,21 @@ class UnityVectorEnv(VectorEnv):
                 observation,
                 nr_agents,
                 self._state_observation_space,
+                shared_payloads,
             )
 
-        visual_obs = self._decode_visual_observations_to_numpy(observation, nr_agents)
+        visual_obs = self._decode_visual_observations_to_numpy(
+            observation,
+            nr_agents,
+            shared_payloads,
+        )
         state_obs = None
         if state_present:
             state_obs = self._batched_scalar_observation_to_numpy(
                 observation,
                 nr_agents,
                 self._state_observation_space,
+                shared_payloads,
             )
 
         if isinstance(self.single_observation_space, spaces.Dict):
@@ -777,7 +831,12 @@ class UnityVectorEnv(VectorEnv):
         return full_obs
 
     def reset_result_to_numpy(self, results: BatchedResetResults, nr_agents):
-        obs = self._batched_observation_to_numpy(results.observation, nr_agents)
+        shared_payloads = self._shared_payloads_for(results.observation, nr_agents)
+        obs = self._batched_observation_to_numpy(
+            results.observation,
+            nr_agents,
+            shared_payloads,
+        )
         info: Dict[str, Any] = {}
 
         custom_indices = self._decode_sparse_indices(results.custom_indices_i32, nr_agents, "custom_indices_i32")
@@ -786,7 +845,12 @@ class UnityVectorEnv(VectorEnv):
         return obs, info
 
     def step_result_to_numpy(self, results: BatchedStepResults):
-        obs = self._batched_observation_to_numpy(results.observation, self.num_envs)
+        shared_payloads = self._shared_payloads_for(results.observation, self.num_envs)
+        obs = self._batched_observation_to_numpy(
+            results.observation,
+            self.num_envs,
+            shared_payloads,
+        )
         rewards = self._decode_float_buffer(results.rewards_f32, self.num_envs, "rewards_f32").copy()
         dones = self._decode_bool_buffer(results.dones, self.num_envs, "dones")
         truncates = self._decode_bool_buffer(results.truncates, self.num_envs, "truncates")
@@ -815,6 +879,15 @@ class UnityVectorEnv(VectorEnv):
         info["_final_observation"] = final_mask.copy()
 
         return obs, dones, truncates, rewards, info
+
+    def _shared_payloads_for(self, observation, nr_agents):
+        if self._shared_observation_reader is None:
+            return None
+        return self._shared_observation_reader.read(
+            observation,
+            self._visual_observation_specs,
+            nr_agents,
+        )
 
     def map_action_to_proto(self, action):
         step = Step()

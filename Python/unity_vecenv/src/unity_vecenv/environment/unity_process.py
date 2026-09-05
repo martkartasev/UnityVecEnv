@@ -5,6 +5,7 @@ from unity_vecenv.environment.protocol_constants import (
     ARG_CHANNEL,
     ARG_DECISION_PERIOD,
     ARG_SCENE,
+    ARG_SHARED_MEMORY_OBSERVATIONS,
     ARG_TIMEOUT,
     ARG_TIMESCALE,
 )
@@ -19,7 +20,8 @@ def start_unity_process(executable_path: str,
                         timeout_ms: int = 0,
                         no_graphics: bool = True,
                         batch_mode: bool = True,
-                        scene_load: str = ""):
+                        scene_load: str = "",
+                        shared_memory_observations: bool = False):
     args = [executable_path,
             ARG_CHANNEL, str(port),
             ARG_TIMEOUT, str(timeout_ms)
@@ -38,6 +40,9 @@ def start_unity_process(executable_path: str,
 
     if decision_period != 10:
         args += [ARG_DECISION_PERIOD, str(decision_period)]
+
+    if shared_memory_observations:
+        args += [ARG_SHARED_MEMORY_OBSERVATIONS]
 
     if batch_mode:
         args += ["-batchmode" ]

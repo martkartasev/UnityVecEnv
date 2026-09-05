@@ -40,6 +40,7 @@ env = UnityVectorEnv(
     port=50010,
     env_parameters={"difficulty": 2, "variant": "wide"},
     autoreset_mode=AutoresetMode.SAME_STEP,
+    shared_memory_observations=True,
 )
 ```
 
@@ -73,6 +74,32 @@ This is useful for connecting to the Unity Editor during development.
 | `log_file` | `str` | `""` | Path for Unity's player log. |
 | `env_parameters` | `Mapping[str, str \| float \| int] \| None` | `None` | Parameters sent during environment initialization and available in Unity before `GymAgent.Initialize()`. |
 | `autoreset_mode` | `AutoresetMode \| str` | `AutoresetMode.NEXT_STEP` | `NEXT_STEP` returns the terminal observation; `SAME_STEP` resets before returning and stores terminal observations in `info["final_observation"]`. Strings `"next_step"` and `"same_step"` are also accepted. |
+| `shared_memory_observations` | `bool` | `False` | On Windows, move the primary batched observation payload through a double-buffered named memory mapping. HTTP remains the control and completion channel. |
+
+### Shared-memory observations
+
+Set `shared_memory_observations=True` when Python launches a Windows Unity
+player to remove the primary observation byte payload from the HTTP/protobuf
+response. Unity copies the completed continuous, discrete, and visual batches
+into a named, double-buffered memory mapping. Python returns read-only NumPy
+views over the published slot without copying those bytes again.
+
+The mapping is opt-in and the existing inline protobuf path remains the
+default. If Unity cannot create or write the mapping, that response and the
+remaining responses from that player retain their inline payloads, and Python
+transparently uses the existing decoder. Commands, rewards, completion flags,
+custom info, and same-step final observations remain in protobuf in this
+prototype.
+
+Each returned shared-memory observation remains stable for one subsequent
+`reset()` or `step()` call. A second subsequent call can reuse its slot, so copy
+an observation that must be retained longer. Training loops that immediately
+copy observations into rollout tensors need no special handling.
+
+The current implementation uses Windows named mappings and therefore requires
+both Unity and Python to run as Windows processes. It does not work when Python
+runs inside WSL. When `start_process=False`, the existing Unity player must
+have been launched with `-sharedmemoryobservations` on the matching channel.
 
 ## Gymnasium API
 
