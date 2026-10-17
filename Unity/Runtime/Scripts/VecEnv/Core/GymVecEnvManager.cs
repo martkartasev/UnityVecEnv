@@ -247,9 +247,7 @@ namespace Scripts.VecEnv.Core
         {
             ClearUserStrings();
 
-            // Park the step loop before any yield. Initialization spans several frames
-            // (more when a scene reloads), and FixedUpdate would otherwise fall through
-            // to WaitForNextMessage and shut the process down mid-initialization.
+            // Must run before the first yield; FixedUpdate would otherwise shut the process down.
             _gymStepOngoing = false;
             _firstResetComplete = false;
             _connectionInitialized = false;
@@ -276,15 +274,6 @@ namespace Scripts.VecEnv.Core
             callback?.Invoke(_environmentDescription);
         }
 
-        /// <summary>
-        /// Activates the requested scene, reloading it in Single mode when the caller
-        /// asks for a different scene or explicitly requests a reload.
-        ///
-        /// A reload is the only way to discard residual physics, transform and sensor
-        /// state left by a previous episode, so a re-initialized process starts from
-        /// the same state as a freshly launched one. Bootstrap's sceneLoaded and
-        /// sceneUnloaded callbacks clear and respawn agents around the load.
-        /// </summary>
         private IEnumerator ApplySceneSelection(InitializeEnvironment initializeEnvironments)
         {
             var activeScene = SceneManager.GetActiveScene().name;
@@ -306,11 +295,7 @@ namespace Scripts.VecEnv.Core
 
             Debug.Log($"Reloading scene '{targetScene}' for initialization (was '{activeScene}').");
 
-            // Pin the shared stream before scene objects awake, so every reload starts
-            // from the same layout. Note this makes reloads identical to each other, not
-            // to a cold launch, whose shared stream is seeded non-deterministically by
-            // Unity. Callers that need every initialization to agree should reload on the
-            // first initialize too (UnityVectorEnv(reload_scene=True)).
+            // See docs/python-usage.md, "Reinitializing and scene reloads".
             Resources.UnloadUnusedAssets();
             Random.InitState(0);
 
@@ -321,8 +306,6 @@ namespace Scripts.VecEnv.Core
             var load = SceneManager.LoadSceneAsync(targetScene, LoadSceneMode.Single);
             if (load == null)
             {
-                // Continue un-reloaded rather than hanging the caller, which has no
-                // failure channel on this endpoint. The scene must be in build settings.
                 Bootstrap.SceneToLoad = activeScene;
                 Bootstrap.LoadingDone = true;
                 Debug.LogError(
@@ -334,8 +317,7 @@ namespace Scripts.VecEnv.Core
             yield return load;
             while (!Bootstrap.LoadingDone) yield return new WaitForFixedUpdate();
 
-            // Let the reloaded scene's Awake/Start and the first physics tick settle so
-            // sensors are populated before agents are registered and observed.
+            // One tick for Awake/Start and the first physics step before agents register.
             yield return new WaitForFixedUpdate();
         }
 

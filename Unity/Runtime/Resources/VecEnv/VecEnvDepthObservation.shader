@@ -17,8 +17,7 @@ Shader "Hidden/VecEnv/DepthObservation"
 
             #include "UnityCG.cginc"
 
-            // Sample the active observation camera's depth texture.
-            // _LastCameraDepthTexture can point to another camera's depth buffer, which leaves our capture empty.
+            // Not _LastCameraDepthTexture, which can belong to another camera.
             UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
             float _DepthMetersMin;
             float _DepthMetersMax;

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,8 +15,6 @@ namespace Scripts.VecEnv.Networking
     public class CommunicatorHttpServer : IExternalCommunication
     {
         private const int DefaultChannel = 50010;
-        private static readonly HashSet<string> LoggedBatchedVisualSummaries = new();
-        private static readonly HashSet<string> LoggedNonZeroBatchedVisualSummaries = new();
         public static int channel = DefaultChannel;
         private static Lazy<CommunicatorHttpServer> _sLazy = new(() => new CommunicatorHttpServer());
         public static CommunicatorHttpServer Instance => _sLazy.Value;
@@ -46,19 +43,10 @@ namespace Scripts.VecEnv.Networking
         {
             if (_sLazy.IsValueCreated)
             {
-                try
-                {
-                    _sLazy.Value.Dispose();
-                }
-                catch
-                {
-                    // Ignore shutdown errors while resetting play mode state.
-                }
+                IgnoreTeardownErrors(() => _sLazy.Value.Dispose());
             }
 
             channel = DefaultChannel;
-            LoggedBatchedVisualSummaries.Clear();
-            LoggedNonZeroBatchedVisualSummaries.Clear();
             _sLazy = new Lazy<CommunicatorHttpServer>(() => new CommunicatorHttpServer());
         }
 
@@ -168,21 +156,7 @@ namespace Scripts.VecEnv.Networking
                 return;
             }
 
-            var customIndices = BuildCustomIndices(infos);
-            var finalIndices = BuildFinalIndices(dones);
-            var results = new BatchedStepResults
-            {
-                Observation = BuildBatchedObservation(agentObservations),
-                RewardsF32 = FloatArrayToByteString(rewards),
-                Dones = StateArrayToByteString(dones, EnvironmentState.Done),
-                Truncates = StateArrayToByteString(dones, EnvironmentState.Truncated),
-                CustomIndicesI32 = IntArrayToByteString(customIndices),
-                Custom = BuildBatchedCustomInfo(infos, customIndices),
-                FinalIndicesI32 = IntArrayToByteString(finalIndices),
-                FinalInfo = BuildBatchedFinalInfo(agentObservations, infos, finalIndices)
-            };
-
-            _stepTcs?.TrySetResult(results);
+            _stepTcs?.TrySetResult(Mapper.MapStepResults(agentObservations, dones, rewards, infos));
         }
 
         public void ResetCompleted(AgentObservation[] agentObservations, Info[] infos)
@@ -192,15 +166,7 @@ namespace Scripts.VecEnv.Networking
                 return;
             }
 
-            var customIndices = BuildCustomIndices(infos);
-            var results = new BatchedResetResults
-            {
-                Observation = BuildBatchedObservation(agentObservations),
-                CustomIndicesI32 = IntArrayToByteString(customIndices),
-                Custom = BuildBatchedCustomInfo(infos, customIndices)
-            };
-
-            _resetTcs?.TrySetResult(results);
+            _resetTcs?.TrySetResult(Mapper.MapResetResults(agentObservations, infos));
         }
 
         public void InitializeCompleted(EnvironmentDescription initialize1)
@@ -212,508 +178,6 @@ namespace Scripts.VecEnv.Networking
 
             var description = Mapper.MapEnvironmentDescription(initialize1);
             _initializeTcs?.TrySetResult(description);
-        }
-
-        private static AgentObservation SelectFinalObservation(AgentObservation currentObservation, Info info)
-        {
-            if ((info.FinalObservation.Continuous?.Length ?? 0) > 0 || (info.FinalObservation.Discrete?.Length ?? 0) > 0)
-            {
-                return info.FinalObservation;
-            }
-
-            return currentObservation;
-        }
-
-        private static int[] BuildCustomIndices(Info[] infos)
-        {
-            if (infos == null || infos.Length == 0)
-            {
-                return Array.Empty<int>();
-            }
-
-            var indices = new List<int>(infos.Length);
-            for (int i = 0; i < infos.Length; i++)
-            {
-                if (infos[i].custom != null && infos[i].custom.HasAnyValues)
-                {
-                    indices.Add(i);
-                }
-            }
-
-            return indices.ToArray();
-        }
-
-        private sealed class CustomInfoLayout
-        {
-            public readonly Dictionary<string, int> FloatKeyLookup = new(StringComparer.Ordinal);
-            public readonly List<string> FloatKeys = new();
-            public readonly Dictionary<string, int> IntKeyLookup = new(StringComparer.Ordinal);
-            public readonly List<string> IntKeys = new();
-            public readonly Dictionary<string, int> BoolKeyLookup = new(StringComparer.Ordinal);
-            public readonly List<string> BoolKeys = new();
-            public readonly Dictionary<string, int> Vector3KeyLookup = new(StringComparer.Ordinal);
-            public readonly List<string> Vector3Keys = new();
-            public readonly Dictionary<string, int> QuaternionKeyLookup = new(StringComparer.Ordinal);
-            public readonly List<string> QuaternionKeys = new();
-        }
-
-        private static int[] BuildFinalIndices(EnvironmentState[] dones)
-        {
-            if (dones == null || dones.Length == 0)
-            {
-                return Array.Empty<int>();
-            }
-
-            var indices = new List<int>(dones.Length);
-            for (int i = 0; i < dones.Length; i++)
-            {
-                if (dones[i] == EnvironmentState.Done || dones[i] == EnvironmentState.Truncated)
-                {
-                    indices.Add(i);
-                }
-            }
-
-            return indices.ToArray();
-        }
-
-        private static BatchedCustomInfo BuildBatchedCustomInfo(Info[] infos, int[] indices)
-        {
-            var batchedCustomInfo = new BatchedCustomInfo();
-            if (indices == null || indices.Length == 0)
-            {
-                return batchedCustomInfo;
-            }
-
-            var layout = new CustomInfoLayout();
-            var globalKeyTypes = new Dictionary<string, CustomInfoValueType>(StringComparer.Ordinal);
-            for (int row = 0; row < indices.Length; row++)
-            {
-                var custom = infos[indices[row]].custom;
-                if (custom == null)
-                {
-                    continue;
-                }
-
-                RegisterCustomKeys(custom.FloatValues, CustomInfoValueType.Float, globalKeyTypes, layout.FloatKeyLookup, layout.FloatKeys);
-                RegisterCustomKeys(custom.IntValues, CustomInfoValueType.Int, globalKeyTypes, layout.IntKeyLookup, layout.IntKeys);
-                RegisterCustomKeys(custom.BoolValues, CustomInfoValueType.Bool, globalKeyTypes, layout.BoolKeyLookup, layout.BoolKeys);
-                RegisterCustomKeys(custom.Vector3Values, CustomInfoValueType.Vector3, globalKeyTypes, layout.Vector3KeyLookup, layout.Vector3Keys);
-                RegisterCustomKeys(custom.QuaternionValues, CustomInfoValueType.Quaternion, globalKeyTypes, layout.QuaternionKeyLookup, layout.QuaternionKeys);
-            }
-
-            var floatValues = new float[indices.Length * layout.FloatKeys.Count];
-            var floatPresent = new byte[floatValues.Length];
-            var intValues = new int[indices.Length * layout.IntKeys.Count];
-            var intPresent = new byte[intValues.Length];
-            var boolValues = new byte[indices.Length * layout.BoolKeys.Count];
-            var boolPresent = new byte[boolValues.Length];
-            var vector3Values = new float[indices.Length * layout.Vector3Keys.Count * 3];
-            var vector3Present = new byte[indices.Length * layout.Vector3Keys.Count];
-            var quaternionValues = new float[indices.Length * layout.QuaternionKeys.Count * 4];
-            var quaternionPresent = new byte[indices.Length * layout.QuaternionKeys.Count];
-
-            for (int row = 0; row < indices.Length; row++)
-            {
-                var custom = infos[indices[row]].custom;
-                if (custom == null)
-                {
-                    continue;
-                }
-
-                PopulateFloatCustomSection(custom, row, layout.FloatKeyLookup, layout.FloatKeys.Count, floatValues, floatPresent);
-                PopulateIntCustomSection(custom, row, layout.IntKeyLookup, layout.IntKeys.Count, intValues, intPresent);
-                PopulateBoolCustomSection(custom, row, layout.BoolKeyLookup, layout.BoolKeys.Count, boolValues, boolPresent);
-                PopulateVector3CustomSection(custom, row, layout.Vector3KeyLookup, layout.Vector3Keys.Count, vector3Values, vector3Present);
-                PopulateQuaternionCustomSection(custom, row, layout.QuaternionKeyLookup, layout.QuaternionKeys.Count, quaternionValues, quaternionPresent);
-            }
-
-            batchedCustomInfo.Keys.Add(layout.FloatKeys);
-            batchedCustomInfo.ValuesF32 = FloatArrayToByteString(floatValues);
-            batchedCustomInfo.Present = ByteArrayToByteString(floatPresent);
-            batchedCustomInfo.KeysI32.Add(layout.IntKeys);
-            batchedCustomInfo.ValuesI32 = IntArrayToByteString(intValues);
-            batchedCustomInfo.PresentI32 = ByteArrayToByteString(intPresent);
-            batchedCustomInfo.KeysBool.Add(layout.BoolKeys);
-            batchedCustomInfo.ValuesBool = ByteArrayToByteString(boolValues);
-            batchedCustomInfo.PresentBool = ByteArrayToByteString(boolPresent);
-            batchedCustomInfo.KeysVector3.Add(layout.Vector3Keys);
-            batchedCustomInfo.ValuesVector3F32 = FloatArrayToByteString(vector3Values);
-            batchedCustomInfo.PresentVector3 = ByteArrayToByteString(vector3Present);
-            batchedCustomInfo.KeysQuaternion.Add(layout.QuaternionKeys);
-            batchedCustomInfo.ValuesQuaternionF32 = FloatArrayToByteString(quaternionValues);
-            batchedCustomInfo.PresentQuaternion = ByteArrayToByteString(quaternionPresent);
-            return batchedCustomInfo;
-        }
-
-        private static void RegisterCustomKeys<T>(
-            IReadOnlyDictionary<string, T> values,
-            CustomInfoValueType valueType,
-            Dictionary<string, CustomInfoValueType> globalKeyTypes,
-            Dictionary<string, int> keyLookup,
-            List<string> orderedKeys)
-        {
-            foreach (var key in values.Keys)
-            {
-                if (globalKeyTypes.TryGetValue(key, out var existingType) && existingType != valueType)
-                {
-                    throw new InvalidOperationException(
-                        $"Custom info key '{key}' was emitted as both {existingType} and {valueType}.");
-                }
-
-                globalKeyTypes[key] = valueType;
-                if (keyLookup.ContainsKey(key))
-                {
-                    continue;
-                }
-
-                keyLookup[key] = orderedKeys.Count;
-                orderedKeys.Add(key);
-            }
-        }
-
-        private static void PopulateFloatCustomSection(
-            CustomInfoBuilder custom,
-            int row,
-            Dictionary<string, int> keyLookup,
-            int keyCount,
-            float[] values,
-            byte[] present)
-        {
-            if (keyCount == 0)
-            {
-                return;
-            }
-
-            foreach (var entry in custom.FloatValues)
-            {
-                var offset = row * keyCount + keyLookup[entry.Key];
-                values[offset] = entry.Value;
-                present[offset] = 1;
-            }
-        }
-
-        private static void PopulateIntCustomSection(
-            CustomInfoBuilder custom,
-            int row,
-            Dictionary<string, int> keyLookup,
-            int keyCount,
-            int[] values,
-            byte[] present)
-        {
-            if (keyCount == 0)
-            {
-                return;
-            }
-
-            foreach (var entry in custom.IntValues)
-            {
-                var offset = row * keyCount + keyLookup[entry.Key];
-                values[offset] = entry.Value;
-                present[offset] = 1;
-            }
-        }
-
-        private static void PopulateBoolCustomSection(
-            CustomInfoBuilder custom,
-            int row,
-            Dictionary<string, int> keyLookup,
-            int keyCount,
-            byte[] values,
-            byte[] present)
-        {
-            if (keyCount == 0)
-            {
-                return;
-            }
-
-            foreach (var entry in custom.BoolValues)
-            {
-                var offset = row * keyCount + keyLookup[entry.Key];
-                values[offset] = entry.Value ? (byte)1 : (byte)0;
-                present[offset] = 1;
-            }
-        }
-
-        private static void PopulateVector3CustomSection(
-            CustomInfoBuilder custom,
-            int row,
-            Dictionary<string, int> keyLookup,
-            int keyCount,
-            float[] values,
-            byte[] present)
-        {
-            if (keyCount == 0)
-            {
-                return;
-            }
-
-            foreach (var entry in custom.Vector3Values)
-            {
-                var keyOffset = row * keyCount + keyLookup[entry.Key];
-                var valueOffset = keyOffset * 3;
-                values[valueOffset] = entry.Value.x;
-                values[valueOffset + 1] = entry.Value.y;
-                values[valueOffset + 2] = entry.Value.z;
-                present[keyOffset] = 1;
-            }
-        }
-
-        private static void PopulateQuaternionCustomSection(
-            CustomInfoBuilder custom,
-            int row,
-            Dictionary<string, int> keyLookup,
-            int keyCount,
-            float[] values,
-            byte[] present)
-        {
-            if (keyCount == 0)
-            {
-                return;
-            }
-
-            foreach (var entry in custom.QuaternionValues)
-            {
-                var keyOffset = row * keyCount + keyLookup[entry.Key];
-                var valueOffset = keyOffset * 4;
-                values[valueOffset] = entry.Value.x;
-                values[valueOffset + 1] = entry.Value.y;
-                values[valueOffset + 2] = entry.Value.z;
-                values[valueOffset + 3] = entry.Value.w;
-                present[keyOffset] = 1;
-            }
-        }
-
-        private static BatchedFinalInfo BuildBatchedFinalInfo(AgentObservation[] agentObservations, Info[] infos, int[] indices)
-        {
-            var batchedFinalInfo = new BatchedFinalInfo();
-            if (indices == null || indices.Length == 0)
-            {
-                return batchedFinalInfo;
-            }
-
-            var finalObservations = new AgentObservation[indices.Length];
-            for (int row = 0; row < indices.Length; row++)
-            {
-                var index = indices[row];
-                finalObservations[row] = SelectFinalObservation(agentObservations[index], infos[index]);
-            }
-
-            batchedFinalInfo.FinalObservation = BuildBatchedObservation(finalObservations);
-            return batchedFinalInfo;
-        }
-
-        private static BatchedObservation BuildBatchedObservation(AgentObservation[] agentObservations)
-        {
-            var batchedObservation = new BatchedObservation();
-            if (agentObservations == null || agentObservations.Length == 0)
-            {
-                return batchedObservation;
-            }
-
-            var continuousSize = agentObservations[0].Continuous?.Length ?? 0;
-            var discreteSize = agentObservations[0].Discrete?.Length ?? 0;
-            var continuousValues = new float[agentObservations.Length * continuousSize];
-            var discreteValues = new int[agentObservations.Length * discreteSize];
-
-            for (int i = 0; i < agentObservations.Length; i++)
-            {
-                var continuous = agentObservations[i].Continuous ?? Array.Empty<float>();
-                var discrete = agentObservations[i].Discrete ?? Array.Empty<int>();
-                if (continuous.Length != continuousSize)
-                {
-                    throw new InvalidOperationException($"Observation {i} has {continuous.Length} continuous values, expected {continuousSize}.");
-                }
-
-                if (discrete.Length != discreteSize)
-                {
-                    throw new InvalidOperationException($"Observation {i} has {discrete.Length} discrete values, expected {discreteSize}.");
-                }
-
-                if (continuousSize > 0)
-                {
-                    Array.Copy(continuous, 0, continuousValues, i * continuousSize, continuousSize);
-                }
-
-                if (discreteSize > 0)
-                {
-                    Array.Copy(discrete, 0, discreteValues, i * discreteSize, discreteSize);
-                }
-            }
-
-            batchedObservation.NumEnvs = agentObservations.Length;
-            batchedObservation.ContinuousSize = continuousSize;
-            batchedObservation.DiscreteSize = discreteSize;
-            batchedObservation.ContinuousF32 = FloatArrayToByteString(continuousValues);
-            batchedObservation.DiscreteI32 = IntArrayToByteString(discreteValues);
-            foreach (var visualObservation in BuildBatchedVisualObservations(agentObservations))
-            {
-                batchedObservation.Visual.Add(visualObservation);
-            }
-
-            return batchedObservation;
-        }
-
-        private static BatchedVisualObservation[] BuildBatchedVisualObservations(AgentObservation[] agentObservations)
-        {
-            var firstVisuals = agentObservations[0].VisualObservations ?? Array.Empty<AgentVisualObservation>();
-            if (firstVisuals.Length == 0)
-            {
-                return Array.Empty<BatchedVisualObservation>();
-            }
-
-            var batchedVisuals = new BatchedVisualObservation[firstVisuals.Length];
-            for (int visualIndex = 0; visualIndex < firstVisuals.Length; visualIndex++)
-            {
-                var firstVisual = firstVisuals[visualIndex];
-                var name = firstVisual.Name ?? string.Empty;
-                var frameSize = firstVisual.Data?.Length ?? 0;
-                var batchedData = new byte[agentObservations.Length * frameSize];
-
-                for (int envIndex = 0; envIndex < agentObservations.Length; envIndex++)
-                {
-                    var visuals = agentObservations[envIndex].VisualObservations ?? Array.Empty<AgentVisualObservation>();
-                    if (visuals.Length != firstVisuals.Length)
-                    {
-                        throw new InvalidOperationException(
-                            $"Observation {envIndex} has {visuals.Length} visual observations, expected {firstVisuals.Length}.");
-                    }
-
-                    if (!string.Equals(visuals[visualIndex].Name ?? string.Empty, name, StringComparison.Ordinal))
-                    {
-                        throw new InvalidOperationException(
-                            $"Observation {envIndex} visual observation {visualIndex} is named '{visuals[visualIndex].Name}', expected '{name}'.");
-                    }
-
-                    var data = visuals[visualIndex].Data ?? Array.Empty<byte>();
-                    if (data.Length != frameSize)
-                    {
-                        throw new InvalidOperationException(
-                            $"Observation {envIndex} visual observation '{name}' has {data.Length} bytes, expected {frameSize}.");
-                    }
-
-                    if (frameSize > 0)
-                    {
-                        Buffer.BlockCopy(data, 0, batchedData, envIndex * frameSize, frameSize);
-                    }
-                }
-
-                batchedVisuals[visualIndex] = new BatchedVisualObservation
-                {
-                    Name = name,
-                    Data = ByteString.CopyFrom(batchedData)
-                };
-                if (firstVisual.DebugLoggingEnabled)
-                {
-                    LogVisualSummaryOnce("server-batch", name, batchedData);
-                }
-            }
-
-            return batchedVisuals;
-        }
-
-        private static ByteString FloatArrayToByteString(float[] values)
-        {
-            if (values == null || values.Length == 0)
-            {
-                return ByteString.Empty;
-            }
-
-            var bytes = new byte[values.Length * sizeof(float)];
-            Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length);
-            return ByteArrayToByteString(bytes);
-        }
-
-        private static ByteString IntArrayToByteString(int[] values)
-        {
-            if (values == null || values.Length == 0)
-            {
-                return ByteString.Empty;
-            }
-
-            var bytes = new byte[values.Length * sizeof(int)];
-            Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length);
-            return ByteArrayToByteString(bytes);
-        }
-
-        private static ByteString StateArrayToByteString(EnvironmentState[] states, EnvironmentState activeState)
-        {
-            if (states == null || states.Length == 0)
-            {
-                return ByteString.Empty;
-            }
-
-            var bytes = new byte[states.Length];
-            for (int i = 0; i < states.Length; i++)
-            {
-                bytes[i] = states[i] == activeState ? (byte)1 : (byte)0;
-            }
-
-            return ByteArrayToByteString(bytes);
-        }
-
-        private static ByteString ByteArrayToByteString(byte[] bytes)
-        {
-            if (bytes == null || bytes.Length == 0)
-            {
-                return ByteString.Empty;
-            }
-
-            return UnsafeByteOperations.UnsafeWrap(new ReadOnlyMemory<byte>(bytes));
-        }
-
-        private static void LogVisualSummaryOnce(string stage, string observationName, byte[] data)
-        {
-            var key = $"{stage}:{observationName}";
-            var hasNonZero = false;
-            if (data != null)
-            {
-                for (int i = 0; i < data.Length; i++)
-                {
-                    if (data[i] != 0)
-                    {
-                        hasNonZero = true;
-                        break;
-                    }
-                }
-            }
-
-            var shouldLog = LoggedBatchedVisualSummaries.Add(key);
-            if (hasNonZero)
-            {
-                shouldLog |= LoggedNonZeroBatchedVisualSummaries.Add($"{key}:nonzero");
-            }
-
-            if (!shouldLog)
-            {
-                return;
-            }
-
-            if (data == null || data.Length == 0)
-            {
-                Debug.Log($"Visual observation '{observationName}' {stage}: len=0");
-                return;
-            }
-
-            byte min = byte.MaxValue;
-            byte max = byte.MinValue;
-            for (int i = 0; i < data.Length; i++)
-            {
-                var value = data[i];
-                if (value < min)
-                {
-                    min = value;
-                }
-
-                if (value > max)
-                {
-                    max = value;
-                }
-            }
-
-            var sampleCount = Math.Min(8, data.Length);
-            var sample = string.Join(",", data.AsSpan(0, sampleCount).ToArray());
-            Debug.Log(
-                $"Visual observation '{observationName}' {stage}: len={data.Length} min={min} max={max} sample=[{sample}]");
         }
 
         private HttpListener ListenerSetup()
@@ -810,26 +274,15 @@ namespace Scripts.VecEnv.Networking
             catch (Exception e)
             {
                 Debug.LogError(e);
-                try
-                {
-                    context.Response.StatusCode = 500;
-                }
-                catch
-                {
-                    // ignored
-                }
+                IgnoreTeardownErrors(() => context.Response.StatusCode = 500);
             }
             finally
             {
-                try
+                IgnoreTeardownErrors(() =>
                 {
                     if (context.Response.StatusCode != 200) Debug.Log("Closed request with response code " + context.Response.StatusCode);
                     context.Response.Close();
-                }
-                catch
-                {
-                    // ignored
-                }
+                });
             }
         }
 
@@ -975,6 +428,18 @@ namespace Scripts.VecEnv.Networking
             }
         }
 
+        // Teardown paths, where the listener, response or thread may already be gone.
+        private static void IgnoreTeardownErrors(System.Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch
+            {
+            }
+        }
+
         public void Dispose()
         {
             if (_isDisposed)
@@ -997,44 +462,14 @@ namespace Scripts.VecEnv.Networking
             _resetTcs?.TrySetCanceled();
             _stepTcs?.TrySetCanceled();
 
-            try
-            {
-                _messageAvailable.Set();
-            }
-            catch
-            {
-                // ignored
-            }
-
-            try
-            {
-                _httpListener?.Stop();
-            }
-            catch
-            {
-                // ignored
-            }
-
+            IgnoreTeardownErrors(() => _messageAvailable.Set());
+            IgnoreTeardownErrors(() => _httpListener?.Stop());
             if (_listenerThread != null && _listenerThread.IsAlive && Thread.CurrentThread != _listenerThread)
             {
-                try
-                {
-                    _listenerThread.Join();
-                }
-                catch
-                {
-                    // ignored
-                }
+                IgnoreTeardownErrors(() => _listenerThread.Join());
             }
 
-            try
-            {
-                _httpListener?.Close();
-            }
-            catch
-            {
-                // ignored
-            }
+            IgnoreTeardownErrors(() => _httpListener?.Close());
 
             _httpListener = null;
             _listenerThread = null;

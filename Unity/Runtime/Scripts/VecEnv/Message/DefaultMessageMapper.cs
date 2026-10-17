@@ -6,39 +6,37 @@ namespace Scripts.VecEnv.Message
 {
     public class DefaultMessageMapper : IMessageMapper
     {
-        public ResetParameters MapResetParameters(ExternalCommunication.ResetParameters resetParameters)
+        public InitializeEnvironment MapInitialize(InitializeEnvironments initialize)
         {
-            return new ResetParameters
+            var initializeEnvironment = new InitializeEnvironment
             {
-                AgentIndex = resetParameters.Index,
-                Seed = resetParameters.HasSeed ? resetParameters.Seed : null,
-                Continuous = resetParameters.Continuous.ToArray()
+                AgentCount = initialize.RequestedNumberOfEnvs,
+                Parameters = initialize.Parameters.Select(MapEnvironmentParameter).ToArray(),
+                SceneName = initialize.SceneName ?? string.Empty,
+                ReloadScene = initialize.ReloadScene
             };
-        }
 
-        public Reset MapReset(ExternalCommunication.Reset resetParameters)
-        {
-            var reset = new Reset();
-            reset.ReloadScene = resetParameters.ReloadScene;
-            reset.ParametersPerAgent = resetParameters.EnvsToReset.Select(MapResetParameters).ToArray();
-            return reset;
-        }
-
-        public AgentAction MapAction(ExternalCommunication.Action msg)
-        {
-            return new AgentAction
+            switch (initialize.AutoResetMode)
             {
-                Continuous = msg.Continuous.ToArray(),
-                Discrete = msg.Discrete.ToArray()
-            };
+                case ExternalCommunication.AutoResetMode.NextStep:
+                    initializeEnvironment.AutoResetMode = EnvironmentAutoResetMode.NextStep;
+                    break;
+                case ExternalCommunication.AutoResetMode.SameStep:
+                    initializeEnvironment.AutoResetMode = EnvironmentAutoResetMode.SameStep;
+                    break;
+                default:
+                    throw new NotSupportedException($"Auto-reset mode {initialize.AutoResetMode} is not supported.");
+            }
+
+            return initializeEnvironment;
         }
 
-        public ExternalCommunication.Observation MapObservationToExternal(AgentObservation agentObservation)
+        public Reset MapReset(ExternalCommunication.Reset reset)
         {
-            var mapObservationToExternal = new ExternalCommunication.Observation();
-            mapObservationToExternal.Continuous.AddRange(agentObservation.Continuous);
-            mapObservationToExternal.Discrete.AddRange(agentObservation.Discrete);
-            return mapObservationToExternal;
+            var mapReset = new Reset();
+            mapReset.ReloadScene = reset.ReloadScene;
+            mapReset.ParametersPerAgent = reset.EnvsToReset.Select(MapResetParameters).ToArray();
+            return mapReset;
         }
 
         public Step MapStep(ExternalCommunication.Step step)
@@ -59,7 +57,7 @@ namespace Scripts.VecEnv.Message
             {
                 ContinuousSize = description.ContinuousActions,
             };
-            actionSpace.DiscreteSize.AddRange(description.DiscreteActions ?? System.Array.Empty<int>());
+            actionSpace.DiscreteSize.AddRange(description.DiscreteActions ?? Array.Empty<int>());
 
             var observationSpace = new Space
             {
@@ -69,7 +67,7 @@ namespace Scripts.VecEnv.Message
             {
                 observationSpace.Name = "state";
             }
-            observationSpace.DiscreteSize.AddRange(description.DiscreteObservations ?? System.Array.Empty<int>());
+            observationSpace.DiscreteSize.AddRange(description.DiscreteObservations ?? Array.Empty<int>());
 
             mapEnvironmentDescription.SingleActionSpace.Add(actionSpace);
             mapEnvironmentDescription.SingleObservationSpace.Add(observationSpace);
@@ -78,17 +76,7 @@ namespace Scripts.VecEnv.Message
             {
                 foreach (var visualObservation in description.VisualObservations)
                 {
-                    var visualSpace = new VisualObservationSpace
-                    {
-                        Name = visualObservation.Name ?? string.Empty,
-                        DataType = visualObservation.DataType == VisualObservationDataType.Float32
-                            ? ExternalCommunication.VisualObservationDataType.Float32
-                            : ExternalCommunication.VisualObservationDataType.Uint8,
-                        Low = visualObservation.Low,
-                        High = visualObservation.High
-                    };
-                    visualSpace.Shape.Add(visualObservation.Shape ?? System.Array.Empty<int>());
-                    mapEnvironmentDescription.SingleVisualObservationSpace.Add(visualSpace);
+                    mapEnvironmentDescription.SingleVisualObservationSpace.Add(MapVisualObservationSpace(visualObservation));
                 }
             }
 
@@ -96,30 +84,59 @@ namespace Scripts.VecEnv.Message
             {
                 foreach (var parameter in description.Parameters)
                 {
-                    var mappedParameter = new ExternalCommunication.EnvironmentParameter
-                    {
-                        Key = parameter.Key ?? string.Empty
-                    };
-
-                    switch (parameter.ValueType)
-                    {
-                        case EnvironmentParameterValueType.String:
-                            mappedParameter.StringValue = parameter.StringValue ?? string.Empty;
-                            break;
-                        case EnvironmentParameterValueType.Float:
-                            mappedParameter.FloatValue = parameter.FloatValue;
-                            break;
-                        case EnvironmentParameterValueType.Int:
-                            mappedParameter.IntValue = parameter.IntValue;
-                            break;
-                    }
-
-                    mapEnvironmentDescription.Parameters.Add(mappedParameter);
+                    mapEnvironmentDescription.Parameters.Add(MapEnvironmentParameter(parameter));
                 }
             }
 
             mapEnvironmentDescription.TrueNumberOfEnvs = description.AgentCount;
             return mapEnvironmentDescription;
+        }
+
+        public BatchedResetResults MapResetResults(AgentObservation[] agentObservations, Info[] infos)
+        {
+            var customIndices = BatchedCustomInfoEncoder.BuildIndices(infos);
+            return new BatchedResetResults
+            {
+                Observation = BatchedObservationEncoder.Encode(agentObservations),
+                CustomIndicesI32 = ByteStringUtils.IntArrayToByteString(customIndices),
+                Custom = BatchedCustomInfoEncoder.Encode(infos, customIndices)
+            };
+        }
+
+        public BatchedStepResults MapStepResults(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info[] infos)
+        {
+            var customIndices = BatchedCustomInfoEncoder.BuildIndices(infos);
+            var finalIndices = BatchedObservationEncoder.BuildFinalIndices(dones);
+            return new BatchedStepResults
+            {
+                Observation = BatchedObservationEncoder.Encode(agentObservations),
+                RewardsF32 = ByteStringUtils.FloatArrayToByteString(rewards),
+                Dones = ByteStringUtils.StateArrayToByteString(dones, EnvironmentState.Done),
+                Truncates = ByteStringUtils.StateArrayToByteString(dones, EnvironmentState.Truncated),
+                CustomIndicesI32 = ByteStringUtils.IntArrayToByteString(customIndices),
+                Custom = BatchedCustomInfoEncoder.Encode(infos, customIndices),
+                FinalIndicesI32 = ByteStringUtils.IntArrayToByteString(finalIndices),
+                FinalInfo = BatchedObservationEncoder.EncodeFinalInfo(agentObservations, infos, finalIndices)
+            };
+        }
+
+        private static ResetParameters MapResetParameters(ExternalCommunication.ResetParameters resetParameters)
+        {
+            return new ResetParameters
+            {
+                AgentIndex = resetParameters.Index,
+                Seed = resetParameters.HasSeed ? resetParameters.Seed : null,
+                Continuous = resetParameters.Continuous.ToArray()
+            };
+        }
+
+        private static AgentAction MapAction(ExternalCommunication.Action msg)
+        {
+            return new AgentAction
+            {
+                Continuous = msg.Continuous.ToArray(),
+                Discrete = msg.Discrete.ToArray()
+            };
         }
 
         private static EnvironmentParameter MapEnvironmentParameter(ExternalCommunication.EnvironmentParameter parameter)
@@ -150,29 +167,42 @@ namespace Scripts.VecEnv.Message
             return mappedParameter;
         }
 
-        public InitializeEnvironment MapInitialize(InitializeEnvironments initialize)
+        private static ExternalCommunication.EnvironmentParameter MapEnvironmentParameter(EnvironmentParameter parameter)
         {
-            var initializeEnvironment = new InitializeEnvironment
+            var mappedParameter = new ExternalCommunication.EnvironmentParameter
             {
-                AgentCount = initialize.RequestedNumberOfEnvs,
-                Parameters = initialize.Parameters.Select(MapEnvironmentParameter).ToArray(),
-                SceneName = initialize.SceneName ?? string.Empty,
-                ReloadScene = initialize.ReloadScene
+                Key = parameter.Key ?? string.Empty
             };
 
-            switch (initialize.AutoResetMode)
+            switch (parameter.ValueType)
             {
-                case ExternalCommunication.AutoResetMode.NextStep:
-                    initializeEnvironment.AutoResetMode = EnvironmentAutoResetMode.NextStep;
+                case EnvironmentParameterValueType.String:
+                    mappedParameter.StringValue = parameter.StringValue ?? string.Empty;
                     break;
-                case ExternalCommunication.AutoResetMode.SameStep:
-                    initializeEnvironment.AutoResetMode = EnvironmentAutoResetMode.SameStep;
+                case EnvironmentParameterValueType.Float:
+                    mappedParameter.FloatValue = parameter.FloatValue;
                     break;
-                default:
-                    throw new NotSupportedException($"Auto-reset mode {initialize.AutoResetMode} is not supported.");
+                case EnvironmentParameterValueType.Int:
+                    mappedParameter.IntValue = parameter.IntValue;
+                    break;
             }
 
-            return initializeEnvironment;
+            return mappedParameter;
+        }
+
+        private static VisualObservationSpace MapVisualObservationSpace(VisualObservationDescription visualObservation)
+        {
+            var visualSpace = new VisualObservationSpace
+            {
+                Name = visualObservation.Name ?? string.Empty,
+                DataType = visualObservation.DataType == VisualObservationDataType.Float32
+                    ? ExternalCommunication.VisualObservationDataType.Float32
+                    : ExternalCommunication.VisualObservationDataType.Uint8,
+                Low = visualObservation.Low,
+                High = visualObservation.High
+            };
+            visualSpace.Shape.Add(visualObservation.Shape ?? Array.Empty<int>());
+            return visualSpace;
         }
     }
 }

@@ -19,7 +19,7 @@ class _ThreadWorker:
         self.has_result = threading.Event()
         self.closed = False
 
-        self._pending_action = None  # ("step", actions) or ("reset", seed, options)
+        self._pending_action = None  # ("step", action, ui_strings), ("reset", seed, options) or ("reinitialize", kwargs)
         self._result = None
 
         self._thread = threading.Thread(target=self._loop, daemon=True)
@@ -46,9 +46,6 @@ class _ThreadWorker:
                 _, seed, options = cmd
                 res = self.env.reset(seed=seed, options=options)
             elif kind == "reinitialize":
-                # A scene reload can fail (missing build-settings entry, dead
-                # process). Hand the error back instead of killing this thread,
-                # which would leave the caller blocked until its timeout.
                 _, kwargs = cmd
                 try:
                     res = self.env.reinitialize(**kwargs)
@@ -62,22 +59,17 @@ class _ThreadWorker:
             self.has_result.set()
 
     def submit_step(self, action: np.ndarray, ui_strings: Sequence[str]):
-        with self.lock:
-            self._pending_action = ("step", action, ui_strings)
-            self._result = None
-        self.has_result.clear()
-        self.has_action.set()
+        self._submit(("step", action, ui_strings))
 
     def submit_reset(self, seed, options):
-        with self.lock:
-            self._pending_action = ("reset", seed, options)
-            self._result = None
-        self.has_result.clear()
-        self.has_action.set()
+        self._submit(("reset", seed, options))
 
     def submit_reinitialize(self, kwargs: Dict[str, Any]):
+        self._submit(("reinitialize", dict(kwargs)))
+
+    def _submit(self, command: tuple):
         with self.lock:
-            self._pending_action = ("reinitialize", dict(kwargs))
+            self._pending_action = command
             self._result = None
         self.has_result.clear()
         self.has_action.set()
@@ -283,12 +275,7 @@ class FlattenedVectorEnvThreaded(VectorEnv):
         self._pending_kind: Optional[str] = None
 
     def _rebuild_layout(self) -> None:
-        """Recompute slices, spaces, metadata and buffers from the sub-envs.
-
-        Runs at construction and again after :meth:`reinitialize`, because a
-        re-initialized process may come back with a different scene's spaces or
-        a different agent count.
-        """
+        """Recompute slices, spaces, metadata and buffers from the sub-envs, at construction and after reinitialize."""
         # slices
         self._slices: List[_Slice] = []
         cur = 0
@@ -334,11 +321,7 @@ class FlattenedVectorEnvThreaded(VectorEnv):
             reload_scene: bool = True,
             timeout: Optional[float] = None,
     ):
-        """Re-initialize every Unity instance concurrently, optionally into another scene.
-
-        ``num_envs`` is per instance, matching construction. Instances reload in
-        parallel, so this costs about one reload rather than one per instance.
-        """
+        """Re-initialize every instance concurrently; num_envs is per instance, as at construction."""
         kwargs = {
             "num_envs": num_envs,
             "env_parameters": env_parameters,

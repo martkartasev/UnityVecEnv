@@ -9,12 +9,7 @@ def _safe_key(name: str | None, prefix: str, i: int) -> str:
 
 def _box_from_proto(space_proto, dtype=np.float32,
                     default_low=-np.inf, default_high=np.inf):
-    """
-    Build Box from:
-      - continuousSize (int)
-      - continuousRange: repeated MinMax { index, minValue, maxValue }
-    Any dimension not specified in continuousRange uses defaults.
-    """
+    """Box from continuousSize and continuousRange entries; dimensions without a range use the defaults."""
     n = int(getattr(space_proto, "continuousSize", 0) or 0)
     if n <= 0:
         return None
@@ -32,9 +27,7 @@ def _box_from_proto(space_proto, dtype=np.float32,
 
 
 def _discrete_from_proto(space_proto):
-    """
-    Build Discrete/MultiDiscrete from repeated discreteSize.
-    """
+    """Discrete or MultiDiscrete from repeated discreteSize."""
     sizes = [int(s) for s in (getattr(space_proto, "discreteSize", []) or [])]
     sizes = [s for s in sizes if s > 0]
     if not sizes:

@@ -199,9 +199,7 @@ class UnityVectorEnv(VectorEnv):
         self.client = start_client(port=self.port)
 
         self.scene_load = scene_load
-        # reload_scene makes this first initialize take the same reload path as every
-        # later reinitialize(), so a freshly launched process and a reused one start
-        # from an identical scene. Costs one extra scene load at startup.
+        # Same reload path as reinitialize(), at the cost of one extra scene load.
         environment_description = self.initialize_environment(
             num_envs,
             self.initialization_parameters,
@@ -211,11 +209,7 @@ class UnityVectorEnv(VectorEnv):
         self._apply_environment_description(environment_description)
 
     def _apply_environment_description(self, environment_description) -> None:
-        """Adopt the spaces and env count returned by an initialize call.
-
-        Shared by construction and :meth:`reinitialize`, because a re-initialized
-        process may return a different scene's spaces and agent count.
-        """
+        """Adopt the spaces and env count from an initialize response; a reinitialized scene may differ."""
         if environment_description.trueNumberOfEnvs == 0:
             raise RuntimeError("Failed to initialize environment connection. Number of envs returns 0.")
 
@@ -268,10 +262,9 @@ class UnityVectorEnv(VectorEnv):
             AutoresetMode.NEXT_STEP: AutoResetMode.NextStep,
             AutoresetMode.SAME_STEP: AutoResetMode.SameStep,
         }
-        normalized_autoreset_mode = _normalize_autoreset_mode(autoreset_mode)
-        init.autoResetMode = proto_modes[normalized_autoreset_mode]
+        init.autoResetMode = proto_modes[autoreset_mode]
         init.requestedNumberOfEnvs = num_envs
-        for key, value in _normalize_environment_parameters(env_parameters).items():
+        for key, value in (env_parameters or {}).items():
             init.parameters.append(_environment_parameter_to_proto(key, value))
         if scene_load:
             init.sceneName = str(scene_load)
@@ -287,15 +280,7 @@ class UnityVectorEnv(VectorEnv):
             scene_load: Optional[str] = None,
             reload_scene: bool = True,
     ):
-        """Re-initialize this live Unity process, optionally into another scene.
-
-        Reuses the running process instead of paying a full relaunch. With
-        ``reload_scene`` (the default) Unity reloads the scene in Single mode, so
-        the environment starts from the same state as a freshly launched process
-        rather than inheriting residual physics and sensor state from the previous
-        episodes. Observation and action spaces are rebuilt from the response,
-        because another scene may describe different spaces or agent counts.
-        """
+        """Re-initialize the running process in place; by default the scene reloads so no episode state carries over."""
         if num_envs is None:
             num_envs = self.num_envs
         if env_parameters is None:
@@ -389,7 +374,6 @@ class UnityVectorEnv(VectorEnv):
 
     def render(self, mode='human'):
         pass
-        # TODO: Screenshot/Video manager back into API
 
     def close(self):
         if self.process is not None:

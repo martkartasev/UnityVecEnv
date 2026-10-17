@@ -4,11 +4,12 @@ namespace Scripts.VecEnv.Message
 {
     public interface IMessageMapper
     {
-        Reset MapReset(ExternalCommunication.Reset resetParameters);
-        AgentAction MapAction(ExternalCommunication.Action msg);
-        Step MapStep(ExternalCommunication.Step step);
         InitializeEnvironment MapInitialize(InitializeEnvironments initialize);
-        ExternalCommunication.Observation MapObservationToExternal(AgentObservation agentObservation);
+        Reset MapReset(ExternalCommunication.Reset reset);
+        Step MapStep(ExternalCommunication.Step step);
+
         ExternalCommunication.EnvironmentDescription MapEnvironmentDescription(EnvironmentDescription description);
+        BatchedResetResults MapResetResults(AgentObservation[] agentObservations, Info[] infos);
+        BatchedStepResults MapStepResults(AgentObservation[] agentObservations, EnvironmentState[] dones, float[] rewards, Info[] infos);
     }
 }

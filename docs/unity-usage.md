@@ -298,14 +298,16 @@ When building for training, not Editor play mode:
 
 - Set **Scripting Backend** to IL2CPP for best runtime performance.
 - Use **Server Build** (headless) if you pass `no_graphics=True` from Python.
-- The HTTP server port defaults to `50010`. Pass `--port <n>` on the command line or let `UnityVectorEnv` handle port selection automatically.
+- The HTTP server port defaults to `50010`. Pass `-channel <n>` on the command line or let `UnityVectorEnv` handle port selection automatically.
 
-Command-line arguments accepted by the Unity build:
+Command-line arguments accepted by the Unity build (keys are case-insensitive; the value is the next argument):
 
 | Argument | Description |
 |---|---|
-| `--port <n>` | HTTP server port |
-| `--num-agents <n>` | Number of agents or environments to request, depending on scene setup |
-| `--scene <name>` | Scene to load |
-| `--timescale <n>` | Initial `Time.timeScale` |
-| `--logfile <path>` | Player log path |
+| `-channel <n>` | HTTP server port |
+| `-timeout <ms>` | Quit when no step arrives within this time; `0` waits forever (default `3000`) |
+| `-agentcount <n>` | Number of agents or environments to request, depending on scene setup |
+| `-scene <name>` | Scene to load |
+| `-timescale <n>` | Initial `Time.timeScale` |
+| `-decisionperiod <n>` | Physics steps per step when the `Step` message carries none, and for stepping before a client connects (default `10`) |
+| `-logfile <path>` | Player log path (Unity's own argument) |

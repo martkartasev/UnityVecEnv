@@ -228,8 +228,7 @@ namespace ExternalCommunication {
     public const int SceneNameFieldNumber = 4;
     private string sceneName_ = "";
     /// <summary>
-    /// Scene to activate for this initialization. Empty keeps the current scene.
-    /// A different name always forces a reload.
+    /// Empty keeps the current scene; a different name forces a reload.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -244,9 +243,7 @@ namespace ExternalCommunication {
     public const int ReloadSceneFieldNumber = 5;
     private bool reloadScene_;
     /// <summary>
-    /// Force a full single-mode scene reload even when the scene is unchanged.
-    /// This discards residual physics and transform state so a re-initialized
-    /// process starts from the same state as a freshly launched one.
+    /// Reload the scene even when sceneName is unchanged.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

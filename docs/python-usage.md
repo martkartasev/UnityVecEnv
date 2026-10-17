@@ -66,13 +66,14 @@ This is useful for connecting to the Unity Editor during development.
 | `start_process` | `bool` | `True` | Whether to launch Unity automatically. |
 | `no_graphics` | `bool` | `True` | Run Unity in headless mode (no window). |
 | `time_scale` | `float` | `10` | Unity `Time.timeScale`. Values above `1` speed up simulation. |
-| `physics_steps_per_action` | `int` | `10` | Fixed-update steps Unity runs between each action. |
+| `physics_steps_per_action` | `int` | `10` | Fixed-update steps Unity runs for each action; sent with every step as `Step.stepCount`. |
 | `port` | `int` | `50010` | Base HTTP port. Automatically incremented if the port is busy. |
 | `num_envs` | `int` | `1` | Number of parallel agents to request from Unity. |
 | `scene_load` | `str` | `""` | Scene name to load on startup (passed as a command-line argument). |
-| `log_file` | `str` | `""` | Path for Unity's player log. |
+| `log_file` | `str` | `""` | Prefix for Unity's player log; the port and `.log` are appended. Empty keeps Unity's default log location. |
 | `env_parameters` | `Mapping[str, str \| float \| int] \| None` | `None` | Parameters sent during environment initialization and available in Unity before `GymAgent.Initialize()`. |
 | `autoreset_mode` | `AutoresetMode \| str` | `AutoresetMode.NEXT_STEP` | `NEXT_STEP` returns the terminal observation; `SAME_STEP` resets before returning and stores terminal observations in `info["final_observation"]`. Strings `"next_step"` and `"same_step"` are also accepted. |
+| `reload_scene` | `bool` | `False` | Reload the scene on the first initialize too, so the first episode starts from the same state as every later `reinitialize()`. See "Reinitializing and scene reloads". |
 
 ## Gymnasium API
 
@@ -87,6 +88,18 @@ for _ in range(steps):
 
 env.close()
 ```
+
+### Seeding resets
+
+`reset(seed=...)` seeds the Unity-side random stream of each agent before its `GymReset` runs:
+
+```python
+obs, info = env.reset(seed=123)              # agent i is seeded with 123 + i
+obs, info = env.reset(seed=[7, 7, 7, 7])     # one seed per agent, length num_envs
+obs, info = env.reset()                      # no seeds: each agent continues its own stream
+```
+
+Seeds must fit a signed 32-bit integer. A seeded agent calls `Random.InitState(seed)` around its `GymReset`. An unseeded agent continues its own stream from where its previous reset left it, and the first reset of that stream is seeded with the agent index, so a run of unseeded resets is reproducible too. Unity's shared random stream is restored after every agent reset, so resets do not disturb other randomness in the scene. `FlattenedVectorEnvThreaded.reset(seed=...)` takes the same forms over the flattened agent count and splits them per instance.
 
 ### Displaying step text in Unity
 
@@ -162,6 +175,14 @@ env = UnityVectorEnv(
 ```
 
 These values are sent in the `/initialize/` request, so they also work when `start_process=False` and Python connects to an already-running Unity Editor instance.
+
+### Reinitializing and scene reloads
+
+`env.reinitialize(num_envs=None, env_parameters=None, autoreset_mode=None, scene_load=None, reload_scene=True)` re-initializes the running Unity process in place, optionally into another scene, and rebuilds the observation and action spaces from the response. By default the scene is reloaded in Single mode, the only way to discard the physics, transform and sensor state left by earlier episodes. In the editor a requested scene is ignored with a warning; open it manually.
+
+Before a reload Unity's shared random stream is pinned (`Random.InitState(0)`) so that every reload starts from the same layout. Reloads are therefore identical to each other, but not to a cold launch, whose shared stream Unity seeds non-deterministically. Pass `reload_scene=True` to the constructor when the first initialization must agree with every later one; it costs one extra scene load at startup.
+
+`FlattenedVectorEnvThreaded.reinitialize(...)` takes the same arguments plus `timeout`, applies them to every instance concurrently, and raises if any instance fails.
 
 ---
 
@@ -239,3 +260,24 @@ The client retries up to 20 times with 0.25 s delays and uses a 30-second per-re
 Observations are transmitted as raw byte arrays (`float32` little-endian for continuous, `int32` little-endian for discrete) and deserialized with `numpy.frombuffer` — no per-element parsing overhead.
 
 Custom info uses a **sparse columnar** encoding: only agents that produced metadata are included, identified by an index list. This keeps payloads small when most agents have no custom data.
+
+### Launch arguments
+
+With `start_process=True`, `UnityVectorEnv` launches the build as
+
+```
+<executable> -channel <port> -timeout 0 -agentcount <num_envs> [-logfile <log_file><port>.log] [-timescale <time_scale>] [-scene <scene_load>] -batchmode -nographics
+```
+
+`Bootstrap` reads the arguments the package defines. Keys are case-insensitive and the value is the next argument.
+
+| Argument | Effect |
+|---|---|
+| `-channel <port>` | HTTP server port. Defaults to `50010`. |
+| `-timeout <ms>` | Unity quits when no step arrives within this many milliseconds; `0` waits forever. Defaults to `3000` when absent, which is why Python passes `0`. |
+| `-agentcount <n>` | Agents or environments to spawn, depending on the scene's `SpawnMode`. |
+| `-timescale <f>` | Initial `Time.timeScale`. |
+| `-scene <name>` | Scene to load before initialization. |
+| `-decisionperiod <n>` | Physics steps per step when a `Step` message carries no `stepCount`, and for the disconnected stepper that runs before a client connects. Defaults to `10`. `UnityVectorEnv` never passes it, because it sends `physics_steps_per_action` with every step. |
+
+`-logfile`, `-batchmode` and `-nographics` are Unity's own player arguments.

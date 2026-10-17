@@ -1,148 +1,76 @@
 # UnityVecEnv
 
-UnityVecEnv connects Unity environments to Python reinforcement-learning code
-through a [Gymnasium](https://gymnasium.farama.org/)-compatible vector
-environment API.
+Use a Unity scene as a reinforcement-learning environment for Python. UnityVecEnv implements Gymnasium's [`VectorEnv`](https://gymnasium.farama.org/api/vector/) interface: many copies of your agent run at once inside Unity while a Python training loop sends actions and receives what each agent sees, its reward and whether its episode has ended.
 
-> **Development status: Alpha.** UnityVecEnv is under active development. APIs,
-> the communication protocol, and package structure may change between minor
-> releases. Pin exact versions, use matching Python and Unity package versions,
-> and evaluate it carefully before using it in production-critical workloads.
+This package is the Python half. The Unity half is a Unity package from the same
+[repository](https://github.com/martkartasev/UnityVecEnv); install both at the same version.
 
-## Features
+## Highlights
 
-- A standard Gymnasium `VectorEnv` interface for Unity environments.
-- Many agents batched inside one Unity process.
-- Multiple Unity processes exposed as one environment with
-  `FlattenedVectorEnvThreaded`.
-- Continuous, discrete, and mixed action/observation spaces, plus visual
-  observations.
-- Gymnasium `NEXT_STEP` and `SAME_STEP` autoreset modes.
-- Typed per-agent info values and run-level environment parameters.
-- Optional ONNX export and Unity tensor-renaming utilities.
-
-## How it works
-
-```text
-Python training loop
-        |
-        | Gymnasium VectorEnv API
-        v
-unity-vecenv Python client
-        |
-        | localhost HTTP + Protocol Buffers
-        v
-Unity Editor or built player
-        |
-        v
-GymVecEnvManager + GymAgent instances
-```
-
-Unity runs the simulation and an embedded local HTTP server. Python sends
-batched actions and receives observations, rewards, termination flags, and
-custom info values.
-
-## Requirements
-
-| Component | Supported version |
-|---|---|
-| Python | 3.10 or newer |
-| Unity Editor | Unity 6 (6000.0) baseline |
-| Gymnasium | 1.2 or newer, below 2.0 |
-| Unity Inference Engine | 2.4.1, installed automatically by the Unity package |
-
-During the Alpha phase, use the same release number for both packages. For
-example, Python package `0.1.9` should be paired with Unity tag `v0.1.9`.
+- Hundreds of agents in one Unity process, and several processes can be treated as one bigger environment.
+- A standard Gymnasium `VectorEnv`, so existing Gymnasium-based trainers work unchanged.
+- Observations as numbers, integer choices or camera images. Agents can report extra values, and Python can pass settings to the scene when it starts.
+- Save a trained PyTorch network as ONNX and run it inside Unity without Python, through Unity's Inference Engine.
 
 ## Installation
 
-### Python client
-
 ```bash
 pip install unity-vecenv
+pip install "unity-vecenv[onnx]"    # optional: onnx and torch, for ONNX export and unity-vecenv onnx-rename
 ```
 
-This installs only the Python client. It does not install the Unity Editor, the
-Unity package, or a built Unity environment.
+| Requirement | Version |
+|---|---|
+| Python | 3.10 or newer |
+| Gymnasium | 1.2 or newer, below 2.0 |
+| Unity Editor | 6000.0 or newer |
+| Unity package `com.mka.gymvecenv` | the same version as this package, for example `0.1.9` with tag `v0.1.9` |
 
-Install the optional ONNX export and model-renaming utilities with:
+Install the Unity package through **Window > Package Manager > + > Install package from git URL** with the URL of the matching tag, for example
 
-```bash
-pip install "unity-vecenv[onnx]"
+```text
+https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#v0.1.9
 ```
 
-For CUDA-enabled inference or export, install the appropriate PyTorch build for
-your system before installing the ONNX extra.
-
-### Unity package
-
-In Unity, select **Window > Package Manager > + > Install package from git
-URL**, or add the package to your project's `Packages/manifest.json`:
-
-```json
-{
-  "dependencies": {
-    "com.mka.gymvecenv": "https://github.com/martkartasev/UnityVecEnv.git?path=/Unity#vX.Y.Z"
-  }
-}
-```
-
-Replace `X.Y.Z` with the version installed in Python. Tagged releases are listed
-on the [GitHub Releases](https://github.com/martkartasev/UnityVecEnv/releases)
-page.
-
-Your Unity scene needs a `GymAgent` subclass. The `GymVecEnvManager` is created
-automatically at runtime. See the
-[Unity setup guide](https://github.com/martkartasev/UnityVecEnv/blob/master/docs/unity-usage.md)
-for agent implementation and scene configuration.
+or add that URL under `"dependencies"` in `Packages/manifest.json` as `"com.mka.gymvecenv"`. The project is in alpha, so install a specific version on both sides, for example `pip install unity-vecenv==0.1.9`. Published versions are listed under [tags](https://github.com/martkartasev/UnityVecEnv/tags).
 
 ## Usage
 
-### Launch a built Unity environment
+The scene needs one C# class that extends `GymAgent`, attached to an object, with its observation and action sizes set in the Inspector; the [Unity guide](https://github.com/martkartasev/UnityVecEnv/blob/master/docs/unity-usage.md) shows the five methods to implement. Build the project into a player, then drive it from Python. `num_envs` is how many copies of the agent Unity should run:
 
 ```python
 from unity_vecenv import UnityVectorEnv
 
-env = UnityVectorEnv(
-    executable_path="path/to/MyGame.exe",
-    num_envs=16,
-    no_graphics=True,
-    time_scale=10,
-)
-
-try:
-    observations, info = env.reset()
-
-    for _ in range(1_000):
-        actions = env.action_space.sample()
-        observations, rewards, terminated, truncated, info = env.step(actions)
-finally:
-    env.close()
+env = UnityVectorEnv("path/to/MyGame.exe", num_envs=16)
+obs, info = env.reset()
+obs, rewards, terminated, truncated, info = env.step(env.action_space.sample())
+env.close()
 ```
 
-### Connect to the Unity Editor
-
-Start the configured scene in Play Mode, then connect to its listening port
-without starting another Unity process:
+To use the Editor instead of a build, press Play in Unity and attach to the port it prints in the Console:
 
 ```python
-from unity_vecenv import UnityVectorEnv
-
-env = UnityVectorEnv(
-    start_process=False,
-    port=50010,
-    num_envs=4,
-)
+env = UnityVectorEnv(start_process=False, port=50010, num_envs=4)
 ```
 
-## Documentation and support
+Each Unity process listens on its own port, so several of them combine like this:
 
-- [Python usage guide](https://github.com/martkartasev/UnityVecEnv/blob/master/docs/python-usage.md)
-- [Unity setup guide](https://github.com/martkartasev/UnityVecEnv/blob/master/docs/unity-usage.md)
-- [Release notes](https://github.com/martkartasev/UnityVecEnv/releases)
-- [Issue tracker](https://github.com/martkartasev/UnityVecEnv/issues)
+```python
+from unity_vecenv import FlattenedVectorEnvThreaded, UnityVectorEnv
 
-## License
+def make_env(i):
+    return lambda: UnityVectorEnv("path/to/MyGame.exe", num_envs=16, port=50010 + i)
 
-UnityVecEnv is available under the
-[MIT License](https://github.com/martkartasev/UnityVecEnv/blob/master/LICENSE).
+env = FlattenedVectorEnvThreaded([make_env(i) for i in range(4)])
+```
+
+## Learn more
+
+- [Python guide](https://github.com/martkartasev/UnityVecEnv/blob/master/docs/python-usage.md): constructor options, seeding, custom info, the ONNX tools
+- [Unity guide](https://github.com/martkartasev/UnityVecEnv/blob/master/docs/unity-usage.md): scene layout, the agent API, running without Python
+- [Issues](https://github.com/martkartasev/UnityVecEnv/issues)
+
+## Author and license
+
+Written by [Mart Kartasev](https://github.com/martkartasev). MIT, see
+[LICENSE](https://github.com/martkartasev/UnityVecEnv/blob/master/LICENSE).

@@ -53,7 +53,7 @@ unity-vecenv = "unity_vecenv.cli:main"
 [project.urls]
 Documentation = "https://github.com/martkartasev/UnityVecEnv/tree/master/docs"
 Issues = "https://github.com/martkartasev/UnityVecEnv/issues"
-"Release notes" = "https://github.com/martkartasev/UnityVecEnv/releases"
+"Release notes" = "https://github.com/martkartasev/UnityVecEnv/tags"
 Repository = "https://github.com/martkartasev/UnityVecEnv"
 
 [tool.setuptools]

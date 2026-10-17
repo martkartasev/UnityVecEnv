@@ -213,7 +213,6 @@ namespace Scripts.VecEnv.Core
             }
 
             foreach (var kvp in argDictionary)
-                //textBox3.Text += ("Key = {0}, Value = {1}", kvp.Key, kvp.Value);
                 Debug.Log($"Key = {kvp.Key}, Value = {kvp.Value}");
 
             return argDictionary;

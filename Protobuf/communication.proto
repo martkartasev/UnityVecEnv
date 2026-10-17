@@ -12,13 +12,10 @@ message InitializeEnvironments {
   int32 requestedNumberOfEnvs = 2;
   repeated EnvironmentParameter parameters = 3;
 
-  // Scene to activate for this initialization. Empty keeps the current scene.
-  // A different name always forces a reload.
+  // Empty keeps the current scene; a different name forces a reload.
   string sceneName = 4;
 
-  // Force a full single-mode scene reload even when the scene is unchanged.
-  // This discards residual physics and transform state so a re-initialized
-  // process starts from the same state as a freshly launched one.
+  // Reload the scene even when sceneName is unchanged.
   bool reloadScene = 5;
 }
 
